@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:uems_project/views/dashboard_view.dart';
 import 'views/login_view.dart';
 
 void main() {
@@ -19,7 +20,7 @@ class MyApp extends StatelessWidget {
         textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
       ),
       // This starts the app on the Login Page
-      home: const UEMSLoginPage(),
+      home: const StudentDashboard(),
     );
   }
 }
