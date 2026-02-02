@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:uems_project/views/dashboard_view.dart';
+import 'package:uems_project/views/student_dashboard_view.dart';
 import 'views/login_view.dart';
 
 void main() {

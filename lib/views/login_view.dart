@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'package:google_fonts/google_fonts.dart'; //ito ay external packages hehe
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:uems_project/views/dashboard_view.dart';
+// Import your student dashboard file here
+import 'student_dashboard_view.dart';
+import 'admin_dashboard_view.dart';
 
 class UEMSLoginPage extends StatefulWidget {
   const UEMSLoginPage({super.key});
@@ -13,10 +15,16 @@ class UEMSLoginPage extends StatefulWidget {
 
 class _UEMSLoginPageState extends State<UEMSLoginPage>
     with TickerProviderStateMixin {
-  static const Color primaryDark = Color(0xFF0F172A);
-  static const Color secondaryDark = Color(0xFF1E1B4B);
-  static const Color tertiaryDark = Color(0xFF020617);
-  static const Color accentColor = Color(0xFF3B82F6);
+  // Navigation State: 'login', 'admin_dashboard', or 'student_portal'
+  String _currentView = 'login';
+  bool _isDarkMode = true; // Global theme state
+
+  // Standardized Violet Theme Palette
+  static const Color primaryViolet = Color(0xFF2E1065);
+  static const Color secondaryViolet = Color(0xFF4C1D95);
+  static const Color tertiaryDark = Color(0xFF0F071D);
+  static const Color accentViolet = Color(0xFF8B5CF6);
+  static const Color surfaceDark = Color(0xFF1E1B4B);
   static const Color successColor = Color(0xFF69F0AE);
 
   late AnimationController _bgController;
@@ -26,15 +34,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   late Animation<double> _formOpacity;
   late Animation<Offset> _formSlide;
 
-  final List<Map<String, dynamic>> _roles = [
-    {'id': 'student', 'label': 'Student', 'icon': LucideIcons.graduationCap},
-    {'id': 'professor', 'label': 'Professor', 'icon': LucideIcons.user},
-    {'id': 'pchair', 'label': 'Chair', 'icon': LucideIcons.shieldCheck},
-    {'id': 'office', 'label': 'Office', 'icon': LucideIcons.building2},
-    {'id': 'admin', 'label': 'Admin', 'icon': LucideIcons.briefcase},
-  ];
-
-  String _selectedRole = 'student';
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -46,17 +45,14 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     super.initState();
 
     _bgController = AnimationController(
-      duration: const Duration(seconds: 12),
+      duration: const Duration(seconds: 15),
       vsync: this,
     )..repeat(reverse: true);
 
-    _bgAnimation = ColorTween(
-      begin: primaryDark,
-      end: secondaryDark,
-    ).animate(CurvedAnimation(parent: _bgController, curve: Curves.easeInOut));
+    _updateBgAnimation();
 
     _entranceController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
 
@@ -65,7 +61,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       curve: const Interval(0.2, 1.0, curve: Curves.easeIn),
     );
 
-    _formSlide = Tween<Offset>(begin: const Offset(0, 0.03), end: Offset.zero)
+    _formSlide = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
         .animate(
           CurvedAnimation(
             parent: _entranceController,
@@ -75,6 +71,20 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _entranceController.forward();
+    });
+  }
+
+  void _updateBgAnimation() {
+    _bgAnimation = ColorTween(
+      begin: _isDarkMode ? primaryViolet : const Color(0xFFEDE9FE),
+      end: _isDarkMode ? surfaceDark : Colors.white,
+    ).animate(CurvedAnimation(parent: _bgController, curve: Curves.easeInOut));
+  }
+
+  void _toggleTheme() {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+      _updateBgAnimation();
     });
   }
 
@@ -88,72 +98,36 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   }
 
   void _handleLogin() async {
-    if (_idController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            "Missing credentials. Authentication required.",
-            style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-          ),
-          backgroundColor: Colors.redAccent.shade400,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
-    // Hardcoded student credentials
-    const String studentId = "2023-10294";
-    const String studentPassword = "student123";
+    final id = _idController.text;
+    final pass = _passwordController.text;
 
-    // Validate credentials
-    if (_selectedRole == 'student' &&
-        _idController.text == studentId &&
-        _passwordController.text == studentPassword) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Row(
-            children: [
-              const Icon(LucideIcons.shieldCheck, color: successColor, size: 24),
-              const SizedBox(width: 15),
-              Text(
-                'Authentication Successful!',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.green.shade600,
-        ),
-      );
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const StudentDashboard(),
-          ),
-        );
-      }
+    setState(() => _isLoading = false);
+
+    if (id == '123' && pass == '123') {
+      setState(() {
+        _currentView = 'student_portal';
+      });
+      _idController.clear();
+      _passwordController.clear();
+    } else if (id == '456' && pass == '456') {
+      setState(() {
+        _currentView = 'admin_dashboard';
+      });
+      _idController.clear();
+      _passwordController.clear();
     } else {
-      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
           content: Text(
-            "Invalid credentials. Please try again.",
-            style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+            "Authentication Failed: Invalid Credentials",
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
           ),
-          backgroundColor: Colors.redAccent.shade400,
+          backgroundColor: Colors.redAccent.shade700,
         ),
       );
     }
@@ -161,11 +135,34 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   @override
   Widget build(BuildContext context) {
+    switch (_currentView) {
+      case 'student_portal':
+        return const StudentDashboardView();
+      case 'admin_dashboard':
+        return AdminDashboardView(
+          onLogout: () => setState(() => _currentView = 'login'),
+        );
+      case 'login':
+      default:
+        return _buildLoginView();
+    }
+  }
+
+  Widget _buildLoginView() {
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width > 900;
 
+    // Theme Variables
+    final Color bgColor = _isDarkMode ? tertiaryDark : const Color(0xFFF8FAFC);
+    final Color cardColor = _isDarkMode
+        ? surfaceDark.withOpacity(0.9)
+        : Colors.white;
+    final Color borderColor = _isDarkMode
+        ? Colors.white.withOpacity(0.1)
+        : Colors.black.withOpacity(0.05);
+
     return Scaffold(
-      backgroundColor: tertiaryDark,
+      backgroundColor: bgColor,
       body: AnimatedBuilder(
         animation: _bgAnimation,
         builder: (context, child) {
@@ -174,7 +171,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
             height: double.infinity,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [_bgAnimation.value ?? primaryDark, tertiaryDark],
+                colors: [_bgAnimation.value ?? primaryViolet, bgColor],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -182,7 +179,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
             child: Stack(
               children: [
                 Opacity(
-                  opacity: 0.03,
+                  opacity: _isDarkMode ? 0.05 : 0.02,
                   child: Container(
                     decoration: const BoxDecoration(
                       image: DecorationImage(
@@ -209,33 +206,31 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 500),
                   width: isDesktop
-                      ? (size.width > 1200 ? 1100 : size.width * 0.95)
+                      ? (size.width > 1200 ? 1000 : size.width * 0.95)
                       : size.width,
-                  constraints: BoxConstraints(
-                    minHeight: isDesktop ? 650 : 0,
-                    maxHeight: isDesktop ? 750 : double.infinity,
-                  ),
+                  constraints: const BoxConstraints(minHeight: 600),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.98),
+                    color: cardColor,
                     borderRadius: BorderRadius.circular(32),
+                    border: Border.all(color: borderColor),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.4),
-                        blurRadius: 80,
-                        offset: const Offset(0, 40),
+                        color: _isDarkMode
+                            ? Colors.black.withOpacity(0.6)
+                            : Colors.indigo.withOpacity(0.1),
+                        blurRadius: 100,
+                        offset: const Offset(0, 50),
                       ),
                     ],
                   ),
-                  child: Row(
-                    children: [
-                      if (isDesktop) _buildLeftBanner(),
-                      Expanded(
-                        flex: isDesktop
-                            ? 6
-                            : 1, // Balanced ratio for the login form
-                        child: _buildRightForm(isDesktop),
-                      ),
-                    ],
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (isDesktop) _buildLeftBanner(),
+                        Expanded(flex: 7, child: _buildRightForm(isDesktop)),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -250,14 +245,14 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     return Expanded(
       flex: 5,
       child: Container(
-        decoration: const BoxDecoration(
-          color: primaryDark,
-          borderRadius: BorderRadius.only(
+        decoration: BoxDecoration(
+          color: _isDarkMode ? primaryViolet : primaryViolet.withOpacity(0.05),
+          borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(32),
             bottomLeft: Radius.circular(32),
           ),
         ),
-        padding: const EdgeInsets.all(60),
+        padding: const EdgeInsets.all(40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -266,12 +261,12 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.15),
+                    color: accentViolet.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Icon(
-                    LucideIcons.school,
-                    color: accentColor,
+                  child: Icon(
+                    LucideIcons.shield,
+                    color: _isDarkMode ? accentViolet : primaryViolet,
                     size: 30,
                   ),
                 ),
@@ -279,7 +274,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                 Text(
                   "UEMS",
                   style: GoogleFonts.orbitron(
-                    color: Colors.white,
+                    color: _isDarkMode ? Colors.white : primaryViolet,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2,
@@ -291,30 +286,31 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
             Text(
               "Unified Education\nManagement System",
               style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 42, // Adjusted for better fit
+                color: _isDarkMode ? Colors.white : primaryViolet,
+                fontSize: 38,
                 fontWeight: FontWeight.w900,
-                height: 1.05,
+                height: 1.1,
                 letterSpacing: -1.5,
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
             Container(
               width: 45,
               height: 6,
               decoration: BoxDecoration(
-                color: accentColor,
+                color: accentViolet,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
             Text(
-              "The next generation administrative core for Colleges and Universities. Designed for ultimate security, seamless academic integration, and real-time efficiency.",
+              "The modernized administrative core designed for ultimate security, seamless academic integration, and real-time efficiency.",
               style: GoogleFonts.inter(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 16,
+                color: _isDarkMode
+                    ? Colors.white.withOpacity(0.6)
+                    : primaryViolet.withOpacity(0.7),
+                fontSize: 15,
                 height: 1.6,
-                fontWeight: FontWeight.w400,
               ),
             ),
             const Spacer(),
@@ -326,118 +322,40 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   }
 
   Widget _buildSecurityBadge() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(LucideIcons.lock, color: successColor, size: 20),
-              const SizedBox(width: 14),
-              Text(
-                "AES-256 BANK-GRADE ENCRYPTION",
-                style: GoogleFonts.inter(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 10, // Slightly smaller for better fit
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: _isDarkMode
+            ? Colors.white.withOpacity(0.04)
+            : primaryViolet.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _isDarkMode
+              ? Colors.white.withOpacity(0.1)
+              : Colors.transparent,
         ),
       ),
-    );
-  }
-
-  Widget _buildRightForm(bool isDesktop) {
-    return Padding(
-      padding: EdgeInsets.all(
-        isDesktop ? 50.0 : 32.0,
-      ), // Reduced desktop padding to prevent text wrap
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            "Portal Access",
-            style: GoogleFonts.inter(
-              fontSize: 34,
-              fontWeight: FontWeight.w900,
-              color: primaryDark,
-              letterSpacing: -1.2,
-            ),
+          Icon(
+            LucideIcons.fingerprint,
+            color: _isDarkMode ? successColor : Colors.green.shade600,
+            size: 20,
           ),
-          const SizedBox(height: 12),
-          Text(
-            "Secure gateway for authorized personnel and students.",
-            style: GoogleFonts.inter(
-              color: Colors.blueGrey.shade500,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 40),
-
-          _buildRoleSelector(),
-
-          const SizedBox(height: 30),
-          _buildInputField(
-            controller: _idController,
-            label: _selectedRole == 'student'
-                ? "Identification Number"
-                : "Insert Employee ID",
-            hint: _selectedRole == 'student'
-                ? "e.g. 2023-10294"
-                : "e.g. F-92841",
-            icon: LucideIcons.user,
-          ),
-          const SizedBox(height: 20),
-          _buildInputField(
-            controller: _passwordController,
-            label: "Insert Password",
-            hint: "••••••••",
-            icon: LucideIcons.shield,
-            isPassword: true,
-          ),
-
-          const SizedBox(height: 40),
-          _buildLoginButton(),
-
-          const SizedBox(height: 24),
-          Center(
-            child: Column(
-              children: [
-                Text(
-                  "Trouble signing in?",
-                  style: GoogleFonts.inter(
-                    color: Colors.blueGrey.shade400,
-                    fontSize: 13,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(
-                    foregroundColor: accentColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                  ),
-                  child: Text(
-                    "Contact System Administrator",
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              "SECURE PIPELINE",
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                color: _isDarkMode
+                    ? Colors.white.withOpacity(0.9)
+                    : primaryViolet,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+              ),
             ),
           ),
         ],
@@ -445,70 +363,85 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     );
   }
 
-  Widget _buildRoleSelector() {
-    return Container(
-      padding: const EdgeInsets.all(5),
-      decoration: BoxDecoration(
-        color: Colors.blueGrey.shade50.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.blueGrey.shade100.withOpacity(0.5)),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: _roles.map((role) {
-            bool isSelected = _selectedRole == role['id'];
-            return GestureDetector(
-              onTap: () => setState(() => _selectedRole = role['id']),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : Colors.transparent,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          ),
-                        ]
-                      : [],
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      role['icon'],
-                      size: 16,
-                      color: isSelected
-                          ? accentColor
-                          : Colors.blueGrey.shade400,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      role['label'],
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: isSelected
-                            ? FontWeight.w800
-                            : FontWeight.w600,
-                        color: isSelected
-                            ? primaryDark
-                            : Colors.blueGrey.shade500,
-                      ),
-                    ),
-                  ],
+  Widget _buildRightForm(bool isDesktop) {
+    final Color titleColor = _isDarkMode ? Colors.white : primaryViolet;
+    final Color subTitleColor = _isDarkMode
+        ? Colors.white70
+        : Colors.blueGrey.shade600;
+
+    return Padding(
+      padding: EdgeInsets.all(isDesktop ? 40.0 : 24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "System Login",
+                style: GoogleFonts.inter(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  color: titleColor,
+                  letterSpacing: -1.2,
                 ),
               ),
-            );
-          }).toList(),
-        ),
+              IconButton(
+                onPressed: _toggleTheme,
+                icon: Icon(
+                  _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
+                  color: accentViolet,
+                ),
+                tooltip: "Toggle Theme",
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "Enter your portal credentials to proceed.",
+            style: GoogleFonts.inter(color: subTitleColor, fontSize: 14),
+          ),
+          const SizedBox(height: 40),
+
+          _buildInputField(
+            controller: _idController,
+            label: "User Identification",
+            hint: "123 (Student) or 456 (Admin)",
+            icon: LucideIcons.user,
+          ),
+          const SizedBox(height: 20),
+          _buildInputField(
+            controller: _passwordController,
+            label: "Security Key",
+            hint: "••••••••",
+            icon: LucideIcons.key,
+            isPassword: true,
+          ),
+
+          const SizedBox(height: 40),
+          _buildLoginButton(),
+
+          const SizedBox(height: 30),
+          Center(
+            child: TextButton(
+              onPressed: () {},
+              child: Text(
+                "Authorized Personnel Access Only",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  color: _isDarkMode
+                      ? Colors.white38
+                      : Colors.blueGrey.shade400,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -520,6 +453,14 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     required IconData icon,
     bool isPassword = false,
   }) {
+    final Color labelColor = _isDarkMode
+        ? accentViolet.withOpacity(0.8)
+        : primaryViolet;
+    final Color inputColor = _isDarkMode ? Colors.white : primaryViolet;
+    final Color fillColor = _isDarkMode
+        ? Colors.white.withOpacity(0.05)
+        : Colors.grey.shade100;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -531,60 +472,69 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
               fontSize: 10,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.5,
-              color: Colors.blueGrey.shade700,
+              color: labelColor,
             ),
           ),
         ),
         TextField(
           controller: controller,
           obscureText: isPassword && !_isPasswordVisible,
-          cursorColor: accentColor,
+          cursorColor: accentViolet,
           style: GoogleFonts.inter(
             fontSize: 15,
-            color: primaryDark,
-            fontWeight: FontWeight.w500,
+            color: inputColor,
+            fontWeight: FontWeight.w600,
           ),
           decoration: InputDecoration(
-            prefixIcon: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Icon(icon, color: Colors.blueGrey.shade300, size: 20),
+            prefixIcon: Icon(
+              icon,
+              color: _isDarkMode ? Colors.white30 : Colors.blueGrey.shade300,
+              size: 22,
             ),
             suffixIcon: isPassword
-                ? Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? LucideIcons.eye
-                            : LucideIcons.eyeOff,
-                        size: 18,
-                        color: Colors.blueGrey.shade300,
-                      ),
-                      onPressed: () => setState(
-                        () => _isPasswordVisible = !_isPasswordVisible,
-                      ),
+                ? IconButton(
+                    icon: Icon(
+                      _isPasswordVisible ? LucideIcons.eye : LucideIcons.eyeOff,
+                      size: 20,
+                      color: _isDarkMode
+                          ? Colors.white30
+                          : Colors.blueGrey.shade300,
+                    ),
+                    onPressed: () => setState(
+                      () => _isPasswordVisible = !_isPasswordVisible,
                     ),
                   )
                 : null,
             hintText: hint,
             hintStyle: GoogleFonts.inter(
-              color: Colors.blueGrey.shade200,
+              color: _isDarkMode ? Colors.white10 : Colors.blueGrey.shade200,
               fontSize: 14,
             ),
             filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(vertical: 20),
+            fillColor: fillColor,
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 18,
+              horizontal: 20,
+            ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.blueGrey.shade100),
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(
+                color: _isDarkMode
+                    ? Colors.white.withOpacity(0.1)
+                    : Colors.transparent,
+              ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.blueGrey.shade100),
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(
+                color: _isDarkMode
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.transparent,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: accentColor, width: 2),
+              borderRadius: BorderRadius.circular(18),
+              borderSide: const BorderSide(color: accentViolet, width: 2),
             ),
           ),
         ),
@@ -597,10 +547,10 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       width: double.infinity,
       height: 60,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: accentColor.withOpacity(0.25),
+            color: accentViolet.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -609,17 +559,17 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       child: ElevatedButton(
         onPressed: _isLoading ? null : _handleLogin,
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryDark,
+          backgroundColor: accentViolet,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
           ),
         ),
         child: _isLoading
             ? const SizedBox(
-                height: 24,
-                width: 24,
+                height: 28,
+                width: 28,
                 child: CircularProgressIndicator(
                   color: Colors.white,
                   strokeWidth: 3,
@@ -629,20 +579,508 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "SECURE PORTAL ACCESS",
+                    "AUTHORIZE LOGIN",
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
+                      letterSpacing: 2,
                       fontSize: 13,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  const Icon(LucideIcons.chevronRight, size: 20),
+                  const SizedBox(width: 15),
+                  const Icon(LucideIcons.arrowRight, size: 22),
                 ],
               ),
       ),
     );
   }
+
+  // --- MODERN ADMIN DASHBOARD VIEW ---
+  Widget _buildAdminDashboard() {
+    final Color dashboardBg = _isDarkMode
+        ? tertiaryDark
+        : const Color(0xFFF1F5F9);
+    final Color sidebarColor = _isDarkMode
+        ? const Color(0xFF1E1033)
+        : primaryViolet;
+    final Color headerColor = _isDarkMode
+        ? const Color(0xFF1E1033)
+        : Colors.white;
+    final Color titleColor = _isDarkMode ? Colors.white : primaryViolet;
+
+    return Scaffold(
+      backgroundColor: dashboardBg,
+      body: Row(
+        children: [
+          // SIDEBAR
+          Container(
+            width: 280,
+            color: sidebarColor,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        LucideIcons.shield,
+                        color: accentViolet,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        "UEMS ADMIN",
+                        style: GoogleFonts.orbitron(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+                _buildSidebarHeader("CENTRAL CONTROL"),
+                _buildSidebarItem(
+                  LucideIcons.layoutDashboard,
+                  "System Overview",
+                  active: true,
+                ),
+                _buildSidebarItem(LucideIcons.megaphone, "Post Announcements"),
+                const SizedBox(height: 20),
+                _buildSidebarHeader("ACADEMIC MANAGEMENT"),
+                _buildSidebarItem(
+                  LucideIcons.userPlus,
+                  "Admission & Enrollment",
+                ),
+                _buildSidebarItem(LucideIcons.users, "Student Directory"),
+                _buildSidebarItem(
+                  LucideIcons.graduationCap,
+                  "Faculty Management",
+                ),
+                _buildSidebarItem(LucideIcons.layers, "Subject & Study Loads"),
+                _buildSidebarItem(LucideIcons.book, "Grade Recording"),
+                const Spacer(),
+                const Divider(color: Colors.white10),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  leading: const CircleAvatar(
+                    backgroundColor: accentViolet,
+                    child: Icon(
+                      LucideIcons.user,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                  title: Text(
+                    "Admin Control",
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  subtitle: Text(
+                    "Level: Super Admin",
+                    style: GoogleFonts.inter(
+                      color: Colors.white30,
+                      fontSize: 11,
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(
+                      LucideIcons.logOut,
+                      color: Colors.white54,
+                      size: 18,
+                    ),
+                    onPressed: () => setState(() => _currentView = 'login'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // MAIN PANEL
+          Expanded(
+            child: Column(
+              children: [
+                Container(
+                  height: 80,
+                  color: headerColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Row(
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Intelligence Panel",
+                            style: GoogleFonts.inter(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: _isDarkMode ? Colors.white : primaryViolet,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          Text(
+                            "SYSTEM STATUS: ACTIVE",
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: successColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: _toggleTheme,
+                        icon: Icon(
+                          _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
+                          color: accentViolet,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      _buildHeaderAction(LucideIcons.search),
+                      const SizedBox(width: 16),
+                      _buildHeaderAction(LucideIcons.bell),
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            _buildStatCard(
+                              "Total Students",
+                              "4,291",
+                              LucideIcons.users,
+                              accentViolet,
+                            ),
+                            _buildStatCard(
+                              "Enrollment Progress",
+                              "82%",
+                              LucideIcons.userCheck,
+                              Colors.blueAccent,
+                            ),
+                            _buildStatCard(
+                              "Accounting Clearances",
+                              "3,102",
+                              LucideIcons.wallet,
+                              Colors.orangeAccent,
+                            ),
+                            _buildStatCard(
+                              "System Uptime",
+                              "99.9%",
+                              LucideIcons.activity,
+                              successColor,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 7,
+                              child: _buildControlPanel(
+                                "Administrative System Logs",
+                                [
+                                  _buildLogRow(
+                                    "Super Admin posted new Announcement",
+                                    "2m ago",
+                                    success: true,
+                                  ),
+                                  _buildLogRow(
+                                    "Student #2023-1021 Assessment finalized",
+                                    "15m ago",
+                                  ),
+                                  _buildLogRow(
+                                    "Database Sync: records consistent",
+                                    "1h ago",
+                                    success: true,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                children: [
+                                  _buildQuickAction(
+                                    "Process Admissions",
+                                    LucideIcons.userPlus,
+                                    Colors.blue,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildQuickAction(
+                                    "Database Health",
+                                    LucideIcons.database,
+                                    successColor,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildQuickAction(
+                                    "Security Audit",
+                                    LucideIcons.lock,
+                                    accentViolet,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 12, top: 8),
+      child: Text(
+        title,
+        style: GoogleFonts.inter(
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          color: Colors.white24,
+          letterSpacing: 1.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebarItem(IconData icon, String label, {bool active = false}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: active ? accentViolet.withOpacity(0.15) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        visualDensity: VisualDensity.compact,
+        leading: Icon(
+          icon,
+          color: active ? accentViolet : Colors.white60,
+          size: 18,
+        ),
+        title: Text(
+          label,
+          style: GoogleFonts.inter(
+            color: active ? Colors.white : Colors.white60,
+            fontWeight: active ? FontWeight.bold : FontWeight.w500,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderAction(IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: _isDarkMode
+            ? Colors.white.withOpacity(0.05)
+            : Colors.indigo.withOpacity(0.05),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        icon,
+        color: _isDarkMode ? Colors.white54 : primaryViolet.withOpacity(0.5),
+        size: 20,
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String label, String val, IconData icon, Color color) {
+    final Color cardBg = _isDarkMode ? const Color(0xFF1E1033) : Colors.white;
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: _isDarkMode
+                ? Colors.white.withOpacity(0.05)
+                : Colors.black.withOpacity(0.05),
+          ),
+          boxShadow: _isDarkMode
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 10,
+                  ),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              val,
+              style: GoogleFonts.inter(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: _isDarkMode ? Colors.white : primaryViolet,
+              ),
+            ),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: _isDarkMode ? Colors.white38 : Colors.blueGrey,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildControlPanel(String title, List<Widget> children) {
+    final Color cardBg = _isDarkMode ? const Color(0xFF1E1033) : Colors.white;
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: _isDarkMode
+              ? Colors.white.withOpacity(0.05)
+              : Colors.black.withOpacity(0.05),
+        ),
+        boxShadow: _isDarkMode
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 10,
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                  color: _isDarkMode ? Colors.white : primaryViolet,
+                ),
+              ),
+              Icon(
+                LucideIcons.moreHorizontal,
+                color: _isDarkMode ? Colors.white24 : Colors.blueGrey.shade200,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogRow(String text, String time, {bool success = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        children: [
+          Icon(
+            success ? LucideIcons.checkCircle : LucideIcons.activity,
+            size: 16,
+            color: success
+                ? successColor
+                : (_isDarkMode ? Colors.white24 : Colors.blueGrey.shade200),
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: _isDarkMode ? Colors.white70 : Colors.blueGrey.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            time,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: _isDarkMode ? Colors.white24 : Colors.blueGrey.shade400,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAction(String title, IconData icon, Color color) {
+    final Color cardBg = _isDarkMode ? const Color(0xFF1E1033) : Colors.white;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _isDarkMode
+              ? Colors.white.withOpacity(0.03)
+              : Colors.black.withOpacity(0.05),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 16),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              color: _isDarkMode ? Colors.white : primaryViolet,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+          ),
+          const Spacer(),
+          Icon(
+            LucideIcons.chevronRight,
+            color: _isDarkMode ? Colors.white12 : Colors.blueGrey.shade200,
+            size: 16,
+          ),
+        ],
+      ),
+    );
+  }
 }
-//ehhehehehheheeheehehehehheheheheheh
-//minecraft si darlene
