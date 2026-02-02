@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart'; //ito ay external packages hehe
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:uems_project/views/dashboard_view.dart';
 
 class UEMSLoginPage extends StatefulWidget {
   const UEMSLoginPage({super.key});
@@ -104,29 +105,58 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
-    setState(() => _isLoading = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Row(
-          children: [
-            const Icon(LucideIcons.shieldCheck, color: successColor, size: 24),
-            const SizedBox(width: 15),
-            Text(
-              'Processing Secure Authentication...',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
+    // Hardcoded student credentials
+    const String studentId = "2023-10294";
+    const String studentPassword = "student123";
+
+    // Validate credentials
+    if (_selectedRole == 'student' &&
+        _idController.text == studentId &&
+        _passwordController.text == studentPassword) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: Row(
+            children: [
+              const Icon(LucideIcons.shieldCheck, color: successColor, size: 24),
+              const SizedBox(width: 15),
+              Text(
+                'Authentication Successful!',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+          backgroundColor: Colors.green.shade600,
         ),
-        backgroundColor: tertiaryDark,
-      ),
-    );
+      );
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const StudentDashboard(),
+          ),
+        );
+      }
+    } else {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            "Invalid credentials. Please try again.",
+            style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+          ),
+          backgroundColor: Colors.redAccent.shade400,
+        ),
+      );
+    }
   }
 
   @override
