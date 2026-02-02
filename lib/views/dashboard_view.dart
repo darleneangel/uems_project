@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:uems_project/views/login_view.dart';
+import 'package:uems_project/views/subject_load_view.dart';
+import 'package:uems_project/views/assessment_view.dart';
+import 'package:uems_project/views/grade_book_view.dart';
+import 'package:uems_project/views/clearance_view.dart';
+import 'package:uems_project/views/profile_view.dart';
+import 'package:uems_project/views/health_declaration_view.dart';
 import 'dart:ui';
 
 class StudentDashboard extends StatelessWidget {
@@ -112,11 +118,11 @@ class StudentDashboard extends StatelessWidget {
               ],
             ),
           ),
-          _modernSidebarItem(LucideIcons.layoutDashboard, "Dashboard", isSelected: true),
-          _modernSidebarItem(LucideIcons.bookOpen, "Subject Load"),
-          _modernSidebarItem(LucideIcons.barChart3, "Assessment"),
-          _modernSidebarItem(LucideIcons.book, "Grade Book"),
-          _modernSidebarItem(LucideIcons.shield, "Clearance"),
+          _modernSidebarItem(LucideIcons.layoutDashboard, "Dashboard", context, isSelected: true),
+          _modernSidebarItem(LucideIcons.bookOpen, "Subject Load", context, onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const SubjectLoadView()))),
+          _modernSidebarItem(LucideIcons.barChart3, "Assessment", context, onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AssessmentView()))),
+          _modernSidebarItem(LucideIcons.book, "Grade Book", context, onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const GradeBookView()))),
+          _modernSidebarItem(LucideIcons.shield, "Clearance", context, onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ClearanceView()))),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8.0),
             child: Divider(color: Colors.white24),
@@ -133,11 +139,12 @@ class StudentDashboard extends StatelessWidget {
               ),
             ),
           ),
-          _modernSidebarItem(LucideIcons.user, "KURT ANDREI", color: accentColor),
-          _modernSidebarItem(LucideIcons.heart, "Health Declaration"),
+          _modernSidebarItem(LucideIcons.user, "KURT ANDREI", context, color: accentColor, onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ProfileView()))),
+          _modernSidebarItem(LucideIcons.heart, "Health Declaration", context, onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HealthDeclarationView()))),
           _modernSidebarItem(
             LucideIcons.logOut,
             "Logout",
+            context,
             color: Colors.red,
             onTap: () {
               Navigator.of(context).pushReplacement(
@@ -152,7 +159,8 @@ class StudentDashboard extends StatelessWidget {
 
   Widget _modernSidebarItem(
     IconData icon,
-    String title, {
+    String title,
+    BuildContext context, {
     bool isSelected = false,
     Color color = Colors.white70,
     VoidCallback? onTap,
