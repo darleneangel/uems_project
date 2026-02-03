@@ -180,9 +180,17 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             tooltip: "Switch to ${_isDarkMode ? 'Light' : 'Dark'} Mode",
           ),
           const SizedBox(width: 16),
-          _buildHeaderAction(LucideIcons.search, subTextColor),
+          _buildHeaderAction(
+            LucideIcons.search,
+            subTextColor,
+            onTap: _showSearchDialog,
+          ),
           const SizedBox(width: 16),
-          _buildHeaderAction(LucideIcons.bell, subTextColor),
+          _buildHeaderAction(
+            LucideIcons.bell,
+            subTextColor,
+            onTap: _showNotificationsPanel,
+          ),
           const SizedBox(width: 24),
           VerticalDivider(
             color: subTextColor.withOpacity(0.2),
@@ -367,6 +375,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               LucideIcons.users,
               aViolet,
               textColor,
+              onTap: () {
+                setState(() => _activeModuleIndex = 2); // Admissions
+              },
             ),
             _buildStatCard(
               "Active Courses",
@@ -374,6 +385,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               LucideIcons.book,
               Colors.blueAccent,
               textColor,
+              onTap: () {
+                setState(() => _activeModuleIndex = 6); // Study Loads
+              },
             ),
             _buildStatCard(
               "Financial Clearances",
@@ -381,6 +395,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               LucideIcons.wallet,
               success,
               textColor,
+              onTap: () {
+                setState(() => _activeModuleIndex = 4); // Accounting
+              },
             ),
             _buildStatCard(
               "System Health",
@@ -604,47 +621,54 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     IconData icon,
     Color color,
     Color textColor,
+    {VoidCallback? onTap}
   ) {
     return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: _isDarkMode ? surfaceDark : Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: _isDarkMode ? Colors.white10 : Colors.black12,
+      child: GestureDetector(
+        onTap: onTap,
+        child: MouseRegion(
+          cursor: onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: _isDarkMode ? surfaceDark : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: _isDarkMode ? Colors.white10 : Colors.black12,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: textColor,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Colors.blueGrey,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                color: textColor,
-              ),
-            ),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                color: Colors.blueGrey,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -684,19 +708,385 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  Widget _buildHeaderAction(IconData icon, Color subTextColor) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: _isDarkMode
-            ? Colors.white.withOpacity(0.05)
-            : Colors.black.withOpacity(0.05),
-        shape: BoxShape.circle,
+  Widget _buildHeaderAction(IconData icon, Color subTextColor,
+      {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: _isDarkMode
+                ? Colors.white.withOpacity(0.05)
+                : Colors.black.withOpacity(0.05),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: subTextColor, size: 20),
+        ),
       ),
-      child: Icon(icon, color: subTextColor, size: 20),
+    );
+  }
+
+  void _showSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => SearchDialog(
+        isDarkMode: _isDarkMode,
+        onItemSelected: (index) {
+          Navigator.pop(context);
+          setState(() => _activeModuleIndex = index);
+        },
+      ),
+    );
+  }
+
+  void _showNotificationsPanel() {
+    showDialog(
+      context: context,
+      builder: (context) => NotificationsPanel(isDarkMode: _isDarkMode),
     );
   }
 }
+
+// SEARCH DIALOG CLASS
+class SearchDialog extends StatefulWidget {
+  final bool isDarkMode;
+  final Function(int) onItemSelected;
+
+  const SearchDialog({
+    required this.isDarkMode,
+    required this.onItemSelected,
+  });
+
+  @override
+  State<SearchDialog> createState() => _SearchDialogState();
+}
+
+class _SearchDialogState extends State<SearchDialog> {
+  late TextEditingController _searchController;
+  List<MapEntry<int, String>> _filteredItems = [];
+
+  final List<MapEntry<int, String>> allItems = [
+    const MapEntry(0, 'System Overview'),
+    const MapEntry(1, 'Announcements'),
+    const MapEntry(2, 'Admissions'),
+    const MapEntry(3, 'Registrar'),
+    const MapEntry(4, 'Accounting'),
+    const MapEntry(6, 'Study Loads'),
+    const MapEntry(7, 'Grade Recording'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _filteredItems = allItems;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterItems(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredItems = allItems;
+      } else {
+        _filteredItems = allItems
+            .where((item) =>
+                item.value.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const Color aViolet = Color(0xFF8B5CF6);
+    const Color surfaceDark = Color(0xFF1E1033);
+    const Color tDark = Color(0xFF0F071D);
+    const Color lBg = Color(0xFFF8FAFC);
+    const Color pViolet = Color(0xFF2E1065);
+
+    final bgColor = widget.isDarkMode ? tDark : lBg;
+    final sideColor = widget.isDarkMode ? surfaceDark : Colors.white;
+    final textColor = widget.isDarkMode ? Colors.white : pViolet;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: 500,
+        decoration: BoxDecoration(
+          color: sideColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: widget.isDarkMode ? Colors.white10 : Colors.black12,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Search Menu Items',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _searchController,
+                onChanged: _filterItems,
+                decoration: InputDecoration(
+                  hintText: 'Type to search...',
+                  prefixIcon: Icon(
+                    LucideIcons.search,
+                    color: Colors.blueGrey,
+                  ),
+                  filled: true,
+                  fillColor: widget.isDarkMode
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.black.withOpacity(0.05),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: widget.isDarkMode
+                          ? Colors.white10
+                          : Colors.black12,
+                    ),
+                  ),
+                  hintStyle: GoogleFonts.inter(color: Colors.blueGrey),
+                ),
+                style: GoogleFonts.inter(color: textColor),
+              ),
+              const SizedBox(height: 20),
+              Flexible(
+                child: _filteredItems.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No items found',
+                          style: GoogleFonts.inter(
+                            color: Colors.blueGrey,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _filteredItems.length,
+                        itemBuilder: (context, index) {
+                          final item = _filteredItems[index];
+                          return ListTile(
+                            title: Text(
+                              item.value,
+                              style: GoogleFonts.inter(
+                                color: textColor,
+                                fontSize: 14,
+                              ),
+                            ),
+                            onTap: () {
+                              widget.onItemSelected(item.key);
+                            },
+                            hoverColor: widget.isDarkMode
+                                ? Colors.white10
+                                : Colors.black12,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// NOTIFICATIONS PANEL CLASS
+class NotificationsPanel extends StatelessWidget {
+  final bool isDarkMode;
+
+  const NotificationsPanel({required this.isDarkMode});
+
+  @override
+  Widget build(BuildContext context) {
+    const Color aViolet = Color(0xFF8B5CF6);
+    const Color surfaceDark = Color(0xFF1E1033);
+    const Color tDark = Color(0xFF0F071D);
+    const Color lBg = Color(0xFFF8FAFC);
+    const Color pViolet = Color(0xFF2E1065);
+    const Color success = Color(0xFF69F0AE);
+
+    final bgColor = isDarkMode ? tDark : lBg;
+    final sideColor = isDarkMode ? surfaceDark : Colors.white;
+    final textColor = isDarkMode ? Colors.white : pViolet;
+
+    // Hardcoded notifications
+    final notifications = [
+      {
+        'title': 'New Student Enrollment',
+        'message': '5 new students enrolled in Computer Science program',
+        'time': '2m ago',
+        'icon': LucideIcons.userPlus,
+        'color': Colors.blueAccent,
+      },
+      {
+        'title': 'Financial Clearance Updated',
+        'message': '92% of students have completed financial clearance',
+        'time': '15m ago',
+        'icon': LucideIcons.checkCircle,
+        'color': success,
+      },
+      {
+        'title': 'Grade Recording Completed',
+        'message': 'All grades for Fall 2025 semester have been recorded',
+        'time': '1h ago',
+        'icon': LucideIcons.award,
+        'color': Colors.orangeAccent,
+      },
+      {
+        'title': 'System Maintenance',
+        'message': 'Scheduled maintenance completed successfully',
+        'time': '3h ago',
+        'icon': LucideIcons.wrench,
+        'color': aViolet,
+      },
+      {
+        'title': 'Course Registration Open',
+        'message': 'Spring 2026 course registration is now open',
+        'time': '5h ago',
+        'icon': LucideIcons.bookOpen,
+        'color': Colors.pinkAccent,
+      },
+    ];
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: 450,
+        decoration: BoxDecoration(
+          color: sideColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDarkMode ? Colors.white10 : Colors.black12,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Text(
+                    'Notifications',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(LucideIcons.x),
+                    color: Colors.blueGrey,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Divider(
+              color: isDarkMode ? Colors.white10 : Colors.black12,
+              height: 0,
+            ),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: notifications.length,
+                itemBuilder: (context, index) {
+                  final notif = notifications[index];
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isDarkMode
+                              ? Colors.white10
+                              : Colors.black12,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color:
+                                (notif['color'] as Color).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            notif['icon'] as IconData,
+                            color: notif['color'] as Color,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                notif['title'] as String,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                notif['message'] as String,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.blueGrey,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                notif['time'] as String,
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: Colors.blueGrey.withOpacity(0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 // PAINTER FOR PIE CHART
 class PieChartPainter extends CustomPainter {
