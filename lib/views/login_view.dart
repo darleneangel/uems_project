@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 // Import your student dashboard file here
@@ -137,7 +136,9 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   Widget build(BuildContext context) {
     switch (_currentView) {
       case 'student_portal':
-        return const StudentDashboardView();
+        return StudentDashboardView(
+          onLogout: () => setState(() => _currentView = 'login'),
+        );
       case 'admin_dashboard':
         return AdminDashboardView(
           onLogout: () => setState(() => _currentView = 'login'),

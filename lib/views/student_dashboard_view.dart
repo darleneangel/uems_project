@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../components/dashboard_panel_template.dart';
+import '../components/student_panel_content.dart';
 
 class StudentDashboardView extends StatefulWidget {
-  const StudentDashboardView({super.key});
+  final VoidCallback? onLogout;
+  const StudentDashboardView({super.key, this.onLogout});
 
   @override
   State<StudentDashboardView> createState() => _StudentDashboardViewState();
@@ -15,13 +17,22 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   bool _isDarkMode = true;
   bool _isSidebarExpanded = true;
   int _selectedIndex = 0;
+  
+  // Panel mapping
+  final List<String> _panelTypes = [
+    'dashboard',
+    'subject_load',
+    'assessment',
+    'grade_book',
+    'clearance',
+    'profile',
+    'health_declaration',
+  ];
 
   // Violet Theme Colors (Dark)
   static const Color pViolet = Color(0xFF2E1065);
-  static const Color sViolet = Color(0xFF4C1D95);
   static const Color tDark = Color(0xFF0F071D);
   static const Color aViolet = Color(0xFF8B5CF6);
-  static const Color surface = Color(0xFF1E1B4B);
   static const Color success = Color(0xFF69F0AE);
 
   // Layout logic
@@ -30,10 +41,66 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
 
   @override
   Widget build(BuildContext context) {
+    if (_selectedIndex == 0) {
+      return _buildDashboardHome();
+    }
+
+    final sidebarItems = [
+      PanelMenuItem(title: 'Dashboard', icon: LucideIcons.home),
+      PanelMenuItem(title: 'Subject Load', icon: LucideIcons.bookOpen),
+      PanelMenuItem(title: 'Assessment', icon: LucideIcons.barChart3),
+      PanelMenuItem(title: 'Grade Book', icon: LucideIcons.book),
+      PanelMenuItem(title: 'Clearance', icon: LucideIcons.shield),
+      PanelMenuItem(title: 'Profile', icon: LucideIcons.user),
+      PanelMenuItem(title: 'Health Declaration', icon: LucideIcons.heartPulse),
+      PanelMenuItem(title: 'Logout', icon: LucideIcons.logOut),
+    ];
+
+    String panelTitle = '';
+    switch (_selectedIndex) {
+      case 1:
+        panelTitle = 'Subject Load';
+        break;
+      case 2:
+        panelTitle = 'Assessment';
+        break;
+      case 3:
+        panelTitle = 'Grade Book';
+        break;
+      case 4:
+        panelTitle = 'Clearance';
+        break;
+      case 5:
+        panelTitle = 'My Profile';
+        break;
+      case 6:
+        panelTitle = 'Health Declaration';
+        break;
+    }
+
+    return DashboardPanelTemplate(
+      panelTitle: panelTitle,
+      subtitle: '',
+      panelContent: StudentPanelContent(panelType: _panelTypes[_selectedIndex]),
+      sidebarItems: sidebarItems,
+      onLogout: () {
+        widget.onLogout?.call();
+      },
+      isDarkMode: _isDarkMode,
+      onMenuItemSelected: (index) => setState(() => _selectedIndex = index),
+      selectedIndex: _selectedIndex,
+      isSidebarExpanded: _isSidebarExpanded,
+      onSidebarToggle: (expanded) =>
+          setState(() => _isSidebarExpanded = expanded),
+      isAdminPanel: false,
+    );
+  }
+
+  Widget _buildDashboardHome() {
     // Dynamic theme colors
-    final bgColor = _isDarkMode ? tDark : const Color(0xFFF8FAFC);
-    final cardColor = _isDarkMode ? surface : Colors.white;
-    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final bgColor = _isDarkMode ? const Color(0xFF0F071D) : const Color(0xFFF8FAFC);
+    final cardColor = _isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
+    final textColor = _isDarkMode ? Colors.white : const Color(0xFF2E1065);
     final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
 
     return Scaffold(
@@ -51,7 +118,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(32),
-                    child: _buildPanelContent(
+                    child: _buildPanelContentHome(
                       cardColor,
                       textColor,
                       subTextColor,
@@ -234,7 +301,13 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
-        onTap: () => setState(() => _selectedIndex = index),
+        onTap: () {
+          if (isDestructive) {
+            widget.onLogout?.call();
+          } else {
+            setState(() => _selectedIndex = index);
+          }
+        },
         minLeadingWidth: 20,
         leading: Icon(
           icon,
@@ -259,7 +332,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     );
   }
 
-  Widget _buildPanelContent(
+  Widget _buildPanelContentHome(
     Color cardColor,
     Color textColor,
     Color subTextColor,

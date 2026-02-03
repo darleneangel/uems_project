@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart'; //ito ay external packages hehe
-import 'package:lucide_icons/lucide_icons.dart';
 
 class UEMSAdminView extends StatefulWidget {
   const UEMSAdminView({super.key});

@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'dart:math' as math;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../components/dashboard_panel_template.dart';
+import '../components/admin_panel_content.dart';
 
 class AdminDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -14,8 +16,20 @@ class AdminDashboardView extends StatefulWidget {
 
 class _AdminDashboardViewState extends State<AdminDashboardView> {
   bool _isSidebarExpanded = true;
-  bool _isDarkMode = true; // Global Theme Toggle
+  bool _isDarkMode = true;
   int _activeModuleIndex = 0;
+
+  // Panel mapping
+  final List<String> _panelTypes = [
+    'overview',
+    'announcements',
+    'admissions',
+    'registrar',
+    'accounting',
+    '',
+    'study_loads',
+    'grade_recording',
+  ];
 
   // Violet Theme Colors (Dark)
   static const Color pViolet = Color(0xFF2E1065);
@@ -26,8 +40,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
 
   // Light Mode Palette
   static const Color lBg = Color(0xFFF8FAFC);
-  static const Color lSurface = Colors.white;
-  static const Color lPrimary = Color(0xFF6D28D9);
 
   void _toggleTheme() => setState(() => _isDarkMode = !_isDarkMode);
 
@@ -38,29 +50,85 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     final textColor = _isDarkMode ? Colors.white : pViolet;
     final subTextColor = _isDarkMode ? Colors.white54 : Colors.blueGrey;
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: Row(
-        children: [
-          // 1. DYNAMIC ADMINISTRATIVE SIDEBAR
-          _buildSidebar(sideColor, textColor, subTextColor),
-
-          // 2. MAIN CONTROL PANEL
-          Expanded(
-            child: Column(
-              children: [
-                _buildTopBar(sideColor, textColor, subTextColor),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(32),
-                    child: _buildDashboardIntelligence(textColor, subTextColor),
+    // Show overview dashboard when index is 0
+    if (_activeModuleIndex == 0) {
+      return Scaffold(
+        backgroundColor: bgColor,
+        body: Row(
+          children: [
+            _buildSidebar(sideColor, textColor, subTextColor),
+            Expanded(
+              child: Column(
+                children: [
+                  _buildTopBar(sideColor, textColor, subTextColor),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(32),
+                      child: _buildDashboardIntelligence(textColor, subTextColor),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      );
+    }
+
+    // Show panel template for other views
+    final sidebarItems = [
+      PanelMenuItem(title: 'System Overview', icon: LucideIcons.layoutDashboard),
+      PanelMenuItem(title: 'Announcements', icon: LucideIcons.megaphone),
+      PanelMenuItem(title: 'Admissions', icon: LucideIcons.userPlus),
+      PanelMenuItem(title: 'Registrar', icon: LucideIcons.users),
+      PanelMenuItem(title: 'Accounting', icon: LucideIcons.wallet),
+      PanelMenuItem(title: '', icon: LucideIcons.divideSquare),
+      PanelMenuItem(title: 'Study Loads', icon: LucideIcons.layers),
+      PanelMenuItem(title: 'Grade Recording', icon: LucideIcons.bookMarked),
+      PanelMenuItem(title: 'Secure Logout', icon: LucideIcons.logOut),
+    ];
+
+    String panelTitle = '';
+    switch (_activeModuleIndex) {
+      case 1:
+        panelTitle = 'Announcements Management';
+        break;
+      case 2:
+        panelTitle = 'Admissions Management';
+        break;
+      case 3:
+        panelTitle = 'Registrar Services';
+        break;
+      case 4:
+        panelTitle = 'Accounting & Finance';
+        break;
+      case 6:
+        panelTitle = 'Study Loads Management';
+        break;
+      case 7:
+        panelTitle = 'Grade Recording System';
+        break;
+    }
+
+    return DashboardPanelTemplate(
+      panelTitle: panelTitle,
+      subtitle: '',
+      panelContent: AdminPanelContent(panelType: _panelTypes[_activeModuleIndex]),
+      sidebarItems: sidebarItems,
+      onLogout: widget.onLogout,
+      isDarkMode: _isDarkMode,
+      onMenuItemSelected: (index) {
+        if (index == 8) {
+          widget.onLogout();
+        } else if (index != 5) {
+          setState(() => _activeModuleIndex = index);
+        }
+      },
+      selectedIndex: _activeModuleIndex,
+      isSidebarExpanded: _isSidebarExpanded,
+      onSidebarToggle: (expanded) =>
+          setState(() => _isSidebarExpanded = expanded),
+      isAdminPanel: true,
     );
   }
 
@@ -222,7 +290,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             9,
             textColor,
             isDestructive: true,
-            onTap: widget.onLogout,
+            onTap: () => widget.onLogout(),
           ),
           const SizedBox(height: 20),
         ],
