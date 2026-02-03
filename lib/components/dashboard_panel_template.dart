@@ -40,6 +40,23 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
   static const Color tDark = Color(0xFF0F071D);
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color surfaceDark = Color(0xFF1E1033);
+  
+  // Temporary hardcoded notifications (can be replaced with live data)
+  final List<Map<String, String>> _notifications = [
+    {
+      'title': 'Grades Available',
+      'subtitle': 'Grades for 2nd Semester are now available.',
+      'time': '2h ago'
+    },
+    {
+      'title': 'Advising Schedule',
+      'subtitle': 'Advising is scheduled next week. Check your calendar.',
+      'time': '1d ago'
+    },
+  ];
+
+  // Build searchable labels from the sidebar items so search stays in sync.
+  List<String> get _searchLabels => widget.sidebarItems.map((e) => e.title).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -238,8 +255,85 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
             ),
           ),
           const Spacer(),
-          Icon(LucideIcons.bell, color: subTextColor, size: 20),
-          const SizedBox(width: 24),
+
+          // Search button (smart search using sidebar labels)
+          IconButton(
+            icon: Icon(LucideIcons.search, color: subTextColor),
+            onPressed: () async {
+              final result = await showSearch<String?>(
+                context: context,
+                delegate: _SmartSearchDelegate(_searchLabels),
+              );
+              if (result != null && result.isNotEmpty) {
+                final match = widget.sidebarItems.indexWhere(
+                    (it) => it.title.toLowerCase() == result.toLowerCase());
+                if (match >= 0) {
+                  widget.onMenuItemSelected(match);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('No panel for "${result}"')),
+                  );
+                }
+              }
+            },
+          ),
+
+          const SizedBox(width: 8),
+
+          // Notifications (opens a bottom sheet with actions)
+          IconButton(
+            icon: Icon(LucideIcons.bell, color: subTextColor, size: 20),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: widget.isDarkMode ? tDark : Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                ),
+                builder: (ctx) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Notifications', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: widget.isDarkMode ? Colors.white : Colors.black)),
+                              IconButton(
+                                icon: const Icon(LucideIcons.x),
+                                onPressed: () => Navigator.of(ctx).pop(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(),
+                        ..._notifications.map((n) {
+                          return ListTile(
+                            leading: const Icon(LucideIcons.megaphone, size: 20, color: Colors.deepPurpleAccent),
+                            title: Text(n['title']!, style: GoogleFonts.inter(color: widget.isDarkMode ? Colors.white : Colors.black, fontWeight: FontWeight.w700)),
+                            subtitle: Text(n['subtitle']!, style: GoogleFonts.inter(color: widget.isDarkMode ? Colors.white70 : Colors.black54)),
+                            trailing: Text(n['time']!, style: GoogleFonts.inter(fontSize: 12, color: widget.isDarkMode ? Colors.white54 : Colors.black45)),
+                            onTap: () {
+                              Navigator.of(ctx).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('${n['title']}: ${n['subtitle']}')),
+                              );
+                            },
+                          );
+                        }).toList(),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+
+          const SizedBox(width: 12),
           CircleAvatar(
             radius: 18,
             backgroundColor: aViolet,
@@ -263,4 +357,57 @@ class PanelMenuItem {
   final IconData icon;
 
   PanelMenuItem({required this.title, required this.icon});
+}
+
+/// Simple SearchDelegate that returns the selected suggestion string.
+class _SmartSearchDelegate extends SearchDelegate<String?> {
+  final List<String> items;
+  _SmartSearchDelegate(this.items);
+
+  @override
+  String get searchFieldLabel => 'Search across portal';
+
+  @override
+  TextStyle? get searchFieldStyle => const TextStyle();
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      if (query.isNotEmpty)
+        IconButton(icon: const Icon(LucideIcons.x), onPressed: () => query = '')
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(icon: const Icon(LucideIcons.chevronLeft), onPressed: () => close(context, null));
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    final results = items.where((i) => i.toLowerCase().contains(query.toLowerCase())).toList();
+    return ListView(
+      children: results.map((r) {
+        return ListTile(
+          title: Text(r),
+          onTap: () => close(context, r),
+        );
+      }).toList(),
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    final suggestions = query.isEmpty
+        ? items.take(6).toList()
+        : items.where((i) => i.toLowerCase().contains(query.toLowerCase())).toList();
+    return ListView(
+      children: suggestions.map((s) {
+        return ListTile(
+          title: Text(s),
+          onTap: () => close(context, s),
+        );
+      }).toList(),
+    );
+  }
 }

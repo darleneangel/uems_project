@@ -754,7 +754,7 @@ class SearchDialog extends StatefulWidget {
   final bool isDarkMode;
   final Function(int) onItemSelected;
 
-  const SearchDialog({
+  const SearchDialog({super.key, 
     required this.isDarkMode,
     required this.onItemSelected,
   });
@@ -914,7 +914,7 @@ class _SearchDialogState extends State<SearchDialog> {
 class NotificationsPanel extends StatelessWidget {
   final bool isDarkMode;
 
-  const NotificationsPanel({required this.isDarkMode});
+  const NotificationsPanel({super.key, required this.isDarkMode});
 
   @override
   Widget build(BuildContext context) {

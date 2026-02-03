@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../components/dashboard_panel_template.dart';
@@ -17,8 +17,8 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   bool _isDarkMode = true;
   bool _isSidebarExpanded = true;
   int _selectedIndex = 0;
-  
-  // Panel mapping
+
+  // Panel mapping (0..6 correspond to sidebar items excluding Logout)
   final List<String> _panelTypes = [
     'dashboard',
     'subject_load',
@@ -26,7 +26,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     'grade_book',
     'clearance',
     'profile',
-    'health_declaration',
+    'payment_upload',
   ];
 
   // Violet Theme Colors (Dark)
@@ -35,16 +35,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color success = Color(0xFF69F0AE);
 
-  // Layout logic
-  void _toggleSidebar() =>
-      setState(() => _isSidebarExpanded = !_isSidebarExpanded);
-
   @override
   Widget build(BuildContext context) {
-    if (_selectedIndex == 0) {
-      return _buildDashboardHome();
-    }
-
+    // Sidebar items: last item is Logout (destructive)
     final sidebarItems = [
       PanelMenuItem(title: 'Dashboard', icon: LucideIcons.home),
       PanelMenuItem(title: 'Subject Load', icon: LucideIcons.bookOpen),
@@ -52,11 +45,13 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
       PanelMenuItem(title: 'Grade Book', icon: LucideIcons.book),
       PanelMenuItem(title: 'Clearance', icon: LucideIcons.shield),
       PanelMenuItem(title: 'Profile', icon: LucideIcons.user),
-      PanelMenuItem(title: 'Health Declaration', icon: LucideIcons.heartPulse),
+      PanelMenuItem(title: 'Bank Payment', icon: LucideIcons.creditCard),
       PanelMenuItem(title: 'Logout', icon: LucideIcons.logOut),
     ];
 
-    String panelTitle = '';
+    // Panel title mapping
+    String panelTitle = 'Dashboard';
+    String subtitle = '';
     switch (_selectedIndex) {
       case 1:
         panelTitle = 'Subject Load';
@@ -74,264 +69,49 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
         panelTitle = 'My Profile';
         break;
       case 6:
-        panelTitle = 'Health Declaration';
+        panelTitle = 'Payment Upload';
         break;
+      default:
+        panelTitle = 'Dashboard';
+        subtitle = 'Welcome back, DARLENE ANGEL';
     }
+
+    // compute colors (used by dashboard content helper)
+    final cardColor = _isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
+    final textColor = _isDarkMode ? Colors.white : const Color(0xFF2E1065);
+    final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
+
+    // The panel content: dashboard content when 0, otherwise StudentPanelContent
+    final Widget panelContent = (_selectedIndex == 0)
+        ? _buildPanelContentHome(cardColor, textColor, subTextColor)
+        : StudentPanelContent(
+            panelType: (_selectedIndex < _panelTypes.length)
+                ? _panelTypes[_selectedIndex]
+                : 'dashboard');
 
     return DashboardPanelTemplate(
       panelTitle: panelTitle,
-      subtitle: '',
-      panelContent: StudentPanelContent(panelType: _panelTypes[_selectedIndex]),
+      subtitle: subtitle,
+      panelContent: panelContent,
       sidebarItems: sidebarItems,
       onLogout: () {
         widget.onLogout?.call();
       },
       isDarkMode: _isDarkMode,
-      onMenuItemSelected: (index) => setState(() => _selectedIndex = index),
+      onMenuItemSelected: (index) {
+        // template will call this for non-destructive items; Logout handled in template
+        if (index >= 0 && index < _panelTypes.length) {
+          setState(() => _selectedIndex = index);
+        }
+      },
       selectedIndex: _selectedIndex,
       isSidebarExpanded: _isSidebarExpanded,
-      onSidebarToggle: (expanded) =>
-          setState(() => _isSidebarExpanded = expanded),
+      onSidebarToggle: (expanded) => setState(() => _isSidebarExpanded = expanded),
       isAdminPanel: false,
     );
   }
 
-  Widget _buildDashboardHome() {
-    // Dynamic theme colors
-    final bgColor = _isDarkMode ? const Color(0xFF0F071D) : const Color(0xFFF8FAFC);
-    final cardColor = _isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
-    final textColor = _isDarkMode ? Colors.white : const Color(0xFF2E1065);
-    final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
-
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: Row(
-        children: [
-          // 1. FIXED TOGGLEABLE SIDEBAR
-          _buildSidebar(cardColor, textColor, subTextColor),
-
-          // 2. MAIN PANEL
-          Expanded(
-            child: Column(
-              children: [
-                _buildTopBar(textColor, subTextColor),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(32),
-                    child: _buildPanelContentHome(
-                      cardColor,
-                      textColor,
-                      subTextColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTopBar(Color textColor, Color subTextColor) {
-    return Container(
-      height: 70,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: BoxDecoration(
-        color: _isDarkMode ? tDark : Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: _isDarkMode ? Colors.white10 : Colors.black12,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(
-              _isSidebarExpanded ? LucideIcons.menu : LucideIcons.chevronRight,
-              color: textColor,
-            ),
-            onPressed: _toggleSidebar,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            "Home > Dashboard",
-            style: GoogleFonts.inter(
-              color: subTextColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Spacer(),
-          // Theme Toggle
-          IconButton(
-            icon: Icon(
-              _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
-              color: textColor,
-            ),
-            onPressed: () => setState(() => _isDarkMode = !_isDarkMode),
-          ),
-          const SizedBox(width: 20),
-          Icon(LucideIcons.bell, color: subTextColor, size: 20),
-          const SizedBox(width: 24),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: aViolet,
-            child: Text(
-              "DA",
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebar(Color cardColor, Color textColor, Color subTextColor) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      width: _isSidebarExpanded ? 260 : 80,
-      color: _isDarkMode ? pViolet : const Color(0xFFF1F5F9),
-      child: Column(
-        children: [
-          const SizedBox(height: 30),
-          // Logo Section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: aViolet.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  LucideIcons.graduationCap,
-                  color: aViolet,
-                  size: 24,
-                ),
-              ),
-              if (_isSidebarExpanded) ...[
-                const SizedBox(width: 12),
-                Text(
-                  "UEMS Portal",
-                  style: GoogleFonts.orbitron(
-                    color: textColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 40),
-          // "Enroll Now" Prompt from image
-          if (_isSidebarExpanded)
-            _buildSidebarEnrollCard()
-          else
-            const Icon(LucideIcons.plusCircle, color: success),
-          const SizedBox(height: 30),
-          // Menu Items
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                _menuItem(LucideIcons.home, "Dashboard", 0),
-                _menuItem(LucideIcons.bookOpen, "Subject Load", 1),
-                _menuItem(LucideIcons.barChart3, "Assessment", 2),
-                _menuItem(LucideIcons.book, "Grade Book", 3),
-                _menuItem(LucideIcons.shield, "Clearance", 4),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Divider(color: Colors.white10),
-                ),
-                _menuItem(LucideIcons.user, "Profile", 5),
-                _menuItem(LucideIcons.heartPulse, "Health Declaration", 6),
-                _menuItem(LucideIcons.logOut, "Logout", 7, isDestructive: true),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebarEnrollCard() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: success.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: success.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          const Icon(LucideIcons.zap, color: success, size: 20),
-          const SizedBox(width: 12),
-          Text(
-            "Enroll Now",
-            style: GoogleFonts.inter(
-              color: success,
-              fontWeight: FontWeight.w800,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _menuItem(
-    IconData icon,
-    String title,
-    int index, {
-    bool isDestructive = false,
-  }) {
-    bool isSelected = _selectedIndex == index;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? aViolet.withOpacity(0.15) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        onTap: () {
-          if (isDestructive) {
-            widget.onLogout?.call();
-          } else {
-            setState(() => _selectedIndex = index);
-          }
-        },
-        minLeadingWidth: 20,
-        leading: Icon(
-          icon,
-          color: isDestructive
-              ? Colors.redAccent
-              : (isSelected ? aViolet : Colors.blueGrey),
-          size: 20,
-        ),
-        title: _isSidebarExpanded
-            ? Text(
-                title,
-                style: GoogleFonts.inter(
-                  color: isDestructive
-                      ? Colors.redAccent
-                      : (isSelected ? Colors.white : Colors.blueGrey),
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 14,
-                ),
-              )
-            : null,
-      ),
-    );
-  }
-
+  // --- Dashboard content (kept as helper methods) ---
   Widget _buildPanelContentHome(
     Color cardColor,
     Color textColor,
@@ -340,40 +120,11 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header from image
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Dashboard",
-                  style: GoogleFonts.inter(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    color: textColor,
-                  ),
-                ),
-                Text(
-                  "Welcome back, DARLENE ANGEL",
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: subTextColor,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            // Enrollment Banner from image
-            _buildEnrollNowBanner(),
-          ],
-        ),
+        // The panel title is rendered by the template. Keep only the enroll banner here.
+        Align(alignment: Alignment.topRight, child: _buildEnrollNowBanner()),
         const SizedBox(height: 32),
-        // ENROLLMENT TRACKS (Main Section from Image)
         _buildEnrollmentTrackSection(cardColor, textColor, subTextColor),
         const SizedBox(height: 32),
-        // ANNOUNCEMENTS
         _buildAnnouncements(cardColor, textColor, subTextColor),
       ],
     );
@@ -451,7 +202,6 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
             style: GoogleFonts.inter(fontSize: 13, color: subTextColor),
           ),
           const SizedBox(height: 40),
-          // Progress Bar
           Stack(
             children: [
               Container(
@@ -503,7 +253,6 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
             ],
           ),
           const SizedBox(height: 40),
-          // Payment Upload Section
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -527,7 +276,10 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
                   width: 250,
                   height: 50,
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      // navigate to the payment upload panel (index 6)
+                      setState(() => _selectedIndex = 6);
+                    },
                     icon: const Icon(LucideIcons.upload, size: 18),
                     label: const Text("UPLOAD & SEND"),
                     style: ElevatedButton.styleFrom(

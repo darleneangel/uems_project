@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:image_picker/image_picker.dart';
 
 class StudentPanelContent extends StatelessWidget {
   final String panelType;
@@ -25,9 +28,9 @@ class StudentPanelContent extends StatelessWidget {
       case 'clearance':
         return _buildClearancePanel();
       case 'profile':
-        return _buildProfilePanel();
-      case 'health_declaration':
-        return _buildHealthDeclarationPanel();
+        return const ProfilePanel();
+      case 'payment_upload':
+        return const PaymentUploadPanel();
       default:
         return _buildDefaultPanel();
     }
@@ -280,94 +283,6 @@ class StudentPanelContent extends StatelessWidget {
     );
   }
 
-  Widget _buildProfilePanel() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: aViolet,
-                child: Text(
-                  'DA',
-                  style: GoogleFonts.inter(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              _profileField('Name', 'DARLENE ANGEL'),
-              _profileField('Student ID', '2024-00001'),
-              _profileField('Email', 'darlene.angel@student.edu'),
-              _profileField('Program', 'Bachelor of Science in Computer Science'),
-              _profileField('Year Level', '2nd Year'),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHealthDeclarationPanel() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Latest Declaration Status: SUBMITTED',
-                style: GoogleFonts.inter(
-                  color: success,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              ...[
-                'I certify that I am in good health.',
-                'I am free from any contagious diseases.',
-                'I have received all necessary vaccinations.',
-                'I understand the health protocols.',
-              ].map((item) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      Icon(LucideIcons.checkCircle2,
-                          color: success, size: 20),
-                      const SizedBox(width: 12),
-                      Text(
-                        item,
-                        style: GoogleFonts.inter(color: Colors.white70),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildDefaultPanel() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -407,30 +322,343 @@ class StudentPanelContent extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _profileField(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+/// Rich profile panel with background and profile picture picker.
+class ProfilePanel extends StatefulWidget {
+  const ProfilePanel({super.key});
+
+  @override
+  State<ProfilePanel> createState() => _ProfilePanelState();
+}
+
+class _ProfilePanelState extends State<ProfilePanel> {
+  File? _imageFile;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage() async {
+  final ImageSource? source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    builder: (ctx) => SafeArea(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              color: Colors.white54,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
+          ListTile(
+            leading: const Icon(LucideIcons.camera),
+            title: const Text('Camera'),
+            onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
+          ListTile(
+            leading: const Icon(LucideIcons.image),
+            title: const Text('Gallery'),
+            onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
           ),
         ],
+      ),
+    ),
+  );
+
+  if (source == null) return;
+  final XFile? picked =
+      await _picker.pickImage(source: source, imageQuality: 85);
+  if (picked != null) {
+    setState(() {
+      _imageFile = File(picked.path);
+    });
+  }
+}
+
+  @override
+  Widget build(BuildContext context) {
+    // Use the static colors from StudentPanelContent
+    final pViolet = StudentPanelContent.pViolet;
+    final aViolet = StudentPanelContent.aViolet;
+
+    return Center(
+      child: Container(
+        width: 460,
+        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 28),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(
+            colors: [pViolet.withOpacity(0.95), aViolet.withOpacity(0.95)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.45),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // Decorative background circle
+                Positioned(
+                  top: -40,
+                  child: Container(
+                    width: 220,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        colors: [Colors.white10, Colors.transparent],
+                        radius: 0.9,
+                      ),
+                      borderRadius: BorderRadius.circular(80),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: CircleAvatar(
+                    radius: 52,
+                    backgroundColor: Colors.white24,
+                    backgroundImage:
+                        _imageFile != null ? FileImage(_imageFile!) : null,
+                    child: _imageFile == null
+                        ? Text(
+                            'DA',
+                            style: GoogleFonts.inter(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'DARLENE ANGEL',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 20),
+            _infoRow('Student ID', '2024-00001'),
+            _infoRow('Email', 'darlene.angel@student.edu'),
+            _infoRow('Program', 'Bachelor of Science in Computer Science'),
+            _infoRow('Year Level', '2nd Year'),
+            const SizedBox(height: 14),
+            ElevatedButton.icon(
+              onPressed: _pickImage,
+              icon: const Icon(LucideIcons.camera),
+              label: const Text('Change Photo'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: pViolet,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, top: 6),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              )
+            ],
+          )
+        ],
+      ),
+    );
+  }
+}
+
+/// Payment Upload panel: pick image and send (simulated upload).
+class PaymentUploadPanel extends StatefulWidget {
+  const PaymentUploadPanel({super.key});
+
+  @override
+  State<PaymentUploadPanel> createState() => _PaymentUploadPanelState();
+}
+
+class _PaymentUploadPanelState extends State<PaymentUploadPanel> {
+  File? _selectedFile;
+  final ImagePicker _picker = ImagePicker();
+  bool _isSending = false;
+
+  Future<void> _pickSlip() async {
+  final ImageSource? source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(LucideIcons.camera),
+            title: const Text('Camera'),
+            onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(LucideIcons.image),
+            title: const Text('Gallery'),
+            onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (source == null) return;
+  final XFile? xfile =
+      await _picker.pickImage(source: source, imageQuality: 80);
+  if (xfile != null) setState(() => _selectedFile = File(xfile.path));
+}
+
+  Future<void> _sendSlip() async {
+    if (_selectedFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a deposit slip first.')),
+      );
+      return;
+    }
+    setState(() => _isSending = true);
+
+    // Simulate upload delay. Replace with your API upload logic.
+    await Future.delayed(const Duration(seconds: 2));
+
+    setState(() => _isSending = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Deposit slip uploaded successfully.')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = StudentPanelContent.surface;
+    final aViolet = StudentPanelContent.aViolet;
+    final success = StudentPanelContent.success;
+    final pViolet = StudentPanelContent.pViolet;
+
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 720),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Upload Deposit Slip',
+              style: GoogleFonts.inter(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Select your deposit slip image and press Send.',
+              style: GoogleFonts.inter(color: Colors.white70),
+            ),
+            const SizedBox(height: 18),
+            if (_selectedFile != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  _selectedFile!,
+                  height: 260,
+                  fit: BoxFit.cover,
+                ),
+              )
+            else
+              Container(
+                height: 260,
+                decoration: BoxDecoration(
+                  color: aViolet.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: aViolet.withOpacity(0.12)),
+                ),
+                child: Center(
+                  child: Text(
+                    'No file selected',
+                    style: GoogleFonts.inter(color: Colors.white70),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _pickSlip,
+                  icon: const Icon(LucideIcons.upload),
+                  label: const Text('Choose Image'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: BorderSide(color: aViolet.withOpacity(0.18)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: _isSending ? null : _sendSlip,
+                  icon: _isSending
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(LucideIcons.send),
+                  label: Text(_isSending ? 'Sending...' : 'Send'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: success,
+                    foregroundColor: pViolet,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
       ),
     );
   }
