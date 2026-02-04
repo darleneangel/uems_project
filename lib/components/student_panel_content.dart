@@ -82,7 +82,7 @@ class StudentPanelContent extends StatelessWidget {
           child: Column(
             children: [
               Text(
-                '***** Student Study Load *****',
+                'Student Study Load',
                 style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
               ),
               const SizedBox(height: 6),
