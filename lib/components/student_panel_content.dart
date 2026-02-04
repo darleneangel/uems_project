@@ -1,4 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,7 +27,7 @@ class StudentPanelContent extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (panelType) {
       case 'subject_load':
-        return _buildSubjectLoadPanel();
+        return _buildSubjectLoadPanel(context);
       case 'assessment':
         return _buildAssessmentPanel();
       case 'grade_book':
@@ -36,66 +43,210 @@ class StudentPanelContent extends StatelessWidget {
     }
   }
 
-  Widget _buildSubjectLoadPanel() {
+  Widget _buildSubjectLoadPanel(BuildContext context) {
+    // Sample subject load data (replace with real data source)
+    final subjects = [
+      {
+        'subject': 'CS 101 - Data Structures',
+        'day': 'Mon/Wed',
+        'time': '08:00 - 09:30',
+        'block': 'A'
+      },
+      {
+        'subject': 'CS 102 - Web Development',
+        'day': 'Tue/Thu',
+        'time': '09:45 - 11:15',
+        'block': 'B'
+      },
+      {
+        'subject': 'CS 103 - Database Management',
+        'day': 'Mon/Wed',
+        'time': '13:00 - 14:30',
+        'block': 'C'
+      },
+      {
+        'subject': 'CS 104 - Software Engineering',
+        'day': 'Fri',
+        'time': '10:00 - 12:00',
+        'block': 'D'
+      },
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Header area matching requested compact format
         Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          alignment: Alignment.center,
+          child: Column(
+            children: [
+              Text(
+                '***** Student Study Load *****',
+                style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'School Year : 2025-2026',
+                style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
+              ),
+              Text(
+                'Semester : 2nd Semester',
+                style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: surface,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white10),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "2nd Semester SY 2025-2026",
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 20),
-              ...[
-                "CS 101 - Data Structures",
-                "CS 102 - Web Development",
-                "CS 103 - Database Management",
-                "CS 104 - Software Engineering",
-              ].asMap().entries.map((entry) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: aViolet.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: aViolet.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          entry.value,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Icon(LucideIcons.checkCircle2,
-                            color: success, size: 20),
-                      ],
+              // Top row: title + export buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Subject Load',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
+                  ElevatedButton.icon(
+                    onPressed: () => _exportPdf(context, subjects),
+                    icon: const Icon(LucideIcons.fileText),
+                    label: const Text('Export PDF'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: aViolet,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _exportCsv(context, subjects),
+                    icon: const Icon(LucideIcons.fileSpreadsheet),
+                    label: const Text('Open in Excel'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: aViolet,
+                      side: BorderSide(color: aViolet.withOpacity(0.6)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Table header
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.02),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(flex: 4, child: Text('Subject', style: GoogleFonts.inter(color: Colors.white54))),
+                    Expanded(flex: 2, child: Text('Day', style: GoogleFonts.inter(color: Colors.white54))),
+                    Expanded(flex: 2, child: Text('Time', style: GoogleFonts.inter(color: Colors.white54))),
+                    Expanded(flex: 1, child: Text('Block', style: GoogleFonts.inter(color: Colors.white54))),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Table rows
+              ...subjects.map((s) {
+                return Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(flex: 4, child: Text(s['subject']!, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600))),
+                        Expanded(flex: 2, child: Text(s['day']!, style: GoogleFonts.inter(color: Colors.white70))),
+                        Expanded(flex: 2, child: Text(s['time']!, style: GoogleFonts.inter(color: Colors.white70))),
+                        Expanded(flex: 1, child: Text(s['block']!, style: GoogleFonts.inter(color: Colors.white70))),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Divider(color: Colors.white10),
+                  ],
                 );
-              }),
+              }).toList(),
             ],
           ),
         ),
       ],
     );
+  }
+
+  // Export helpers
+  Future<void> _exportPdf(BuildContext context, List<Map<String, String>> subjects) async {
+    try {
+      final pdf = pw.Document();
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context ctx) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Center(
+                  child: pw.Text('Student Study Load', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.SizedBox(height: 6),
+                pw.Text('School Year : 2025-2026'),
+                pw.Text('Semester : 2nd Semester'),
+                pw.SizedBox(height: 12),
+                pw.Table.fromTextArray(
+                  headers: ['Subject', 'Day', 'Time', 'Block'],
+                  data: subjects.map((s) => [s['subject'], s['day'], s['time'], s['block']]).toList(),
+                  headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      final bytes = await pdf.save();
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/subject_load.pdf');
+      await file.writeAsBytes(bytes);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved PDF to ${file.path}')));
+      await OpenFile.open(file.path);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to export PDF: $e')));
+    }
+  }
+
+  Future<void> _exportCsv(BuildContext context, List<Map<String, String>> subjects) async {
+    try {
+      final sb = StringBuffer();
+      sb.writeln('Subject,Day,Time,Block');
+      for (final s in subjects) {
+        final line = '"${s['subject']}"","${s['day']}"","${s['time']}"","${s['block']}"'
+            .replaceAll('\",\"', '","');
+        // simpler: just escape quotes properly
+        sb.writeln('"${s['subject']}","${s['day']}","${s['time']}","${s['block']}"');
+      }
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/subject_load.csv');
+      await file.writeAsString(sb.toString());
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved CSV to ${file.path}')));
+      await OpenFile.open(file.path);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to export CSV: $e')));
+    }
   }
 
   Widget _buildAssessmentPanel() {
