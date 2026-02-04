@@ -128,6 +128,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       onSidebarToggle: (expanded) =>
           setState(() => _isSidebarExpanded = expanded),
       isAdminPanel: true,
+      themeToggle: () => setState(() => _isDarkMode = !_isDarkMode),
     );
   }
 

@@ -14,6 +14,7 @@ class DashboardPanelTemplate extends StatefulWidget {
   final bool isSidebarExpanded;
   final Function(bool) onSidebarToggle;
   final bool isAdminPanel;
+  final VoidCallback? themeToggle;
 
   const DashboardPanelTemplate({
     super.key,
@@ -28,6 +29,7 @@ class DashboardPanelTemplate extends StatefulWidget {
     required this.isSidebarExpanded,
     required this.onSidebarToggle,
     this.isAdminPanel = false,
+    this.themeToggle,
   });
 
   @override
@@ -327,6 +329,16 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                 },
               );
             },
+          ),
+
+          // Theme toggle button
+          IconButton(
+            icon: Icon(
+              widget.isDarkMode ? LucideIcons.sun : LucideIcons.moon,
+              color: subTextColor,
+              size: 20,
+            ),
+            onPressed: () => widget.themeToggle?.call(),
           ),
 
           const SizedBox(width: 12),

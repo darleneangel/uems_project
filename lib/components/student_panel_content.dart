@@ -29,6 +29,7 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
   // interactive filters state
   String _selectedAcademicYear = '2025-2026';
   String _selectedSemester = '1st Semester';
+  String? _selectedOfficeKey;
 
   @override
   Widget build(BuildContext context) {
@@ -45,9 +46,211 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
         return const ProfilePanel();
       case 'payment_upload':
         return const PaymentUploadPanel();
+      case 'offices':
+        return _buildOfficesPanel();
       default:
         return _buildDefaultPanel();
     }
+  }
+
+  Widget _buildOfficesPanel() {
+    final offices = [
+      {'key': 'registrar', 'title': 'Registrar / Records', 'icon': LucideIcons.clipboard},
+      {'key': 'cashier', 'title': 'Cashier / Payments', 'icon': LucideIcons.creditCard},
+      {'key': 'financial_aid', 'title': 'Financial Aid & Scholarships', 'icon': LucideIcons.award},
+      {'key': 'library', 'title': 'Library Services', 'icon': LucideIcons.bookOpen},
+      {'key': 'student_affairs', 'title': 'Student Affairs', 'icon': LucideIcons.users},
+      {'key': 'health', 'title': 'Health Services', 'icon': LucideIcons.heart},
+      {'key': 'it', 'title': 'IT Helpdesk / Accounts', 'icon': LucideIcons.hardDrive},
+      {'key': 'career', 'title': 'Career Services', 'icon': LucideIcons.briefcase},
+      {'key': 'alumni', 'title': 'Alumni & Degree Verification', 'icon': LucideIcons.award},
+      {'key': 'exams', 'title': 'Examinations / Academic Affairs', 'icon': LucideIcons.fileText},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: StudentPanelContent.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with back button if form is open
+              if (_selectedOfficeKey != null)
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => setState(() => _selectedOfficeKey = null),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white70),
+                      label: const Text('Back to Offices', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    ),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text('Offices & Requests', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 16),
+              // Show form or grid
+              if (_selectedOfficeKey != null)
+                _buildOfficeRequestForm(_selectedOfficeKey!)
+              else
+                GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  childAspectRatio: 3.6,
+                  children: offices.map((o) {
+                    return InkWell(
+                      onTap: () {
+                        setState(() => _selectedOfficeKey = o['key'] as String);
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.02),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white10),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: StudentPanelContent.aViolet.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(o['icon'] as IconData, color: StudentPanelContent.aViolet, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(o['title'] as String, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 4),
+                                  Text('Requests & Documents', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOfficeRequestForm(String officeKey) {
+    final officeNames = {
+      'registrar': 'Registrar / Records',
+      'cashier': 'Cashier / Payments',
+      'financial_aid': 'Financial Aid & Scholarships',
+      'library': 'Library Services',
+      'student_affairs': 'Student Affairs',
+      'health': 'Health Services',
+      'it': 'IT Helpdesk / Accounts',
+      'career': 'Career Services',
+      'alumni': 'Alumni & Degree Verification',
+      'exams': 'Examinations / Academic Affairs',
+    };
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(officeNames[officeKey] ?? 'Request Form', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)),
+          const SizedBox(height: 16),
+          TextFormField(
+            decoration: InputDecoration(
+              labelText: 'Student ID',
+              labelStyle: const TextStyle(color: Colors.white70),
+              hintText: '2025-00001',
+              hintStyle: const TextStyle(color: Colors.white30),
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.05),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            ),
+            style: const TextStyle(color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            decoration: InputDecoration(
+              labelText: 'Full Name',
+              labelStyle: const TextStyle(color: Colors.white70),
+              hintText: 'DARLENE ANGEL',
+              hintStyle: const TextStyle(color: Colors.white30),
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.05),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            ),
+            style: const TextStyle(color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            decoration: InputDecoration(
+              labelText: 'Contact (Email / Phone)',
+              labelStyle: const TextStyle(color: Colors.white70),
+              hintText: 'email@example.com',
+              hintStyle: const TextStyle(color: Colors.white30),
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.05),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            ),
+            style: const TextStyle(color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            decoration: InputDecoration(
+              labelText: 'Notes / Additional Info',
+              labelStyle: const TextStyle(color: Colors.white70),
+              hintText: 'Enter any special requests...',
+              hintStyle: const TextStyle(color: Colors.white30),
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.05),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            ),
+            style: const TextStyle(color: Colors.white),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton(
+              onPressed: () {
+                final ref = DateTime.now().millisecondsSinceEpoch.toString().substring(7);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request submitted — Ref: REQ-$ref')));
+                setState(() => _selectedOfficeKey = null);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: StudentPanelContent.aViolet,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Submit Request', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSubjectLoadPanel(BuildContext context) {
@@ -188,7 +391,7 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                     Divider(color: Colors.white10),
                   ],
                 );
-              }).toList(),
+                }).toList(),
             ],
           ),
         ),

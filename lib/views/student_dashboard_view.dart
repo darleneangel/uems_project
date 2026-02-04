@@ -14,7 +14,7 @@ class StudentDashboardView extends StatefulWidget {
 
 class _StudentDashboardViewState extends State<StudentDashboardView> {
   // Theme state
-  final bool _isDarkMode = true;
+  bool _isDarkMode = true;
   bool _isSidebarExpanded = true;
   int _selectedIndex = 0;
 
@@ -27,6 +27,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     'clearance',
     'profile',
     'payment_upload',
+    'offices',
   ];
 
   // Violet Theme Colors (Dark)
@@ -46,6 +47,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
       PanelMenuItem(title: 'Clearance', icon: LucideIcons.shield),
       PanelMenuItem(title: 'Profile', icon: LucideIcons.user),
       PanelMenuItem(title: 'Bank Payment', icon: LucideIcons.creditCard),
+      PanelMenuItem(title: 'Offices & Requests', icon: LucideIcons.building),
       PanelMenuItem(title: 'Logout', icon: LucideIcons.logOut),
     ];
 
@@ -70,6 +72,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
         break;
       case 6:
         panelTitle = 'Payment Upload';
+        break;
+      case 7:
+        panelTitle = 'Offices & Requests';
         break;
       default:
         panelTitle = 'Dashboard';
@@ -108,6 +113,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
       isSidebarExpanded: _isSidebarExpanded,
       onSidebarToggle: (expanded) => setState(() => _isSidebarExpanded = expanded),
       isAdminPanel: false,
+      themeToggle: () => setState(() => _isDarkMode = !_isDarkMode),
     );
   }
 
