@@ -819,10 +819,10 @@ class _SearchDialogState extends State<SearchDialog> {
       child: Container(
         width: 500,
         decoration: BoxDecoration(
-          color: sideColor,
+          color: widget.isDarkMode ? sideColor : Color(0xFFEDE9FE),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: widget.isDarkMode ? Colors.white10 : Colors.black12,
+            color: widget.isDarkMode ? Colors.white10 : aViolet.withOpacity(0.2),
           ),
         ),
         child: Padding(
@@ -846,21 +846,21 @@ class _SearchDialogState extends State<SearchDialog> {
                   hintText: 'Type to search...',
                   prefixIcon: Icon(
                     LucideIcons.search,
-                    color: Colors.blueGrey,
+                    color: aViolet,
                   ),
                   filled: true,
                   fillColor: widget.isDarkMode
                       ? Colors.white.withOpacity(0.05)
-                      : Colors.black.withOpacity(0.05),
+                      : pViolet.withOpacity(0.08),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
                       color: widget.isDarkMode
                           ? Colors.white10
-                          : Colors.black12,
+                          : aViolet.withOpacity(0.3),
                     ),
                   ),
-                  hintStyle: GoogleFonts.inter(color: Colors.blueGrey),
+                  hintStyle: GoogleFonts.inter(color: widget.isDarkMode ? Colors.blueGrey : aViolet),
                 ),
                 style: GoogleFonts.inter(color: textColor),
               ),

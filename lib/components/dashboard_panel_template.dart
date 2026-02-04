@@ -259,22 +259,18 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
           // Search button (smart search using sidebar labels)
           IconButton(
             icon: Icon(LucideIcons.search, color: subTextColor),
-            onPressed: () async {
-              final result = await showSearch<String?>(
+            onPressed: () {
+              showDialog(
                 context: context,
-                delegate: _SmartSearchDelegate(_searchLabels),
+                builder: (context) => _PanelSearchDialog(
+                  items: widget.sidebarItems,
+                  isDarkMode: widget.isDarkMode,
+                  onItemSelected: (index) {
+                    Navigator.pop(context);
+                    widget.onMenuItemSelected(index);
+                  },
+                ),
               );
-              if (result != null && result.isNotEmpty) {
-                final match = widget.sidebarItems.indexWhere(
-                    (it) => it.title.toLowerCase() == result.toLowerCase());
-                if (match >= 0) {
-                  widget.onMenuItemSelected(match);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('No panel for "$result"')),
-                  );
-                }
-              }
             },
           ),
 
@@ -359,10 +355,184 @@ class PanelMenuItem {
   PanelMenuItem({required this.title, required this.icon});
 }
 
+/// Panel Search Dialog - matches the admin dashboard search dialog style
+class _PanelSearchDialog extends StatefulWidget {
+  final List<PanelMenuItem> items;
+  final bool isDarkMode;
+  final Function(int) onItemSelected;
+
+  const _PanelSearchDialog({
+    super.key,
+    required this.items,
+    required this.isDarkMode,
+    required this.onItemSelected,
+  });
+
+  @override
+  State<_PanelSearchDialog> createState() => _PanelSearchDialogState();
+}
+
+class _PanelSearchDialogState extends State<_PanelSearchDialog> {
+  late TextEditingController _searchController;
+  late List<MapEntry<int, PanelMenuItem>> _filteredItems;
+
+  final List<MapEntry<int, PanelMenuItem>> _allItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    
+    // Build all items excluding logout items
+    for (int i = 0; i < widget.items.length; i++) {
+      final item = widget.items[i];
+      if (item.title.isNotEmpty && 
+          item.title.toLowerCase() != 'logout' && 
+          item.title.toLowerCase() != 'secure logout') {
+        _allItems.add(MapEntry(i, item));
+      }
+    }
+    
+    _filteredItems = _allItems;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterItems(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredItems = _allItems;
+      } else {
+        _filteredItems = _allItems
+            .where((item) =>
+                item.value.title.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const Color aViolet = Color(0xFF8B5CF6);
+    const Color surfaceDark = Color(0xFF1E1033);
+    const Color tDark = Color(0xFF0F071D);
+    const Color lBg = Color(0xFFF8FAFC);
+    const Color pViolet = Color(0xFF2E1065);
+
+    final bgColor = widget.isDarkMode ? tDark : lBg;
+    final sideColor = widget.isDarkMode ? surfaceDark : Color(0xFFEDE9FE);
+    final textColor = widget.isDarkMode ? Colors.white : pViolet;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: 500,
+        decoration: BoxDecoration(
+          color: sideColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: widget.isDarkMode ? Colors.white10 : aViolet.withOpacity(0.2),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Search Menu Items',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _searchController,
+                onChanged: _filterItems,
+                decoration: InputDecoration(
+                  hintText: 'Type to search...',
+                  prefixIcon: Icon(
+                    LucideIcons.search,
+                    color: aViolet,
+                  ),
+                  filled: true,
+                  fillColor: widget.isDarkMode
+                      ? Colors.white.withOpacity(0.05)
+                      : pViolet.withOpacity(0.08),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: widget.isDarkMode
+                          ? Colors.white10
+                          : aViolet.withOpacity(0.3),
+                    ),
+                  ),
+                  hintStyle: GoogleFonts.inter(
+                    color: widget.isDarkMode ? Colors.blueGrey : aViolet,
+                  ),
+                ),
+                style: GoogleFonts.inter(color: textColor),
+              ),
+              const SizedBox(height: 20),
+              Flexible(
+                child: _filteredItems.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No items found',
+                          style: GoogleFonts.inter(
+                            color: Colors.blueGrey,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _filteredItems.length,
+                        itemBuilder: (context, index) {
+                          final item = _filteredItems[index];
+                          return ListTile(
+                            title: Text(
+                              item.value.title,
+                              style: GoogleFonts.inter(
+                                color: textColor,
+                                fontSize: 14,
+                              ),
+                            ),
+                            onTap: () {
+                              widget.onItemSelected(item.key);
+                            },
+                            hoverColor: widget.isDarkMode
+                                ? Colors.white10
+                                : aViolet.withOpacity(0.1),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Simple SearchDelegate that returns the selected suggestion string.
 class _SmartSearchDelegate extends SearchDelegate<String?> {
   final List<String> items;
   _SmartSearchDelegate(this.items);
+
+  static const Color pViolet = Color(0xFF2E1065);
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color tDark = Color(0xFF0F071D);
+  static const Color lBg = Color(0xFFF8FAFC);
 
   @override
   String get searchFieldLabel => 'Search across portal';
@@ -371,16 +541,40 @@ class _SmartSearchDelegate extends SearchDelegate<String?> {
   TextStyle? get searchFieldStyle => const TextStyle();
 
   @override
+  ThemeData appBarTheme(BuildContext context) {
+    return Theme.of(context).copyWith(
+      appBarTheme: AppBarTheme(
+        backgroundColor: pViolet,
+        elevation: 0,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: InputBorder.none,
+        hintStyle: GoogleFonts.inter(color: Colors.white70),
+      ),
+      scaffoldBackgroundColor: lBg,
+      textTheme: TextTheme(
+        bodyMedium: GoogleFonts.inter(color: pViolet),
+      ),
+    );
+  }
+
+  @override
   List<Widget>? buildActions(BuildContext context) {
     return [
       if (query.isNotEmpty)
-        IconButton(icon: const Icon(LucideIcons.x), onPressed: () => query = '')
+        IconButton(
+          icon: const Icon(LucideIcons.x, color: Colors.white),
+          onPressed: () => query = '',
+        )
     ];
   }
 
   @override
   Widget? buildLeading(BuildContext context) {
-    return IconButton(icon: const Icon(LucideIcons.chevronLeft), onPressed: () => close(context, null));
+    return IconButton(
+      icon: const Icon(LucideIcons.chevronLeft, color: Colors.white),
+      onPressed: () => close(context, null),
+    );
   }
 
   @override
@@ -389,8 +583,12 @@ class _SmartSearchDelegate extends SearchDelegate<String?> {
     return ListView(
       children: results.map((r) {
         return ListTile(
-          title: Text(r),
+          title: Text(
+            r,
+            style: GoogleFonts.inter(color: pViolet, fontWeight: FontWeight.w500),
+          ),
           onTap: () => close(context, r),
+          hoverColor: aViolet.withOpacity(0.1),
         );
       }).toList(),
     );
@@ -404,8 +602,13 @@ class _SmartSearchDelegate extends SearchDelegate<String?> {
     return ListView(
       children: suggestions.map((s) {
         return ListTile(
-          title: Text(s),
+          leading: Icon(LucideIcons.search, color: aViolet, size: 18),
+          title: Text(
+            s,
+            style: GoogleFonts.inter(color: pViolet, fontWeight: FontWeight.w500),
+          ),
           onTap: () => close(context, s),
+          hoverColor: aViolet.withOpacity(0.1),
         );
       }).toList(),
     );
