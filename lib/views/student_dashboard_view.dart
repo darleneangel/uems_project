@@ -14,7 +14,7 @@ class StudentDashboardView extends StatefulWidget {
 
 class _StudentDashboardViewState extends State<StudentDashboardView> {
   // Theme state
-  bool _isDarkMode = true;
+  final bool _isDarkMode = true;
   bool _isSidebarExpanded = true;
   int _selectedIndex = 0;
 

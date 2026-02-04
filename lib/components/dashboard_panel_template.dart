@@ -271,7 +271,7 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                   widget.onMenuItemSelected(match);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('No panel for "${result}"')),
+                    SnackBar(content: Text('No panel for "$result"')),
                   );
                 }
               }
@@ -323,7 +323,7 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                               );
                             },
                           );
-                        }).toList(),
+                        }),
                         const SizedBox(height: 8),
                       ],
                     ),
