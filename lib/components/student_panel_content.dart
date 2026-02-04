@@ -1,18 +1,16 @@
-import 'dart:io';
-import 'dart:typed_data';
-
+﻿import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
-import 'package:printing/printing.dart';
+// note: `printing` plugin temporarily disabled in pubspec to avoid pdfium native build on Windows
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
 
-class StudentPanelContent extends StatelessWidget {
+class StudentPanelContent extends StatefulWidget {
   final String panelType;
 
   const StudentPanelContent({super.key, required this.panelType});
@@ -24,14 +22,23 @@ class StudentPanelContent extends StatelessWidget {
   static const Color pViolet = Color(0xFF2E1065);
 
   @override
+  State<StudentPanelContent> createState() => _StudentPanelContentState();
+}
+
+class _StudentPanelContentState extends State<StudentPanelContent> {
+  // interactive filters state
+  String _selectedAcademicYear = '2025-2026';
+  String _selectedSemester = '1st Semester';
+
+  @override
   Widget build(BuildContext context) {
-    switch (panelType) {
+    switch (widget.panelType) {
       case 'subject_load':
         return _buildSubjectLoadPanel(context);
       case 'assessment':
         return _buildAssessmentPanel();
       case 'grade_book':
-        return _buildGradeBookPanel();
+        return _buildGradeBookPanel(context);
       case 'clearance':
         return _buildClearancePanel();
       case 'profile':
@@ -87,11 +94,11 @@ class StudentPanelContent extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'School Year : 2025-2026',
+                'School Year : $_selectedAcademicYear',
                 style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
               ),
               Text(
-                'Semester : 2nd Semester',
+                'Semester : $_selectedSemester',
                 style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
               ),
             ],
@@ -101,7 +108,7 @@ class StudentPanelContent extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: surface,
+            color: StudentPanelContent.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white10),
           ),
@@ -126,7 +133,7 @@ class StudentPanelContent extends StatelessWidget {
                     icon: const Icon(LucideIcons.fileText),
                     label: const Text('Export PDF'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: aViolet,
+                      backgroundColor: StudentPanelContent.aViolet,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
@@ -137,8 +144,8 @@ class StudentPanelContent extends StatelessWidget {
                     icon: const Icon(LucideIcons.fileSpreadsheet),
                     label: const Text('Open in Excel'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: aViolet,
-                      side: BorderSide(color: aViolet.withOpacity(0.6)),
+                      foregroundColor: StudentPanelContent.aViolet,
+                      side: BorderSide(color: StudentPanelContent.aViolet.withOpacity(0.6)),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
                   ),
@@ -204,8 +211,8 @@ class StudentPanelContent extends StatelessWidget {
                   child: pw.Text('Student Study Load', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
                 ),
                 pw.SizedBox(height: 6),
-                pw.Text('School Year : 2025-2026'),
-                pw.Text('Semester : 2nd Semester'),
+                pw.Text('School Year : $_selectedAcademicYear'),
+                pw.Text('Semester : $_selectedSemester'),
                 pw.SizedBox(height: 12),
                 pw.Table.fromTextArray(
                   headers: ['Subject', 'Day', 'Time', 'Block'],
@@ -234,13 +241,68 @@ class StudentPanelContent extends StatelessWidget {
       final sb = StringBuffer();
       sb.writeln('Subject,Day,Time,Block');
       for (final s in subjects) {
-        final line = '"${s['subject']}"","${s['day']}"","${s['time']}"","${s['block']}"'
-            .replaceAll('\",\"', '","');
-        // simpler: just escape quotes properly
         sb.writeln('"${s['subject']}","${s['day']}","${s['time']}","${s['block']}"');
       }
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/subject_load.csv');
+      await file.writeAsString(sb.toString());
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved CSV to ${file.path}')));
+      await OpenFile.open(file.path);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to export CSV: $e')));
+    }
+  }
+
+  // Gradebook exports
+  Future<void> _exportGradebookPdf(BuildContext context, List<Map<String, String>> grades) async {
+    try {
+      final pdf = pw.Document();
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context ctx) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Center(child: pw.Text('Grade Book', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold))),
+                pw.SizedBox(height: 6),
+                pw.Text('Academic Year: ${_selectedAcademicYear}'),
+                pw.Text('Semester: ${_selectedSemester}'),
+                pw.SizedBox(height: 12),
+                pw.Table.fromTextArray(
+                  headers: ['Subject', 'Midterm', 'Final', 'Grade'],
+                  data: grades.map((g) => [g['subject'], g['midterm'], g['final'], g['grade']]).toList(),
+                  headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      final bytes = await pdf.save();
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/grade_book.pdf');
+      await file.writeAsBytes(bytes);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved PDF to ${file.path}')));
+      await OpenFile.open(file.path);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to export PDF: $e')));
+    }
+  }
+
+  Future<void> _exportGradebookCsv(BuildContext context, List<Map<String, String>> grades) async {
+    try {
+      final sb = StringBuffer();
+      sb.writeln('Academic Year:${_selectedAcademicYear}');
+      sb.writeln('Semester:${_selectedSemester}');
+      sb.writeln();
+      sb.writeln('Subject,Midterm,Final,Grade');
+      for (final g in grades) {
+        sb.writeln('"${g['subject']}","${g['midterm']}","${g['final']}","${g['grade']}"');
+      }
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/grade_book.csv');
       await file.writeAsString(sb.toString());
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved CSV to ${file.path}')));
       await OpenFile.open(file.path);
@@ -256,7 +318,7 @@ class StudentPanelContent extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: surface,
+            color: StudentPanelContent.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white10),
           ),
@@ -286,7 +348,7 @@ class StudentPanelContent extends StatelessWidget {
                           Text(
                             assessment.$2,
                             style: GoogleFonts.inter(
-                              color: success,
+                              color: StudentPanelContent.success,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -296,11 +358,10 @@ class StudentPanelContent extends StatelessWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: LinearProgressIndicator(
-                          value: double.parse(assessment.$2.replaceAll('%', '')) /
-                              100,
+                          value: double.parse(assessment.$2.replaceAll('%', '')) / 100,
                           minHeight: 8,
                           backgroundColor: Colors.white.withOpacity(0.1),
-                          valueColor: AlwaysStoppedAnimation(success),
+                          valueColor: AlwaysStoppedAnimation(StudentPanelContent.success),
                         ),
                       ),
                     ],
@@ -314,23 +375,102 @@ class StudentPanelContent extends StatelessWidget {
     );
   }
 
-  Widget _buildGradeBookPanel() {
+  Widget _buildGradeBookPanel(BuildContext context) {
+    // Hardcoded grade data for now
+    final grades = [
+      {'subject': 'CS 101', 'midterm': '92', 'final': '92', 'grade': '92%'},
+      {'subject': 'CS 102', 'midterm': '88', 'final': '88', 'grade': '88%'},
+      {'subject': 'CS 103', 'midterm': '85', 'final': '85', 'grade': '85%'},
+      {'subject': 'CS 104', 'midterm': '90', 'final': '90', 'grade': '90%'},
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          alignment: Alignment.centerLeft,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text('Academic Year: ', style: GoogleFonts.inter(color: Colors.white70)),
+                  const SizedBox(width: 6),
+                  DropdownButton<String>(
+                    value: _selectedAcademicYear,
+                    dropdownColor: StudentPanelContent.pViolet,
+                    style: GoogleFonts.inter(color: Colors.white),
+                    underline: Container(),
+                    items: const [
+                      DropdownMenuItem(value: '2025-2026', child: Text('2025-2026')),
+                      DropdownMenuItem(value: '2024-2025', child: Text('2024-2025')),
+                    ],
+                    onChanged: (v) => setState(() {
+                      if (v != null) _selectedAcademicYear = v;
+                    }),
+                  ),
+                  const SizedBox(width: 16),
+                  Text('Semester: ', style: GoogleFonts.inter(color: Colors.white70)),
+                  const SizedBox(width: 6),
+                  DropdownButton<String>(
+                    value: _selectedSemester,
+                    dropdownColor: StudentPanelContent.pViolet,
+                    style: GoogleFonts.inter(color: Colors.white),
+                    underline: Container(),
+                    items: const [
+                      DropdownMenuItem(value: '1st Semester', child: Text('1st Semester')),
+                      DropdownMenuItem(value: '2nd Semester', child: Text('2nd Semester')),
+                      DropdownMenuItem(value: 'Summer', child: Text('Summer')),
+                    ],
+                    onChanged: (v) => setState(() {
+                      if (v != null) _selectedSemester = v;
+                    }),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: surface,
+            color: StudentPanelContent.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white10),
           ),
           child: Column(
             children: [
+              Row(
+                children: [
+                  Expanded(child: Container()),
+                  ElevatedButton.icon(
+                    onPressed: () => _exportGradebookPdf(context, grades),
+                    icon: const Icon(LucideIcons.fileText),
+                    label: const Text('Export PDF'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: StudentPanelContent.aViolet,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _exportGradebookCsv(context, grades),
+                    icon: const Icon(LucideIcons.fileSpreadsheet),
+                    label: const Text('Open in Excel'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: StudentPanelContent.aViolet,
+                      side: BorderSide(color: StudentPanelContent.aViolet.withOpacity(0.6)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               Table(
                 border: TableBorder(
-                  horizontalInside:
-                      BorderSide(color: Colors.white.withOpacity(0.1)),
+                  horizontalInside: BorderSide(color: Colors.white.withOpacity(0.1)),
                 ),
                 columnWidths: const {
                   0: FlexColumnWidth(3),
@@ -340,9 +480,7 @@ class StudentPanelContent extends StatelessWidget {
                 },
                 children: [
                   TableRow(
-                    decoration: BoxDecoration(
-                      color: aViolet.withOpacity(0.1),
-                    ),
+                    decoration: BoxDecoration(color: StudentPanelContent.aViolet.withOpacity(0.1)),
                     children: [
                       _tableHeader('Subject'),
                       _tableHeader('Midterm'),
@@ -350,20 +488,14 @@ class StudentPanelContent extends StatelessWidget {
                       _tableHeader('Grade'),
                     ],
                   ),
-                  ...['CS 101', 'CS 102', 'CS 103', 'CS 104']
-                      .asMap()
-                      .entries
-                      .map((entry) {
-                    final grades = ['92', '88', '85', '90'];
-                    return TableRow(
-                      children: [
-                        _tableCell(entry.value),
-                        _tableCell(grades[entry.key]),
-                        _tableCell(grades[entry.key]),
-                        _tableCell('${grades[entry.key]}%'),
-                      ],
-                    );
-                  }),
+                  ...grades.map((g) {
+                    return TableRow(children: [
+                      _tableCell(g['subject']!),
+                      _tableCell(g['midterm']!),
+                      _tableCell(g['final']!),
+                      _tableCell(g['grade']!),
+                    ]);
+                  }).toList(),
                 ],
               ),
             ],
@@ -380,7 +512,7 @@ class StudentPanelContent extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: surface,
+            color: StudentPanelContent.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white10),
           ),
@@ -397,12 +529,10 @@ class StudentPanelContent extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: (clearance.$2 ? success : aViolet)
-                          .withOpacity(0.1),
+                      color: (clearance.$2 ? StudentPanelContent.success : StudentPanelContent.aViolet).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: (clearance.$2 ? success : aViolet)
-                            .withOpacity(0.3),
+                        color: (clearance.$2 ? StudentPanelContent.success : StudentPanelContent.aViolet).withOpacity(0.3),
                       ),
                     ),
                     child: Row(
@@ -416,10 +546,8 @@ class StudentPanelContent extends StatelessWidget {
                           ),
                         ),
                         Icon(
-                          clearance.$2
-                              ? LucideIcons.checkCircle2
-                              : LucideIcons.clock,
-                          color: clearance.$2 ? success : aViolet,
+                          clearance.$2 ? LucideIcons.checkCircle2 : LucideIcons.clock,
+                          color: clearance.$2 ? StudentPanelContent.success : StudentPanelContent.aViolet,
                           size: 20,
                         ),
                       ],
@@ -438,7 +566,7 @@ class StudentPanelContent extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: surface,
+        color: StudentPanelContent.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white10),
       ),
@@ -488,36 +616,35 @@ class _ProfilePanelState extends State<ProfilePanel> {
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage() async {
-  final ImageSource? source = await showModalBottomSheet<ImageSource>(
-    context: context,
-    builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(LucideIcons.camera),
-            title: const Text('Camera'),
-            onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
-          ),
-          ListTile(
-            leading: const Icon(LucideIcons.image),
-            title: const Text('Gallery'),
-            onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
-          ),
-        ],
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(LucideIcons.camera),
+              title: const Text('Camera'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.image),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
 
-  if (source == null) return;
-  final XFile? picked =
-      await _picker.pickImage(source: source, imageQuality: 85);
-  if (picked != null) {
-    setState(() {
-      _imageFile = File(picked.path);
-    });
+    if (source == null) return;
+    final XFile? picked = await _picker.pickImage(source: source, imageQuality: 85);
+    if (picked != null) {
+      setState(() {
+        _imageFile = File(picked.path);
+      });
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -571,8 +698,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
                   child: CircleAvatar(
                     radius: 52,
                     backgroundColor: Colors.white24,
-                    backgroundImage:
-                        _imageFile != null ? FileImage(_imageFile!) : null,
+                    backgroundImage: _imageFile != null ? FileImage(_imageFile!) : null,
                     child: _imageFile == null
                         ? Text(
                             'DA',
@@ -670,32 +796,32 @@ class _PaymentUploadPanelState extends State<PaymentUploadPanel> {
   bool _isSending = false;
 
   Future<void> _pickSlip() async {
-  final ImageSource? source = await showModalBottomSheet<ImageSource>(
-    context: context,
-    builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(LucideIcons.camera),
-            title: const Text('Camera'),
-            onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
-          ),
-          ListTile(
-            leading: const Icon(LucideIcons.image),
-            title: const Text('Gallery'),
-            onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
-          ),
-        ],
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(LucideIcons.camera),
+              title: const Text('Camera'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.image),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
 
-  if (source == null) return;
-  final XFile? xfile =
+    if (source == null) return;
+    final XFile? xfile =
       await _picker.pickImage(source: source, imageQuality: 80);
-  if (xfile != null) setState(() => _selectedFile = File(xfile.path));
-}
+    if (xfile != null) setState(() => _selectedFile = File(xfile.path));
+  }
 
   Future<void> _sendSlip() async {
     if (_selectedFile == null) {
