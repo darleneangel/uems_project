@@ -136,7 +136,7 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Offices & Requests',
+                        '',
                         style: GoogleFonts.inter(
                           color: Colors.white,
                           fontWeight: FontWeight.w900,
