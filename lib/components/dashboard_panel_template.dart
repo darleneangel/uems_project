@@ -118,7 +118,7 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     children: List.generate(widget.sidebarItems.length, (index) {
                       final item = widget.sidebarItems[index];
-                      bool isSelected = widget.selectedIndex == index;
+                      // Keep sidebar appearance uniform regardless of selection.
                       bool isDestructive =
                           item.title.toLowerCase() == 'logout' ||
                               item.title.toLowerCase() == 'secure logout';
@@ -126,9 +126,7 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? aViolet.withOpacity(0.15)
-                              : Colors.transparent,
+                          color: Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ListTile(
@@ -144,11 +142,7 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                             item.icon,
                             color: isDestructive
                                 ? Colors.redAccent
-                                : (isSelected
-                                    ? aViolet
-                                    : (widget.isDarkMode
-                                        ? Colors.white54
-                                        : Colors.blueGrey)),
+                                : (widget.isDarkMode ? Colors.white54 : Colors.blueGrey),
                             size: 20,
                           ),
                           title: widget.isSidebarExpanded
@@ -157,14 +151,8 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                                   style: GoogleFonts.inter(
                                     color: isDestructive
                                         ? Colors.redAccent
-                                        : (isSelected
-                                            ? Colors.white
-                                            : (widget.isDarkMode
-                                                ? Colors.white60
-                                                : Colors.blueGrey)),
-                                    fontWeight: isSelected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
+                                        : (widget.isDarkMode ? Colors.white60 : Colors.blueGrey),
+                                    fontWeight: FontWeight.w500,
                                     fontSize: 14,
                                   ),
                                 )
@@ -374,7 +362,6 @@ class _PanelSearchDialog extends StatefulWidget {
   final Function(int) onItemSelected;
 
   const _PanelSearchDialog({
-    super.key,
     required this.items,
     required this.isDarkMode,
     required this.onItemSelected,

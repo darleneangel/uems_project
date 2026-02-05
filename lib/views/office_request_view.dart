@@ -256,7 +256,7 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
 
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _delivery,
+            initialValue: _delivery,
             items: const [
               DropdownMenuItem(value: 'Pickup', child: Text('Pickup')),
               DropdownMenuItem(value: 'Email', child: Text('Email (PDF)')),

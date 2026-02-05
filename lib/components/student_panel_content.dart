@@ -136,7 +136,7 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Offices & Requests',
+                        '',
                         style: GoogleFonts.inter(
                           color: Colors.white,
                           fontWeight: FontWeight.w900,
@@ -539,7 +539,7 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                     Divider(color: Colors.white10),
                   ],
                 );
-              }).toList(),
+                }).toList(),
             ],
           ),
         ),
@@ -654,8 +654,8 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                   ),
                 ),
                 pw.SizedBox(height: 6),
-                pw.Text('Academic Year: ${_selectedAcademicYear}'),
-                pw.Text('Semester: ${_selectedSemester}'),
+                pw.Text('Academic Year: $_selectedAcademicYear'),
+                pw.Text('Semester: $_selectedSemester'),
                 pw.SizedBox(height: 12),
                 pw.Table.fromTextArray(
                   headers: ['Subject', 'Midterm', 'Final', 'Grade'],
@@ -698,8 +698,8 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
   ) async {
     try {
       final sb = StringBuffer();
-      sb.writeln('Academic Year:${_selectedAcademicYear}');
-      sb.writeln('Semester:${_selectedSemester}');
+      sb.writeln('Academic Year:$_selectedAcademicYear');
+      sb.writeln('Semester:$_selectedSemester');
       sb.writeln();
       sb.writeln('Subject,Midterm,Final,Grade');
       for (final g in grades) {
@@ -927,14 +927,12 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                     ],
                   ),
                   ...grades.map((g) {
-                    return TableRow(
-                      children: [
-                        _tableCell(g['subject']!),
-                        _tableCell(g['midterm']!),
-                        _tableCell(g['final']!),
-                        _tableCell(g['grade']!),
-                      ],
-                    );
+                    return TableRow(children: [
+                      _tableCell(g['subject']!),
+                      _tableCell(g['midterm']!),
+                      _tableCell(g['final']!),
+                      _tableCell(g['grade']!),
+                    ]);
                   }).toList(),
                 ],
               ),
@@ -945,74 +943,101 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
     );
   }
 
-  Widget _buildClearancePanel() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(24),
+Widget _buildClearancePanel() {
+  final List<(String, bool, IconData, String)> clearanceItems = [
+    ('Library Clearance', true, LucideIcons.library, '/library-panel'),
+    ('Financial Clearance', true, LucideIcons.creditCard, '/financial-panel'),
+    ('Registrar Clearance', false, LucideIcons.clipboardList, '/registrar-panel'),
+    ('Faculty Clearance', true, LucideIcons.graduationCap, '/faculty-panel'),
+  ];
+
+  return GridView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 2, // Matches the 2-column layout in your image
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 2.1, // Adjust this to match the height of your cards
+    ),
+    itemCount: clearanceItems.length,
+    itemBuilder: (context, index) {
+      final item = clearanceItems[index];
+      final isComplete = item.$2;
+
+      return InkWell(
+        onTap: () {
+          // Replace with your actual navigation logic
+          print("Navigating to ${item.$4}");
+          // Navigator.pushNamed(context, item.$4);
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: StudentPanelContent.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white10),
+            border: Border.all(
+              color: isComplete 
+                  ? StudentPanelContent.success.withOpacity(0.3) 
+                  : Colors.white10,
+            ),
           ),
-          child: Column(
+          child: Row(
             children: [
-              ...[
-                ('Library Clearance', true),
-                ('Financial Clearance', true),
-                ('Registrar Clearance', false),
-                ('Faculty Clearance', true),
-              ].map((clearance) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color:
-                          (clearance.$2
-                                  ? StudentPanelContent.success
-                                  : StudentPanelContent.aViolet)
-                              .withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color:
-                            (clearance.$2
-                                    ? StudentPanelContent.success
-                                    : StudentPanelContent.aViolet)
-                                .withOpacity(0.3),
+              // Icon Container (matches the Registrar style)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: (isComplete ? StudentPanelContent.success : StudentPanelContent.aViolet)
+                      .withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  item.$3,
+                  color: isComplete ? StudentPanelContent.success : StudentPanelContent.aViolet,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Text Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      item.$1,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          clearance.$1,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Icon(
-                          clearance.$2
-                              ? LucideIcons.checkCircle2
-                              : LucideIcons.clock,
-                          color: clearance.$2
-                              ? StudentPanelContent.success
-                              : StudentPanelContent.aViolet,
-                          size: 20,
-                        ),
-                      ],
+                    const SizedBox(height: 4),
+                    Text(
+                      isComplete ? "Completed" : "Pending Action",
+                      style: GoogleFonts.inter(
+                        color: Colors.white60,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                );
-              }),
+                  ],
+                ),
+              ),
+              // Status Indicator (Small check or clock at the end)
+              Icon(
+                isComplete ? LucideIcons.checkCircle2 : LucideIcons.clock,
+                color: isComplete ? StudentPanelContent.success : StudentPanelContent.aViolet,
+                size: 16,
+              ),
             ],
           ),
         ),
-      ],
-    );
-  }
+      );
+    },
+  );
+}
 
   Widget _buildDefaultPanel() {
     return Container(

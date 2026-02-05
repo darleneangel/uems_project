@@ -25,7 +25,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     'admissions',
     'registrar',
     'accounting',
-    '',
     'study_loads',
     'grade_recording',
   ];
@@ -87,7 +86,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       PanelMenuItem(title: 'Admissions', icon: LucideIcons.userPlus),
       PanelMenuItem(title: 'Registrar', icon: LucideIcons.users),
       PanelMenuItem(title: 'Accounting', icon: LucideIcons.wallet),
-      PanelMenuItem(title: '', icon: LucideIcons.divideSquare),
       PanelMenuItem(title: 'Study Loads', icon: LucideIcons.layers),
       PanelMenuItem(title: 'Grade Recording', icon: LucideIcons.bookMarked),
       PanelMenuItem(title: 'Secure Logout', icon: LucideIcons.logOut),
@@ -107,10 +105,10 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       case 4:
         panelTitle = 'Accounting & Finance';
         break;
-      case 6:
+      case 5:
         panelTitle = 'Study Loads Management';
         break;
-      case 7:
+      case 6:
         panelTitle = 'Grade Recording System';
         break;
     }
@@ -125,9 +123,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       onLogout: widget.onLogout,
       isDarkMode: _isDarkMode,
       onMenuItemSelected: (index) {
-        if (index == 8) {
+        if (index == 7) {
           widget.onLogout();
-        } else if (index != 5) {
+        } else {
           setState(() => _activeModuleIndex = index);
         }
       },
@@ -338,11 +336,11 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     bool isDestructive = false,
     VoidCallback? onTap,
   }) {
-    bool isSelected = _activeModuleIndex == index;
+    // Keep sidebar appearance uniform regardless of selection
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        color: isSelected ? aViolet.withOpacity(0.15) : Colors.transparent,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
@@ -350,19 +348,15 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         visualDensity: VisualDensity.compact,
         leading: Icon(
           icon,
-          color: isDestructive
-              ? Colors.redAccent
-              : (isSelected ? aViolet : textColor.withOpacity(0.4)),
+          color: isDestructive ? Colors.redAccent : textColor.withOpacity(0.4),
           size: 20,
         ),
         title: _isSidebarExpanded
             ? Text(
                 label,
                 style: GoogleFonts.inter(
-                  color: isDestructive
-                      ? Colors.redAccent
-                      : (isSelected ? textColor : textColor.withOpacity(0.6)),
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isDestructive ? Colors.redAccent : textColor.withOpacity(0.6),
+                  fontWeight: FontWeight.w500,
                   fontSize: 13,
                 ),
               )
