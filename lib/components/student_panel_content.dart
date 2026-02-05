@@ -391,7 +391,7 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                     Divider(color: Colors.white10),
                   ],
                 );
-                }).toList(),
+                }),
             ],
           ),
         ),
@@ -469,8 +469,8 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
               children: [
                 pw.Center(child: pw.Text('Grade Book', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold))),
                 pw.SizedBox(height: 6),
-                pw.Text('Academic Year: ${_selectedAcademicYear}'),
-                pw.Text('Semester: ${_selectedSemester}'),
+                pw.Text('Academic Year: $_selectedAcademicYear'),
+                pw.Text('Semester: $_selectedSemester'),
                 pw.SizedBox(height: 12),
                 pw.Table.fromTextArray(
                   headers: ['Subject', 'Midterm', 'Final', 'Grade'],
@@ -497,8 +497,8 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
   Future<void> _exportGradebookCsv(BuildContext context, List<Map<String, String>> grades) async {
     try {
       final sb = StringBuffer();
-      sb.writeln('Academic Year:${_selectedAcademicYear}');
-      sb.writeln('Semester:${_selectedSemester}');
+      sb.writeln('Academic Year:$_selectedAcademicYear');
+      sb.writeln('Semester:$_selectedSemester');
       sb.writeln();
       sb.writeln('Subject,Midterm,Final,Grade');
       for (final g in grades) {
@@ -698,7 +698,7 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                       _tableCell(g['final']!),
                       _tableCell(g['grade']!),
                     ]);
-                  }).toList(),
+                  }),
                 ],
               ),
             ],

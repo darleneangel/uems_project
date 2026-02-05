@@ -374,7 +374,6 @@ class _PanelSearchDialog extends StatefulWidget {
   final Function(int) onItemSelected;
 
   const _PanelSearchDialog({
-    super.key,
     required this.items,
     required this.isDarkMode,
     required this.onItemSelected,
