@@ -55,16 +55,52 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
 
   Widget _buildOfficesPanel() {
     final offices = [
-      {'key': 'registrar', 'title': 'Registrar / Records', 'icon': LucideIcons.clipboard},
-      {'key': 'cashier', 'title': 'Cashier / Payments', 'icon': LucideIcons.creditCard},
-      {'key': 'financial_aid', 'title': 'Financial Aid & Scholarships', 'icon': LucideIcons.award},
-      {'key': 'library', 'title': 'Library Services', 'icon': LucideIcons.bookOpen},
-      {'key': 'student_affairs', 'title': 'Student Affairs', 'icon': LucideIcons.users},
+      {
+        'key': 'registrar',
+        'title': 'Registrar / Records',
+        'icon': LucideIcons.clipboard,
+      },
+      {
+        'key': 'cashier',
+        'title': 'Cashier / Payments',
+        'icon': LucideIcons.creditCard,
+      },
+      {
+        'key': 'financial_aid',
+        'title': 'Financial Aid & Scholarships',
+        'icon': LucideIcons.award,
+      },
+      {
+        'key': 'library',
+        'title': 'Library Services',
+        'icon': LucideIcons.bookOpen,
+      },
+      {
+        'key': 'student_affairs',
+        'title': 'Student Affairs',
+        'icon': LucideIcons.users,
+      },
       {'key': 'health', 'title': 'Health Services', 'icon': LucideIcons.heart},
-      {'key': 'it', 'title': 'IT Helpdesk / Accounts', 'icon': LucideIcons.hardDrive},
-      {'key': 'career', 'title': 'Career Services', 'icon': LucideIcons.briefcase},
-      {'key': 'alumni', 'title': 'Alumni & Degree Verification', 'icon': LucideIcons.award},
-      {'key': 'exams', 'title': 'Examinations / Academic Affairs', 'icon': LucideIcons.fileText},
+      {
+        'key': 'it',
+        'title': 'IT Helpdesk / Accounts',
+        'icon': LucideIcons.hardDrive,
+      },
+      {
+        'key': 'career',
+        'title': 'Career Services',
+        'icon': LucideIcons.briefcase,
+      },
+      {
+        'key': 'alumni',
+        'title': 'Alumni & Degree Verification',
+        'icon': LucideIcons.award,
+      },
+      {
+        'key': 'exams',
+        'title': 'Examinations / Academic Affairs',
+        'icon': LucideIcons.fileText,
+      },
     ];
 
     return Column(
@@ -85,9 +121,13 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                 Row(
                   children: [
                     TextButton.icon(
-                      onPressed: () => setState(() => _selectedOfficeKey = null),
+                      onPressed: () =>
+                          setState(() => _selectedOfficeKey = null),
                       icon: const Icon(Icons.arrow_back, color: Colors.white70),
-                      label: const Text('Back to Offices', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      label: const Text(
+                        'Back to Offices',
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
                     ),
                   ],
                 )
@@ -95,7 +135,14 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text('Offices & Requests', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+                      child: Text(
+                        'Offices & Requests',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 18,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -129,10 +176,16 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: StudentPanelContent.aViolet.withOpacity(0.08),
+                                color: StudentPanelContent.aViolet.withOpacity(
+                                  0.08,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(o['icon'] as IconData, color: StudentPanelContent.aViolet, size: 20),
+                              child: Icon(
+                                o['icon'] as IconData,
+                                color: StudentPanelContent.aViolet,
+                                size: 20,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -140,9 +193,21 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(o['title'] as String, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+                                  Text(
+                                    o['title'] as String,
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                   const SizedBox(height: 4),
-                                  Text('Requests & Documents', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)),
+                                  Text(
+                                    'Requests & Documents',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -177,7 +242,10 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(officeNames[officeKey] ?? 'Request Form', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)),
+          Text(
+            officeNames[officeKey] ?? 'Request Form',
+            style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
+          ),
           const SizedBox(height: 16),
           TextFormField(
             decoration: InputDecoration(
@@ -187,7 +255,10 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
               hintStyle: const TextStyle(color: Colors.white30),
               filled: true,
               fillColor: Colors.white.withOpacity(0.05),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Colors.white10),
+              ),
             ),
             style: const TextStyle(color: Colors.white),
           ),
@@ -200,7 +271,10 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
               hintStyle: const TextStyle(color: Colors.white30),
               filled: true,
               fillColor: Colors.white.withOpacity(0.05),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Colors.white10),
+              ),
             ),
             style: const TextStyle(color: Colors.white),
           ),
@@ -213,7 +287,10 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
               hintStyle: const TextStyle(color: Colors.white30),
               filled: true,
               fillColor: Colors.white.withOpacity(0.05),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Colors.white10),
+              ),
             ),
             style: const TextStyle(color: Colors.white),
           ),
@@ -226,7 +303,10 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
               hintStyle: const TextStyle(color: Colors.white30),
               filled: true,
               fillColor: Colors.white.withOpacity(0.05),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Colors.white10),
+              ),
             ),
             style: const TextStyle(color: Colors.white),
             maxLines: 3,
@@ -237,15 +317,24 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
             height: 44,
             child: ElevatedButton(
               onPressed: () {
-                final ref = DateTime.now().millisecondsSinceEpoch.toString().substring(7);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request submitted — Ref: REQ-$ref')));
+                final ref = DateTime.now().millisecondsSinceEpoch
+                    .toString()
+                    .substring(7);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Request submitted — Ref: REQ-$ref')),
+                );
                 setState(() => _selectedOfficeKey = null);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: StudentPanelContent.aViolet,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              child: const Text('Submit Request', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Submit Request',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
@@ -260,25 +349,25 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
         'subject': 'CS 101 - Data Structures',
         'day': 'Mon/Wed',
         'time': '08:00 - 09:30',
-        'block': 'A'
+        'block': 'A',
       },
       {
         'subject': 'CS 102 - Web Development',
         'day': 'Tue/Thu',
         'time': '09:45 - 11:15',
-        'block': 'B'
+        'block': 'B',
       },
       {
         'subject': 'CS 103 - Database Management',
         'day': 'Mon/Wed',
         'time': '13:00 - 14:30',
-        'block': 'C'
+        'block': 'C',
       },
       {
         'subject': 'CS 104 - Software Engineering',
         'day': 'Fri',
         'time': '10:00 - 12:00',
-        'block': 'D'
+        'block': 'D',
       },
     ];
 
@@ -338,7 +427,10 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: StudentPanelContent.aViolet,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -348,8 +440,13 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                     label: const Text('Open in Excel'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: StudentPanelContent.aViolet,
-                      side: BorderSide(color: StudentPanelContent.aViolet.withOpacity(0.6)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      side: BorderSide(
+                        color: StudentPanelContent.aViolet.withOpacity(0.6),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -365,10 +462,34 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                 ),
                 child: Row(
                   children: [
-                    Expanded(flex: 4, child: Text('Subject', style: GoogleFonts.inter(color: Colors.white54))),
-                    Expanded(flex: 2, child: Text('Day', style: GoogleFonts.inter(color: Colors.white54))),
-                    Expanded(flex: 2, child: Text('Time', style: GoogleFonts.inter(color: Colors.white54))),
-                    Expanded(flex: 1, child: Text('Block', style: GoogleFonts.inter(color: Colors.white54))),
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        'Subject',
+                        style: GoogleFonts.inter(color: Colors.white54),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'Day',
+                        style: GoogleFonts.inter(color: Colors.white54),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'Time',
+                        style: GoogleFonts.inter(color: Colors.white54),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: Text(
+                        'Block',
+                        style: GoogleFonts.inter(color: Colors.white54),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -381,17 +502,44 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Expanded(flex: 4, child: Text(s['subject']!, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600))),
-                        Expanded(flex: 2, child: Text(s['day']!, style: GoogleFonts.inter(color: Colors.white70))),
-                        Expanded(flex: 2, child: Text(s['time']!, style: GoogleFonts.inter(color: Colors.white70))),
-                        Expanded(flex: 1, child: Text(s['block']!, style: GoogleFonts.inter(color: Colors.white70))),
+                        Expanded(
+                          flex: 4,
+                          child: Text(
+                            s['subject']!,
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            s['day']!,
+                            style: GoogleFonts.inter(color: Colors.white70),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            s['time']!,
+                            style: GoogleFonts.inter(color: Colors.white70),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: Text(
+                            s['block']!,
+                            style: GoogleFonts.inter(color: Colors.white70),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Divider(color: Colors.white10),
                   ],
                 );
-                }),
+                }).toList(),
             ],
           ),
         ),
@@ -400,7 +548,10 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
   }
 
   // Export helpers
-  Future<void> _exportPdf(BuildContext context, List<Map<String, String>> subjects) async {
+  Future<void> _exportPdf(
+    BuildContext context,
+    List<Map<String, String>> subjects,
+  ) async {
     try {
       final pdf = pw.Document();
       pdf.addPage(
@@ -411,7 +562,13 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Center(
-                  child: pw.Text('Student Study Load', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                  child: pw.Text(
+                    'Student Study Load',
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
                 ),
                 pw.SizedBox(height: 6),
                 pw.Text('School Year : $_selectedAcademicYear'),
@@ -419,7 +576,11 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                 pw.SizedBox(height: 12),
                 pw.Table.fromTextArray(
                   headers: ['Subject', 'Day', 'Time', 'Block'],
-                  data: subjects.map((s) => [s['subject'], s['day'], s['time'], s['block']]).toList(),
+                  data: subjects
+                      .map(
+                        (s) => [s['subject'], s['day'], s['time'], s['block']],
+                      )
+                      .toList(),
                   headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                 ),
               ],
@@ -432,32 +593,48 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/subject_load.pdf');
       await file.writeAsBytes(bytes);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved PDF to ${file.path}')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Saved PDF to ${file.path}')));
       await OpenFile.open(file.path);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to export PDF: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to export PDF: $e')));
     }
   }
 
-  Future<void> _exportCsv(BuildContext context, List<Map<String, String>> subjects) async {
+  Future<void> _exportCsv(
+    BuildContext context,
+    List<Map<String, String>> subjects,
+  ) async {
     try {
       final sb = StringBuffer();
       sb.writeln('Subject,Day,Time,Block');
       for (final s in subjects) {
-        sb.writeln('"${s['subject']}","${s['day']}","${s['time']}","${s['block']}"');
+        sb.writeln(
+          '"${s['subject']}","${s['day']}","${s['time']}","${s['block']}"',
+        );
       }
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/subject_load.csv');
       await file.writeAsString(sb.toString());
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved CSV to ${file.path}')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Saved CSV to ${file.path}')));
       await OpenFile.open(file.path);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to export CSV: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to export CSV: $e')));
     }
   }
 
   // Gradebook exports
-  Future<void> _exportGradebookPdf(BuildContext context, List<Map<String, String>> grades) async {
+  Future<void> _exportGradebookPdf(
+    BuildContext context,
+    List<Map<String, String>> grades,
+  ) async {
     try {
       final pdf = pw.Document();
       pdf.addPage(
@@ -467,14 +644,31 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Center(child: pw.Text('Grade Book', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold))),
+                pw.Center(
+                  child: pw.Text(
+                    'Grade Book',
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ),
                 pw.SizedBox(height: 6),
                 pw.Text('Academic Year: $_selectedAcademicYear'),
                 pw.Text('Semester: $_selectedSemester'),
                 pw.SizedBox(height: 12),
                 pw.Table.fromTextArray(
                   headers: ['Subject', 'Midterm', 'Final', 'Grade'],
-                  data: grades.map((g) => [g['subject'], g['midterm'], g['final'], g['grade']]).toList(),
+                  data: grades
+                      .map(
+                        (g) => [
+                          g['subject'],
+                          g['midterm'],
+                          g['final'],
+                          g['grade'],
+                        ],
+                      )
+                      .toList(),
                   headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                 ),
               ],
@@ -487,14 +681,21 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/grade_book.pdf');
       await file.writeAsBytes(bytes);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved PDF to ${file.path}')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Saved PDF to ${file.path}')));
       await OpenFile.open(file.path);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to export PDF: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to export PDF: $e')));
     }
   }
 
-  Future<void> _exportGradebookCsv(BuildContext context, List<Map<String, String>> grades) async {
+  Future<void> _exportGradebookCsv(
+    BuildContext context,
+    List<Map<String, String>> grades,
+  ) async {
     try {
       final sb = StringBuffer();
       sb.writeln('Academic Year:$_selectedAcademicYear');
@@ -502,15 +703,21 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
       sb.writeln();
       sb.writeln('Subject,Midterm,Final,Grade');
       for (final g in grades) {
-        sb.writeln('"${g['subject']}","${g['midterm']}","${g['final']}","${g['grade']}"');
+        sb.writeln(
+          '"${g['subject']}","${g['midterm']}","${g['final']}","${g['grade']}"',
+        );
       }
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/grade_book.csv');
       await file.writeAsString(sb.toString());
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved CSV to ${file.path}')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Saved CSV to ${file.path}')));
       await OpenFile.open(file.path);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to export CSV: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to export CSV: $e')));
     }
   }
 
@@ -561,10 +768,14 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: LinearProgressIndicator(
-                          value: double.parse(assessment.$2.replaceAll('%', '')) / 100,
+                          value:
+                              double.parse(assessment.$2.replaceAll('%', '')) /
+                              100,
                           minHeight: 8,
                           backgroundColor: Colors.white.withOpacity(0.1),
-                          valueColor: AlwaysStoppedAnimation(StudentPanelContent.success),
+                          valueColor: AlwaysStoppedAnimation(
+                            StudentPanelContent.success,
+                          ),
                         ),
                       ),
                     ],
@@ -599,7 +810,10 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
             children: [
               Row(
                 children: [
-                  Text('Academic Year: ', style: GoogleFonts.inter(color: Colors.white70)),
+                  Text(
+                    'Academic Year: ',
+                    style: GoogleFonts.inter(color: Colors.white70),
+                  ),
                   const SizedBox(width: 6),
                   DropdownButton<String>(
                     value: _selectedAcademicYear,
@@ -607,15 +821,24 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                     style: GoogleFonts.inter(color: Colors.white),
                     underline: Container(),
                     items: const [
-                      DropdownMenuItem(value: '2025-2026', child: Text('2025-2026')),
-                      DropdownMenuItem(value: '2024-2025', child: Text('2024-2025')),
+                      DropdownMenuItem(
+                        value: '2025-2026',
+                        child: Text('2025-2026'),
+                      ),
+                      DropdownMenuItem(
+                        value: '2024-2025',
+                        child: Text('2024-2025'),
+                      ),
                     ],
                     onChanged: (v) => setState(() {
                       if (v != null) _selectedAcademicYear = v;
                     }),
                   ),
                   const SizedBox(width: 16),
-                  Text('Semester: ', style: GoogleFonts.inter(color: Colors.white70)),
+                  Text(
+                    'Semester: ',
+                    style: GoogleFonts.inter(color: Colors.white70),
+                  ),
                   const SizedBox(width: 6),
                   DropdownButton<String>(
                     value: _selectedSemester,
@@ -623,8 +846,14 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                     style: GoogleFonts.inter(color: Colors.white),
                     underline: Container(),
                     items: const [
-                      DropdownMenuItem(value: '1st Semester', child: Text('1st Semester')),
-                      DropdownMenuItem(value: '2nd Semester', child: Text('2nd Semester')),
+                      DropdownMenuItem(
+                        value: '1st Semester',
+                        child: Text('1st Semester'),
+                      ),
+                      DropdownMenuItem(
+                        value: '2nd Semester',
+                        child: Text('2nd Semester'),
+                      ),
                       DropdownMenuItem(value: 'Summer', child: Text('Summer')),
                     ],
                     onChanged: (v) => setState(() {
@@ -665,7 +894,9 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                     label: const Text('Open in Excel'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: StudentPanelContent.aViolet,
-                      side: BorderSide(color: StudentPanelContent.aViolet.withOpacity(0.6)),
+                      side: BorderSide(
+                        color: StudentPanelContent.aViolet.withOpacity(0.6),
+                      ),
                     ),
                   ),
                 ],
@@ -673,7 +904,9 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
               const SizedBox(height: 16),
               Table(
                 border: TableBorder(
-                  horizontalInside: BorderSide(color: Colors.white.withOpacity(0.1)),
+                  horizontalInside: BorderSide(
+                    color: Colors.white.withOpacity(0.1),
+                  ),
                 ),
                 columnWidths: const {
                   0: FlexColumnWidth(3),
@@ -683,7 +916,9 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                 },
                 children: [
                   TableRow(
-                    decoration: BoxDecoration(color: StudentPanelContent.aViolet.withOpacity(0.1)),
+                    decoration: BoxDecoration(
+                      color: StudentPanelContent.aViolet.withOpacity(0.1),
+                    ),
                     children: [
                       _tableHeader('Subject'),
                       _tableHeader('Midterm'),
@@ -698,7 +933,7 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                       _tableCell(g['final']!),
                       _tableCell(g['grade']!),
                     ]);
-                  }),
+                  }).toList(),
                 ],
               ),
             ],
@@ -732,10 +967,18 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: (clearance.$2 ? StudentPanelContent.success : StudentPanelContent.aViolet).withOpacity(0.1),
+                      color:
+                          (clearance.$2
+                                  ? StudentPanelContent.success
+                                  : StudentPanelContent.aViolet)
+                              .withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: (clearance.$2 ? StudentPanelContent.success : StudentPanelContent.aViolet).withOpacity(0.3),
+                        color:
+                            (clearance.$2
+                                    ? StudentPanelContent.success
+                                    : StudentPanelContent.aViolet)
+                                .withOpacity(0.3),
                       ),
                     ),
                     child: Row(
@@ -749,8 +992,12 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                           ),
                         ),
                         Icon(
-                          clearance.$2 ? LucideIcons.checkCircle2 : LucideIcons.clock,
-                          color: clearance.$2 ? StudentPanelContent.success : StudentPanelContent.aViolet,
+                          clearance.$2
+                              ? LucideIcons.checkCircle2
+                              : LucideIcons.clock,
+                          color: clearance.$2
+                              ? StudentPanelContent.success
+                              : StudentPanelContent.aViolet,
                           size: 20,
                         ),
                       ],
@@ -798,10 +1045,7 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
   Widget _tableCell(String text) {
     return Padding(
       padding: const EdgeInsets.all(12),
-      child: Text(
-        text,
-        style: GoogleFonts.inter(color: Colors.white70),
-      ),
+      child: Text(text, style: GoogleFonts.inter(color: Colors.white70)),
     );
   }
 }
@@ -841,7 +1085,10 @@ class _ProfilePanelState extends State<ProfilePanel> {
     );
 
     if (source == null) return;
-    final XFile? picked = await _picker.pickImage(source: source, imageQuality: 85);
+    final XFile? picked = await _picker.pickImage(
+      source: source,
+      imageQuality: 85,
+    );
     if (picked != null) {
       setState(() {
         _imageFile = File(picked.path);
@@ -901,7 +1148,9 @@ class _ProfilePanelState extends State<ProfilePanel> {
                   child: CircleAvatar(
                     radius: 52,
                     backgroundColor: Colors.white24,
-                    backgroundImage: _imageFile != null ? FileImage(_imageFile!) : null,
+                    backgroundImage: _imageFile != null
+                        ? FileImage(_imageFile!)
+                        : null,
                     child: _imageFile == null
                         ? Text(
                             'DA',
@@ -942,7 +1191,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -958,10 +1207,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
             children: [
               Text(
                 label,
-                style: GoogleFonts.inter(
-                  color: Colors.white70,
-                  fontSize: 12,
-                ),
+                style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
               ),
             ],
           ),
@@ -976,9 +1222,9 @@ class _ProfilePanelState extends State<ProfilePanel> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-              )
+              ),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -1021,8 +1267,10 @@ class _PaymentUploadPanelState extends State<PaymentUploadPanel> {
     );
 
     if (source == null) return;
-    final XFile? xfile =
-      await _picker.pickImage(source: source, imageQuality: 80);
+    final XFile? xfile = await _picker.pickImage(
+      source: source,
+      imageQuality: 80,
+    );
     if (xfile != null) setState(() => _selectedFile = File(xfile.path));
   }
 
@@ -1114,7 +1362,8 @@ class _PaymentUploadPanelState extends State<PaymentUploadPanel> {
                     foregroundColor: Colors.white,
                     side: BorderSide(color: aViolet.withOpacity(0.18)),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1132,11 +1381,12 @@ class _PaymentUploadPanelState extends State<PaymentUploadPanel> {
                     backgroundColor: success,
                     foregroundColor: pViolet,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
