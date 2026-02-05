@@ -3,15 +3,15 @@ import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-class RegistrarDashboardView extends StatefulWidget {
+class TeacherDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
-  const RegistrarDashboardView({super.key, required this.onLogout});
+  const TeacherDashboardView({super.key, required this.onLogout});
 
   @override
-  State<RegistrarDashboardView> createState() => _RegistrarDashboardViewState();
+  State<TeacherDashboardView> createState() => _TeacherDashboardViewState();
 }
 
-class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
+class _TeacherDashboardViewState extends State<TeacherDashboardView> {
   // Navigation & Theme State
   bool _isDarkMode = true;
   bool _isSidebarExpanded = true;
@@ -40,7 +40,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
       backgroundColor: bgColor,
       body: Row(
         children: [
-          // 1. FIXED TOGGLEABLE SIDEBAR (Identical UI Layout)
+          // 1. FIXED TOGGLEABLE SIDEBAR
           _buildSidebar(panelColor, textColor, subTextColor),
 
           // 2. MAIN PANEL AREA
@@ -89,7 +89,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
           ),
           const SizedBox(width: 16),
           Text(
-            "Registrar Office Intelligence System",
+            "Faculty Instruction & Management Portal",
             style: GoogleFonts.inter(
               color: textColor,
               fontSize: 16,
@@ -104,6 +104,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
               _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
               color: aViolet,
             ),
+            tooltip: "Switch Theme",
           ),
           const SizedBox(width: 20),
           _headerAction(LucideIcons.bell, subTextColor),
@@ -119,7 +120,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                "REGISTRAR_ADMIN",
+                "PROF_MANALASTAS",
                 style: GoogleFonts.inter(
                   color: textColor,
                   fontWeight: FontWeight.bold,
@@ -127,7 +128,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
                 ),
               ),
               Text(
-                "Record Control Active",
+                "Academic Faculty",
                 style: GoogleFonts.inter(
                   color: success,
                   fontSize: 10,
@@ -139,7 +140,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
           const SizedBox(width: 12),
           CircleAvatar(
             backgroundColor: aViolet,
-            child: const Icon(LucideIcons.users, color: Colors.white, size: 18),
+            child: const Icon(LucideIcons.user, color: Colors.white, size: 18),
           ),
         ],
       ),
@@ -164,7 +165,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
-                  LucideIcons.bookOpen,
+                  LucideIcons.graduationCap,
                   color: aViolet,
                   size: 24,
                 ),
@@ -172,7 +173,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
               if (_isSidebarExpanded) ...[
                 const SizedBox(width: 12),
                 Text(
-                  "UEMS Records",
+                  "UEMS Teacher",
                   style: GoogleFonts.orbitron(
                     color: textColor,
                     fontWeight: FontWeight.bold,
@@ -188,21 +189,21 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
                 _menuItem(LucideIcons.layoutDashboard, "Overview", 0),
-                _sidebarHeader("RECORDS MANAGEMENT"),
-                _menuItem(LucideIcons.contact, "Student Directory", 1),
-                _menuItem(LucideIcons.clipboardCheck, "Enrollment Verify", 2),
-                _menuItem(LucideIcons.gitPullRequest, "Add/Drop Requests", 3),
+                _sidebarHeader("INSTRUCTION"),
+                _menuItem(LucideIcons.calendar, "Classes & Schedules", 1),
+                _menuItem(LucideIcons.uploadCloud, "Syllabi & Materials", 2),
+                _menuItem(LucideIcons.bookOpen, "Learning Resources", 3),
                 _sidebarHeader("ACADEMICS"),
-                _menuItem(LucideIcons.star, "Grade Management", 4),
-                _menuItem(LucideIcons.fileText, "Transcripts & Certs", 5),
                 _menuItem(
-                  LucideIcons.graduationCap,
-                  "Graduation Eligibility",
-                  6,
+                  LucideIcons.clipboardCheck,
+                  "Attendance & Participation",
+                  4,
                 ),
-                _sidebarHeader("INSTITUTIONAL"),
-                _menuItem(LucideIcons.layers, "Curriculum & Catalog", 7),
-                _menuItem(LucideIcons.barChart, "Statistics & Reports", 8),
+                _menuItem(LucideIcons.star, "Grade Recording", 5),
+                _menuItem(LucideIcons.filePieChart, "Progress Reports", 6),
+                _sidebarHeader("FACULTY SERVICES"),
+                _menuItem(LucideIcons.messagesSquare, "Communications", 7),
+                _menuItem(LucideIcons.briefcase, "Teaching Load & Payroll", 8),
               ],
             ),
           ),
@@ -280,11 +281,11 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
   ) {
     switch (_selectedIndex) {
       case 1:
-        return _buildDirectoryPanel(panelColor, textColor);
-      case 4:
-        return _buildGradesPanel(panelColor, textColor);
+        return _buildSchedulePanel(panelColor, textColor);
+      case 5:
+        return _buildGradingPanel(panelColor, textColor);
       case 8:
-        return _buildStatsPanel(panelColor, textColor);
+        return _buildFacultyServicesPanel(panelColor, textColor);
       case 0:
       default:
         return _buildOverviewPanel(panelColor, textColor);
@@ -299,7 +300,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Registrar Overview",
+            "Faculty Overview",
             style: GoogleFonts.inter(
               fontSize: 28,
               fontWeight: FontWeight.w900,
@@ -310,24 +311,24 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
           Row(
             children: [
               _statCard(
-                "Total Enrolled",
-                "4,291",
+                "Students Taught",
+                "185",
                 LucideIcons.users,
+                aViolet,
+                textColor,
+              ),
+              _statCard(
+                "Grading Progress",
+                "72%",
+                LucideIcons.trendingUp,
                 success,
                 textColor,
               ),
               _statCard(
-                "Graduation Ready",
-                "856",
-                LucideIcons.graduationCap,
+                "Classes Today",
+                "4",
+                LucideIcons.calendar,
                 Colors.blueAccent,
-                textColor,
-              ),
-              _statCard(
-                "Pending Petitions",
-                "24",
-                LucideIcons.alertCircle,
-                Colors.orangeAccent,
                 textColor,
               ),
             ],
@@ -339,33 +340,19 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
     );
   }
 
-  // --- MODULE: STUDENT DIRECTORY ---
-  Widget _buildDirectoryPanel(Color panelColor, Color textColor) {
+  // --- MODULE: SCHEDULES ---
+  Widget _buildSchedulePanel(Color panelColor, Color textColor) {
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Centralized Student Records",
+            "Assigned Courses & Schedules",
             style: GoogleFonts.inter(
               fontSize: 28,
               fontWeight: FontWeight.w900,
               color: textColor,
-            ),
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            style: TextStyle(color: textColor),
-            decoration: InputDecoration(
-              hintText: "Search by Student ID, Name, or Program...",
-              prefixIcon: const Icon(LucideIcons.search),
-              filled: true,
-              fillColor: panelColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
             ),
           ),
           const SizedBox(height: 24),
@@ -378,7 +365,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
               ),
               child: const Center(
                 child: Text(
-                  "Database Query: Records loading...",
+                  "Loading Timetable...",
                   style: TextStyle(color: Colors.white24),
                 ),
               ),
@@ -389,22 +376,94 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
     );
   }
 
-  // --- MODULE: GRADES ---
-  Widget _buildGradesPanel(Color panelColor, Color textColor) {
-    return Center(
-      child: Text(
-        "Grade Management Hub: syncing with Teacher Modules...",
-        style: TextStyle(color: textColor.withOpacity(0.5)),
+  // --- MODULE: GRADING ---
+  Widget _buildGradingPanel(Color panelColor, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Grade Recording Hub",
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            "Select class to encode grades for assignments and exams:",
+            style: TextStyle(color: textColor.withOpacity(0.5)),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: 2,
+              childAspectRatio: 4,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              children: [
+                _classCard(
+                  "System Integration 101",
+                  "BSCS-4A",
+                  panelColor,
+                  textColor,
+                ),
+                _classCard(
+                  "Software Engineering",
+                  "BSCS-3B",
+                  panelColor,
+                  textColor,
+                ),
+                _classCard("Data Structures", "BSCS-2A", panelColor, textColor),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // --- MODULE: STATISTICS ---
-  Widget _buildStatsPanel(Color panelColor, Color textColor) {
-    return Center(
-      child: Text(
-        "Generating Government & Accreditation Reports...",
-        style: TextStyle(color: textColor.withOpacity(0.5)),
+  // --- MODULE: HR & PAYROLL ---
+  Widget _buildFacultyServicesPanel(Color panelColor, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Faculty Services & HR",
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              _serviceCard(
+                "Payroll & Payslips",
+                LucideIcons.wallet,
+                panelColor,
+                textColor,
+              ),
+              _serviceCard(
+                "Teaching Load Report",
+                LucideIcons.fileText,
+                panelColor,
+                textColor,
+              ),
+              _serviceCard(
+                "HR Information",
+                LucideIcons.userCircle,
+                panelColor,
+                textColor,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -462,24 +521,16 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
       crossAxisCount: 2,
       mainAxisSpacing: 16,
       crossAxisSpacing: 16,
-      childAspectRatio: 3,
+      childAspectRatio: 3.5,
       children: [
-        _quickActionButton("Issue Transcript", LucideIcons.fileText, aViolet),
+        _quickActionButton("Post Announcement", LucideIcons.megaphone, aViolet),
+        _quickActionButton("Upload Resources", LucideIcons.share2, Colors.blue),
         _quickActionButton(
-          "Verify Enrollment",
-          LucideIcons.checkSquare,
+          "Generate Progress Report",
+          LucideIcons.filePieChart,
           success,
         ),
-        _quickActionButton(
-          "Update Curriculum",
-          LucideIcons.bookOpen,
-          Colors.blue,
-        ),
-        _quickActionButton(
-          "Graduation Audit",
-          LucideIcons.award,
-          Colors.orange,
-        ),
+        _quickActionButton("Exam Schedules", LucideIcons.clock, Colors.orange),
       ],
     );
   }
@@ -509,6 +560,87 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
           color: Colors.white24,
         ),
         onTap: () {},
+      ),
+    );
+  }
+
+  Widget _classCard(
+    String name,
+    String section,
+    Color panelColor,
+    Color textColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: panelColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          const Icon(LucideIcons.book, color: aViolet, size: 20),
+          const SizedBox(width: 15),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: TextStyle(
+                  color: textColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                section,
+                style: const TextStyle(color: Colors.white24, fontSize: 12),
+              ),
+            ],
+          ),
+          const Spacer(),
+          const Icon(LucideIcons.arrowRight, color: Colors.white12, size: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _serviceCard(
+    String title,
+    IconData icon,
+    Color panelColor,
+    Color textColor,
+  ) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: panelColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: aViolet, size: 32),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Access Details",
+              style: TextStyle(color: aViolet, fontSize: 11),
+            ),
+          ],
+        ),
       ),
     );
   }

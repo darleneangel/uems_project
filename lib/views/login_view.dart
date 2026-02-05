@@ -7,6 +7,8 @@ import 'admin_dashboard_view.dart';
 import 'accounting_dashboard_view.dart';
 import 'admission_dashboard_view.dart';
 import 'registrar_dashboard_view.dart';
+import 'program_chair_dashboard_view.dart';
+import 'teacher_dashboard_view.dart';
 
 class UEMSLoginPage extends StatefulWidget {
   const UEMSLoginPage({super.key});
@@ -106,55 +108,39 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
     final id = _idController.text;
     final pass = _passwordController.text;
-
     setState(() => _isLoading = false);
 
+    // CENTRALIZED ROUTING LOGIC
     if (id == '123' && pass == '123') {
-      setState(() {
-        _currentView = 'student_portal';
-      });
-      _idController.clear();
-      _passwordController.clear();
+      setState(() => _currentView = 'student_portal');
     } else if (id == '456' && pass == '456') {
-      setState(() {
-        _currentView = 'admin_dashboard';
-      });
-      _idController.clear();
-      _passwordController.clear();
+      setState(() => _currentView = 'admin_dashboard');
     } else if (id == '789' && pass == '789') {
-      setState(() {
-        _currentView = 'admission_dashboard';
-      });
-      _idController.clear();
-      _passwordController.clear();
-    } else if (id == '910' && pass == '910') {
-      setState(() {
-        _currentView = 'registrar_dashboard';
-      });
-      _idController.clear();
-      _passwordController.clear();
-    } else if (id == '111' && pass == '111') {
-      setState(() {
-        _currentView = 'registrar_dashboard';
-      });
-      _idController.clear();
-      _passwordController.clear();
+      setState(() => _currentView = 'admission_dashboard');
+    } else if (id == '321' && pass == '321') {
+      // Added Accounting ID
+      setState(() => _currentView = 'accounting_dashboard');
+    } else if (id == '910' && pass == '910' || id == '111' && pass == '111') {
+      setState(() => _currentView = 'registrar_dashboard');
+    } else if (id == '222' && pass == '222') {
+      setState(() => _currentView = 'program_chair_dashboard');
+    } else if (id == '333' && pass == '333') {
+      setState(() => _currentView = 'teacher_dashboard');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            "Authentication Failed: Invalid Credentials",
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-          ),
-          backgroundColor: Colors.redAccent.shade700,
+        const SnackBar(
+          content: Text("Invalid Credentials"),
+          backgroundColor: Colors.redAccent,
         ),
       );
     }
+    _idController.clear();
+    _passwordController.clear();
   }
 
   @override
   Widget build(BuildContext context) {
+    // ROUTING SWITCH - Directs to your separate files
     switch (_currentView) {
       case 'student_portal':
         return StudentDashboardView(
@@ -174,6 +160,14 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         );
       case 'registrar_dashboard':
         return RegistrarDashboardView(
+          onLogout: () => setState(() => _currentView = 'login'),
+        );
+      case 'program_chair_dashboard':
+        return ProgramChairDashboardView(
+          onLogout: () => setState(() => _currentView = 'login'),
+        );
+      case 'teacher_dashboard':
+        return TeacherDashboardView(
           onLogout: () => setState(() => _currentView = 'login'),
         );
       case 'login':

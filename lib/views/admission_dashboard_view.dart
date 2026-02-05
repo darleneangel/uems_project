@@ -1,305 +1,388 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../components/dashboard_panel_template.dart';
-import '../components/student_panel_content.dart';
 
 class AdmissionDashboardView extends StatefulWidget {
-  final VoidCallback? onLogout;
-  const AdmissionDashboardView({super.key, this.onLogout});
+  final VoidCallback onLogout;
+  const AdmissionDashboardView({super.key, required this.onLogout});
 
   @override
   State<AdmissionDashboardView> createState() => _AdmissionDashboardViewState();
 }
 
 class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
-  // Theme state
+  // Navigation & Theme State
   bool _isDarkMode = true;
   bool _isSidebarExpanded = true;
   int _selectedIndex = 0;
 
-  // Panel mapping (0..6 correspond to sidebar items excluding Logout)
-  final List<String> _panelTypes = [
-    'dashboard',
-    'subject_load',
-    'assessment',
-    'grade_book',
-    'clearance',
-    'profile',
-    'payment_upload',
-    'offices',
-  ];
-
-  // Violet Theme Colors (Dark)
+  // Standardized Violet/Plum Palette
   static const Color pViolet = Color(0xFF2E1065);
   static const Color tDark = Color(0xFF0F071D);
   static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color surfaceDark = Color(0xFF1E1B4B);
   static const Color success = Color(0xFF69F0AE);
+
+  void _toggleSidebar() =>
+      setState(() => _isSidebarExpanded = !_isSidebarExpanded);
+  void _toggleTheme() => setState(() => _isDarkMode = !_isDarkMode);
 
   @override
   Widget build(BuildContext context) {
-    // Sidebar items: last item is Logout (destructive)
-    final sidebarItems = [
-      PanelMenuItem(title: 'Dashboard', icon: LucideIcons.home),
-      PanelMenuItem(title: 'Subject Load', icon: LucideIcons.bookOpen),
-      PanelMenuItem(title: 'Assessment', icon: LucideIcons.barChart3),
-      PanelMenuItem(title: 'Grade Book', icon: LucideIcons.book),
-      PanelMenuItem(title: 'Clearance', icon: LucideIcons.shield),
-      PanelMenuItem(title: 'Profile', icon: LucideIcons.user),
-      PanelMenuItem(title: 'Bank Payment', icon: LucideIcons.creditCard),
-      PanelMenuItem(title: 'Offices & Requests', icon: LucideIcons.building),
-      PanelMenuItem(title: 'Logout', icon: LucideIcons.logOut),
-    ];
+    // Dynamic theme colors
+    final bgColor = _isDarkMode ? tDark : const Color(0xFFF8FAFC);
+    final panelColor = _isDarkMode ? surfaceDark : Colors.white;
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final subTextColor = _isDarkMode ? Colors.white54 : Colors.blueGrey;
 
-    // Panel title mapping
-    String panelTitle = 'Dashboard';
-    String subtitle = '';
-    switch (_selectedIndex) {
-      case 1:
-        panelTitle = 'Subject Load';
-        break;
-      case 2:
-        panelTitle = 'Assessment';
-        break;
-      case 3:
-        panelTitle = 'Grade Book';
-        break;
-      case 4:
-        panelTitle = 'Clearance';
-        break;
-      case 5:
-        panelTitle = 'My Profile';
-        break;
-      case 6:
-        panelTitle = 'Payment Upload';
-        break;
-      case 7:
-        panelTitle = 'Offices & Requests';
-        break;
-      default:
-        panelTitle = 'Dashboard';
-        subtitle = 'Welcome back, DARLENE ANGEL';
-    }
+    return Scaffold(
+      backgroundColor: bgColor,
+      body: Row(
+        children: [
+          // 1. FIXED TOGGLEABLE SIDEBAR
+          _buildSidebar(panelColor, textColor, subTextColor),
 
-    // compute colors (used by dashboard content helper)
-    final cardColor = _isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
-    final textColor = _isDarkMode ? Colors.white : const Color(0xFF2E1065);
-    final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
-
-    // The panel content: dashboard content when 0, otherwise StudentPanelContent
-    final Widget panelContent = (_selectedIndex == 0)
-        ? _buildPanelContentHome(cardColor, textColor, subTextColor)
-        : StudentPanelContent(
-            panelType: (_selectedIndex < _panelTypes.length)
-                ? _panelTypes[_selectedIndex]
-                : 'dashboard',
-          );
-
-    return DashboardPanelTemplate(
-      panelTitle: panelTitle,
-      subtitle: subtitle,
-      panelContent: panelContent,
-      sidebarItems: sidebarItems,
-      onLogout: () {
-        widget.onLogout?.call();
-      },
-      isDarkMode: _isDarkMode,
-      onMenuItemSelected: (index) {
-        // template will call this for non-destructive items; Logout handled in template
-        if (index >= 0 && index < _panelTypes.length) {
-          setState(() => _selectedIndex = index);
-        }
-      },
-      selectedIndex: _selectedIndex,
-      isSidebarExpanded: _isSidebarExpanded,
-      onSidebarToggle: (expanded) =>
-          setState(() => _isSidebarExpanded = expanded),
-      isAdminPanel: false,
-      themeToggle: () => setState(() => _isDarkMode = !_isDarkMode),
-    );
-  }
-
-  // --- Dashboard content (kept as helper methods) ---
-  Widget _buildPanelContentHome(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // The panel title is rendered by the template. Keep only the enroll banner here.
-        Align(alignment: Alignment.topRight, child: _buildEnrollNowBanner()),
-        const SizedBox(height: 32),
-        _buildEnrollmentTrackSection(cardColor, textColor, subTextColor),
-        const SizedBox(height: 32),
-        _buildAnnouncements(cardColor, textColor, subTextColor),
-      ],
-    );
-  }
-
-  Widget _buildEnrollNowBanner() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [pViolet, aViolet]),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: aViolet.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+          // 2. MAIN PANEL AREA
+          Expanded(
+            child: Column(
+              children: [
+                _buildTopBar(textColor, subTextColor),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _buildPanelContent(
+                      panelColor,
+                      textColor,
+                      subTextColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTopBar(Color textColor, Color subTextColor) {
+    return Container(
+      height: 75,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: _isDarkMode ? tDark : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: _isDarkMode ? Colors.white10 : Colors.black12,
+          ),
+        ),
       ),
       child: Row(
         children: [
-          const Icon(LucideIcons.laptop, color: Colors.white, size: 30),
-          const SizedBox(width: 15),
+          IconButton(
+            icon: Icon(
+              _isSidebarExpanded ? LucideIcons.menu : LucideIcons.chevronRight,
+              color: textColor,
+            ),
+            onPressed: _toggleSidebar,
+          ),
+          const SizedBox(width: 16),
+          Text(
+            "Admissions Intelligence & Recruitment",
+            style: GoogleFonts.inter(
+              color: textColor,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: _toggleTheme,
+            icon: Icon(
+              _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
+              color: aViolet,
+            ),
+          ),
+          const SizedBox(width: 20),
+          _headerAction(LucideIcons.bell, subTextColor),
+          const SizedBox(width: 24),
+          const VerticalDivider(
+            color: Colors.white10,
+            indent: 20,
+            endIndent: 20,
+          ),
+          const SizedBox(width: 24),
           Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                "ENROLL NOW",
+                "ADMISSIONS_OFFICER",
                 style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
+                  color: textColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
                 ),
               ),
               Text(
-                "2nd Semester SY 2025-2026",
-                style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
+                "Verified Access",
+                style: GoogleFonts.inter(
+                  color: success,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
-          const SizedBox(width: 20),
-          const Icon(LucideIcons.chevronRight, color: Colors.white),
+          const SizedBox(width: 12),
+          CircleAvatar(
+            backgroundColor: aViolet,
+            child: const Icon(
+              LucideIcons.userPlus,
+              color: Colors.white,
+              size: 18,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildEnrollmentTrackSection(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: _isDarkMode ? Colors.white10 : Colors.black12,
-        ),
-      ),
+  Widget _buildSidebar(Color panelColor, Color textColor, Color subTextColor) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: _isSidebarExpanded ? 280 : 85,
+      color: _isDarkMode ? pViolet : const Color(0xFFF1F5F9),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Enrollment Tracks",
-            style: GoogleFonts.inter(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: textColor,
-            ),
-          ),
-          Text(
-            "School Year: 2025-2026 | Semester: 2nd Semester",
-            style: GoogleFonts.inter(fontSize: 13, color: subTextColor),
-          ),
-          const SizedBox(height: 40),
-          Stack(
+          const SizedBox(height: 30),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                height: 12,
-                width: double.infinity,
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _isDarkMode ? Colors.white10 : Colors.black12,
-                  borderRadius: BorderRadius.circular(10),
+                  color: aViolet.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: const Icon(LucideIcons.school, color: aViolet, size: 24),
               ),
-              FractionallySizedBox(
-                widthFactor: 0.85,
-                child: Container(
-                  height: 12,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [success, aViolet]),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: success.withOpacity(0.3),
-                        blurRadius: 10,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const Positioned(
-                right: 0,
-                top: -25,
-                child: Text(
-                  "You are Now Enrolled",
-                  style: TextStyle(
-                    color: success,
+              if (_isSidebarExpanded) ...[
+                const SizedBox(width: 12),
+                Text(
+                  "UEMS Admissions",
+                  style: GoogleFonts.orbitron(
+                    color: textColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _statusIndicator("Submitted", true, success),
-              _statusIndicator("Paid", true, success),
-              _statusIndicator("Advising", true, success),
-              _statusIndicator("Assessment", false, aViolet, isCurrent: true),
+              ],
             ],
           ),
           const SizedBox(height: 40),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: _isDarkMode
-                  ? Colors.white.withOpacity(0.03)
-                  : Colors.black.withOpacity(0.02),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: _isDarkMode ? Colors.white10 : Colors.black12,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
-                Text(
-                  "For BANK PAYMENT, upload your deposit slip here.",
-                  style: GoogleFonts.inter(color: subTextColor, fontSize: 14),
+                _menuItem(LucideIcons.layoutDashboard, "Overview", 0),
+                _sidebarHeader("APPLICANT MANAGEMENT"),
+                _menuItem(LucideIcons.fileText, "Applications", 1),
+                _menuItem(LucideIcons.clipboardList, "Exams & Interviews", 2),
+                _menuItem(LucideIcons.shieldCheck, "Document Verification", 3),
+                _sidebarHeader("LIFECYCLE"),
+                _menuItem(LucideIcons.mail, "Admission Letters", 4),
+                _menuItem(LucideIcons.refreshCw, "Fee Coordination", 5),
+                _menuItem(LucideIcons.database, "Registrar Transfer", 6),
+                _sidebarHeader("ANALYTICS"),
+                _menuItem(LucideIcons.barChart, "Recruitment Stats", 7),
+              ],
+            ),
+          ),
+          const Divider(color: Colors.white10),
+          _menuItem(
+            LucideIcons.logOut,
+            "Logout System",
+            8,
+            isDestructive: true,
+            onTap: widget.onLogout,
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _menuItem(
+    IconData icon,
+    String title,
+    int index, {
+    bool isDestructive = false,
+    VoidCallback? onTap,
+  }) {
+    bool isSelected = _selectedIndex == index;
+    final activeColor = isDestructive ? Colors.redAccent : aViolet;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: isSelected ? aViolet.withOpacity(0.15) : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: ListTile(
+        onTap: onTap ?? () => setState(() => _selectedIndex = index),
+        visualDensity: VisualDensity.compact,
+        leading: Icon(
+          icon,
+          color: isSelected ? activeColor : Colors.blueGrey,
+          size: 20,
+        ),
+        title: _isSidebarExpanded
+            ? Text(
+                title,
+                style: GoogleFonts.inter(
+                  color: isSelected ? Colors.white : Colors.blueGrey,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                  fontSize: 13,
                 ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: 250,
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      // navigate to the payment upload panel (index 6)
-                      setState(() => _selectedIndex = 6);
-                    },
-                    icon: const Icon(LucideIcons.upload, size: 18),
-                    label: const Text("UPLOAD & SEND"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: success,
-                      foregroundColor: pViolet,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+              )
+            : null,
+      ),
+    );
+  }
+
+  Widget _sidebarHeader(String title) {
+    if (!_isSidebarExpanded) return const SizedBox(height: 20);
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 10, top: 20),
+      child: Text(
+        title,
+        style: GoogleFonts.inter(
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          color: Colors.blueGrey.withOpacity(0.5),
+          letterSpacing: 1.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPanelContent(
+    Color panelColor,
+    Color textColor,
+    Color subTextColor,
+  ) {
+    switch (_selectedIndex) {
+      case 1:
+        return _buildApplicationsPanel(panelColor, textColor);
+      case 7:
+        return _buildStatsPanel(panelColor, textColor);
+      case 0:
+      default:
+        return _buildOverviewPanel(panelColor, textColor);
+    }
+  }
+
+  // --- MODULE: OVERVIEW ---
+  Widget _buildOverviewPanel(Color panelColor, Color textColor) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Admissions Overview",
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              _statCard(
+                "Total Applicants",
+                "1,240",
+                LucideIcons.users,
+                aViolet,
+                textColor,
+              ),
+              _statCard(
+                "Pending Review",
+                "142",
+                LucideIcons.clock,
+                Colors.orangeAccent,
+                textColor,
+              ),
+              _statCard(
+                "Admitted Status",
+                "856",
+                LucideIcons.checkCircle,
+                success,
+                textColor,
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          _buildActionGrid(panelColor, textColor),
+        ],
+      ),
+    );
+  }
+
+  // --- MODULE: APPLICATIONS ---
+  Widget _buildApplicationsPanel(Color panelColor, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Application Processing",
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  style: TextStyle(color: textColor),
+                  decoration: InputDecoration(
+                    hintText: "Search Applicants (Online/Offline)...",
+                    prefixIcon: const Icon(LucideIcons.search),
+                    filled: true,
+                    fillColor: panelColor,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
                     ),
                   ),
                 ),
-              ],
+              ),
+              const SizedBox(width: 16),
+              _actionIcon(LucideIcons.filter, panelColor),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: panelColor,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: const Center(
+                child: Text(
+                  "Processing Queue: Loading data...",
+                  style: TextStyle(color: Colors.white24),
+                ),
+              ),
             ),
           ),
         ],
@@ -307,130 +390,142 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
     );
   }
 
-  Widget _statusIndicator(
+  // --- MODULE: STATISTICS ---
+  Widget _buildStatsPanel(Color panelColor, Color textColor) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(LucideIcons.pieChart, color: aViolet, size: 64),
+          const SizedBox(height: 24),
+          Text(
+            "Recruitment Analytics Engine",
+            style: TextStyle(
+              color: textColor,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Text(
+            "Acceptance Rates | Demographic Trends",
+            style: TextStyle(color: Colors.white24),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- UI HELPERS ---
+
+  Widget _statCard(
     String label,
-    bool isDone,
-    Color color, {
-    bool isCurrent = false,
-  }) {
-    return Column(
-      children: [
-        Icon(
-          isDone
-              ? LucideIcons.checkCircle2
-              : (isCurrent ? LucideIcons.circleDot : LucideIcons.circle),
-          color: color,
-          size: 20,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            color: isDone || isCurrent ? color : Colors.blueGrey,
-            fontWeight: FontWeight.bold,
-            fontSize: 11,
+    String val,
+    IconData icon,
+    Color color,
+    Color textColor,
+  ) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: _isDarkMode ? surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: _isDarkMode ? Colors.white10 : Colors.black12,
           ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(height: 15),
+            Text(
+              val,
+              style: GoogleFonts.inter(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: textColor,
+              ),
+            ),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.blueGrey,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionGrid(Color panelColor, Color textColor) {
+    return GridView.count(
+      shrinkWrap: true,
+      crossAxisCount: 2,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 3.5,
+      children: [
+        _quickActionButton("New Application", LucideIcons.userPlus, aViolet),
+        _quickActionButton("Schedule Exams", LucideIcons.calendar, Colors.blue),
+        _quickActionButton("Generate Letters", LucideIcons.mail, success),
+        _quickActionButton(
+          "Registrar Transfer",
+          LucideIcons.database,
+          Colors.orange,
         ),
       ],
     );
   }
 
-  Widget _buildAnnouncements(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Latest Announcements",
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: textColor,
-          ),
-        ),
-        const SizedBox(height: 20),
-        _announcementItem(
-          "San Sebastian College - Recoletos de Cavite",
-          "03/26/2026",
-          "Grades for the 2nd Semester are now available for viewing. Check your Grade Book.",
-          cardColor,
-          textColor,
-          subTextColor,
-        ),
-      ],
-    );
-  }
-
-  Widget _announcementItem(
-    String office,
-    String date,
-    String msg,
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
+  Widget _quickActionButton(String label, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: _isDarkMode ? surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: _isDarkMode ? Colors.white10 : Colors.black12,
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: aViolet.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(LucideIcons.megaphone, color: aViolet, size: 20),
+      child: ListTile(
+        leading: Icon(icon, color: color),
+        title: Text(
+          label,
+          style: TextStyle(
+            color: _isDarkMode ? Colors.white : pViolet,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
           ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      office,
-                      style: GoogleFonts.inter(
-                        color: textColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    Text(
-                      date,
-                      style: GoogleFonts.inter(
-                        color: subTextColor,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  msg,
-                  style: GoogleFonts.inter(
-                    color: subTextColor,
-                    height: 1.5,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
+        trailing: const Icon(
+          LucideIcons.chevronRight,
+          size: 16,
+          color: Colors.white24,
+        ),
+        onTap: () {},
       ),
     );
   }
+
+  Widget _actionIcon(IconData icon, Color panelColor) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: panelColor,
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Icon(icon, color: Colors.blueGrey),
+  );
+
+  Widget _headerAction(IconData icon, Color color) => Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.05),
+      shape: BoxShape.circle,
+    ),
+    child: Icon(icon, color: color, size: 20),
+  );
 }
