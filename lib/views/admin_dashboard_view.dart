@@ -63,7 +63,10 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                   Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(32),
-                      child: _buildDashboardIntelligence(textColor, subTextColor),
+                      child: _buildDashboardIntelligence(
+                        textColor,
+                        subTextColor,
+                      ),
                     ),
                   ),
                 ],
@@ -76,7 +79,10 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
 
     // Show panel template for other views
     final sidebarItems = [
-      PanelMenuItem(title: 'System Overview', icon: LucideIcons.layoutDashboard),
+      PanelMenuItem(
+        title: 'System Overview',
+        icon: LucideIcons.layoutDashboard,
+      ),
       PanelMenuItem(title: 'Announcements', icon: LucideIcons.megaphone),
       PanelMenuItem(title: 'Admissions', icon: LucideIcons.userPlus),
       PanelMenuItem(title: 'Registrar', icon: LucideIcons.users),
@@ -112,7 +118,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     return DashboardPanelTemplate(
       panelTitle: panelTitle,
       subtitle: '',
-      panelContent: AdminPanelContent(panelType: _panelTypes[_activeModuleIndex]),
+      panelContent: AdminPanelContent(
+        panelType: _panelTypes[_activeModuleIndex],
+      ),
       sidebarItems: sidebarItems,
       onLogout: widget.onLogout,
       isDarkMode: _isDarkMode,
@@ -620,9 +628,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     String value,
     IconData icon,
     Color color,
-    Color textColor,
-    {VoidCallback? onTap}
-  ) {
+    Color textColor, {
+    VoidCallback? onTap,
+  }) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -708,8 +716,11 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  Widget _buildHeaderAction(IconData icon, Color subTextColor,
-      {VoidCallback? onTap}) {
+  Widget _buildHeaderAction(
+    IconData icon,
+    Color subTextColor, {
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: MouseRegion(
@@ -754,7 +765,8 @@ class SearchDialog extends StatefulWidget {
   final bool isDarkMode;
   final Function(int) onItemSelected;
 
-  const SearchDialog({super.key, 
+  const SearchDialog({
+    super.key,
     required this.isDarkMode,
     required this.onItemSelected,
   });
@@ -796,8 +808,9 @@ class _SearchDialogState extends State<SearchDialog> {
         _filteredItems = allItems;
       } else {
         _filteredItems = allItems
-            .where((item) =>
-                item.value.toLowerCase().contains(query.toLowerCase()))
+            .where(
+              (item) => item.value.toLowerCase().contains(query.toLowerCase()),
+            )
             .toList();
       }
     });
@@ -823,7 +836,9 @@ class _SearchDialogState extends State<SearchDialog> {
           color: widget.isDarkMode ? sideColor : Color(0xFFEDE9FE),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: widget.isDarkMode ? Colors.white10 : aViolet.withOpacity(0.2),
+            color: widget.isDarkMode
+                ? Colors.white10
+                : aViolet.withOpacity(0.2),
           ),
         ),
         child: Padding(
@@ -845,10 +860,7 @@ class _SearchDialogState extends State<SearchDialog> {
                 onChanged: _filterItems,
                 decoration: InputDecoration(
                   hintText: 'Type to search...',
-                  prefixIcon: Icon(
-                    LucideIcons.search,
-                    color: aViolet,
-                  ),
+                  prefixIcon: Icon(LucideIcons.search, color: aViolet),
                   filled: true,
                   fillColor: widget.isDarkMode
                       ? Colors.white.withOpacity(0.05)
@@ -861,7 +873,9 @@ class _SearchDialogState extends State<SearchDialog> {
                           : aViolet.withOpacity(0.3),
                     ),
                   ),
-                  hintStyle: GoogleFonts.inter(color: widget.isDarkMode ? Colors.blueGrey : aViolet),
+                  hintStyle: GoogleFonts.inter(
+                    color: widget.isDarkMode ? Colors.blueGrey : aViolet,
+                  ),
                 ),
                 style: GoogleFonts.inter(color: textColor),
               ),
@@ -871,9 +885,7 @@ class _SearchDialogState extends State<SearchDialog> {
                     ? Center(
                         child: Text(
                           'No items found',
-                          style: GoogleFonts.inter(
-                            color: Colors.blueGrey,
-                          ),
+                          style: GoogleFonts.inter(color: Colors.blueGrey),
                         ),
                       )
                     : ListView.builder(
@@ -1018,9 +1030,7 @@ class NotificationsPanel extends StatelessWidget {
                     decoration: BoxDecoration(
                       border: Border(
                         bottom: BorderSide(
-                          color: isDarkMode
-                              ? Colors.white10
-                              : Colors.black12,
+                          color: isDarkMode ? Colors.white10 : Colors.black12,
                         ),
                       ),
                     ),
@@ -1030,8 +1040,7 @@ class NotificationsPanel extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color:
-                                (notif['color'] as Color).withOpacity(0.1),
+                            color: (notif['color'] as Color).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
@@ -1086,7 +1095,6 @@ class NotificationsPanel extends StatelessWidget {
     );
   }
 }
-
 
 // PAINTER FOR PIE CHART
 class PieChartPainter extends CustomPainter {

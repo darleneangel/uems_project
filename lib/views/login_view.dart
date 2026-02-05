@@ -4,6 +4,9 @@ import 'package:lucide_icons/lucide_icons.dart';
 // Import your student dashboard file here
 import 'student_dashboard_view.dart';
 import 'admin_dashboard_view.dart';
+import 'accounting_dashboard_view.dart';
+import 'admission_dashboard_view.dart';
+import 'registrar_dashboard_view.dart';
 
 class UEMSLoginPage extends StatefulWidget {
   const UEMSLoginPage({super.key});
@@ -118,6 +121,24 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       });
       _idController.clear();
       _passwordController.clear();
+    } else if (id == '789' && pass == '789') {
+      setState(() {
+        _currentView = 'admission_dashboard';
+      });
+      _idController.clear();
+      _passwordController.clear();
+    } else if (id == '910' && pass == '910') {
+      setState(() {
+        _currentView = 'registrar_dashboard';
+      });
+      _idController.clear();
+      _passwordController.clear();
+    } else if (id == '111' && pass == '111') {
+      setState(() {
+        _currentView = 'registrar_dashboard';
+      });
+      _idController.clear();
+      _passwordController.clear();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -141,6 +162,18 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         );
       case 'admin_dashboard':
         return AdminDashboardView(
+          onLogout: () => setState(() => _currentView = 'login'),
+        );
+      case 'admission_dashboard':
+        return AdmissionDashboardView(
+          onLogout: () => setState(() => _currentView = 'login'),
+        );
+      case 'accounting_dashboard':
+        return AccountingDashboardView(
+          onLogout: () => setState(() => _currentView = 'login'),
+        );
+      case 'registrar_dashboard':
+        return RegistrarDashboardView(
           onLogout: () => setState(() => _currentView = 'login'),
         );
       case 'login':
