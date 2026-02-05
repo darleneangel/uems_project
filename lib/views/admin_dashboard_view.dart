@@ -25,7 +25,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     'admissions',
     'registrar',
     'accounting',
-    '',
     'study_loads',
     'grade_recording',
   ];
@@ -87,7 +86,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       PanelMenuItem(title: 'Admissions', icon: LucideIcons.userPlus),
       PanelMenuItem(title: 'Registrar', icon: LucideIcons.users),
       PanelMenuItem(title: 'Accounting', icon: LucideIcons.wallet),
-      PanelMenuItem(title: '', icon: LucideIcons.divideSquare),
       PanelMenuItem(title: 'Study Loads', icon: LucideIcons.layers),
       PanelMenuItem(title: 'Grade Recording', icon: LucideIcons.bookMarked),
       PanelMenuItem(title: 'Secure Logout', icon: LucideIcons.logOut),
@@ -107,10 +105,10 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       case 4:
         panelTitle = 'Accounting & Finance';
         break;
-      case 6:
+      case 5:
         panelTitle = 'Study Loads Management';
         break;
-      case 7:
+      case 6:
         panelTitle = 'Grade Recording System';
         break;
     }
@@ -125,9 +123,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       onLogout: widget.onLogout,
       isDarkMode: _isDarkMode,
       onMenuItemSelected: (index) {
-        if (index == 8) {
+        if (index == 7) {
           widget.onLogout();
-        } else if (index != 5) {
+        } else {
           setState(() => _activeModuleIndex = index);
         }
       },

@@ -2,6 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../views/admissions_list_view.dart';
+import '../views/revenue_list_view.dart';
+import '../views/payments_list_view.dart';
+import '../views/scholarships_list_view.dart';
+import '../views/refunds_list_view.dart';
+import '../views/enrollment_statistics_view.dart';
+import '../views/student_records_view.dart';
+import '../views/transcript_generation_view.dart';
+import '../views/academic_calendar_view.dart';
+import '../views/course_catalog_view.dart';
 
 class AdminPanelContent extends StatelessWidget {
   final String panelType;
@@ -21,7 +30,7 @@ class AdminPanelContent extends StatelessWidget {
       case 'admissions':
         return _buildAdmissionsPanel(context);
       case 'registrar':
-        return _buildRegistrarPanel();
+        return _buildRegistrarPanel(context);
       case 'accounting':
         return _buildAccountingPanel(context);
       case 'study_loads':
@@ -201,36 +210,101 @@ class AdminPanelContent extends StatelessWidget {
     );
   }
 
-  Widget _buildRegistrarPanel() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: surfaceDark,
+  Widget _buildRegistrarPanel(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _buildRegistrarStatBox(context, 'Enrollment Statistics', '1,245', aViolet),
+            _buildRegistrarStatBox(context, 'Student Records', '892', Colors.greenAccent),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            _buildRegistrarStatBox(context, 'Transcript Generation', '156', Colors.blueAccent),
+            _buildRegistrarStatBox(context, 'Academic Calendar', '7', Colors.yellowAccent),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            _buildRegistrarStatBox(context, 'Course Catalog', '45', Colors.cyanAccent),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRegistrarStatBox(BuildContext context, String label, String value, Color color) {
+    void handleTap() {
+      final lower = label.toLowerCase();
+      if (lower.contains('enrollment')) {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (c) => const EnrollmentStatisticsView(),
+        ));
+      } else if (lower.contains('student')) {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (c) => const StudentRecordsView(),
+        ));
+      } else if (lower.contains('transcript')) {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (c) => const TranscriptGenerationView(),
+        ));
+      } else if (lower.contains('academic')) {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (c) => const AcademicCalendarView(),
+        ));
+      } else if (lower.contains('course')) {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (c) => const CourseCatalogView(),
+        ));
+      }
+    }
+
+    return Expanded(
+      child: InkWell(
+        onTap: handleTap,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        children: [
-          ...[
-            'Enrollment Statistics',
-            'Student Records Management',
-            'Transcript Generation',
-            'Academic Calendar',
-            'Course Catalog',
-          ].map((service) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: Icon(LucideIcons.fileText, color: aViolet),
-                title: Text(
-                  service,
-                  style: GoogleFonts.inter(color: Colors.white),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: surfaceDark,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                trailing: Icon(LucideIcons.chevronRight, color: aViolet),
+                child: Icon(LucideIcons.barChart3, color: color, size: 20),
               ),
-            );
-          }),
-        ],
+              const SizedBox(height: 12),
+              Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  color: Colors.white54,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -390,21 +464,47 @@ class AdminPanelContent extends StatelessWidget {
   }
 
   Widget _buildStatBox(BuildContext context, String label, String value, Color color) {
-    bool isApplicationsStat = label.toLowerCase().contains('application') ||
+    bool isAccountingStat = label.toLowerCase().contains('revenue') ||
+        label.toLowerCase().contains('payment') ||
+        label.toLowerCase().contains('scholarship') ||
+        label.toLowerCase().contains('refund');
+
+    bool isApplicationsStat = !isAccountingStat && (
+        label.toLowerCase().contains('application') ||
         label.toLowerCase().contains('pending') ||
         label.toLowerCase().contains('approved') ||
-        label.toLowerCase().contains('rejected');
+        label.toLowerCase().contains('rejected'));
 
     void handleTap() {
-      if (!isApplicationsStat) return;
-      String filter = 'all';
-      final lower = label.toLowerCase();
-      if (lower.contains('pending')) filter = 'pending';
-      if (lower.contains('approved')) filter = 'approved';
-      if (lower.contains('rejected')) filter = 'rejected';
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (c) => AdmissionsListView(filter: filter),
-      ));
+      if (isAccountingStat) {
+        final lower = label.toLowerCase();
+        if (lower.contains('revenue')) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (c) => const RevenueListView(),
+          ));
+        } else if (lower.contains('payment')) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (c) => const PaymentsListView(),
+          ));
+        } else if (lower.contains('scholarship')) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (c) => const ScholarshipsListView(),
+          ));
+        } else if (lower.contains('refund')) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (c) => const RefundsListView(),
+          ));
+        }
+      } else if (isApplicationsStat) {
+        String filter = 'all';
+        final lower = label.toLowerCase();
+        if (lower.contains('pending')) filter = 'pending';
+        if (lower.contains('approved')) filter = 'approved';
+        if (lower.contains('rejected')) filter = 'rejected';
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (c) => AdmissionsListView(filter: filter),
+        ));
+      }
     }
 
     return Expanded(
@@ -681,22 +781,28 @@ class _AdmissionsSearchDelegate extends SearchDelegate<Map<String, String>?> {
     }).toList();
 
     if (results.isEmpty) {
-      return Center(child: Text('No results', style: GoogleFonts.inter(color: Colors.white54)));
+      return Container(
+        color: const Color(0xFF0F071D),
+        child: Center(child: Text('No results', style: GoogleFonts.inter(color: Colors.white54))),
+      );
     }
 
-    return ListView.separated(
+    return Container(
+      color: const Color(0xFF0F071D),
+      child: ListView.separated(
       padding: const EdgeInsets.all(12),
       itemCount: results.length,
-      separatorBuilder: (_, __) => const Divider(color: Colors.white10),
-      itemBuilder: (context, index) {
-        final s = results[index];
-        return ListTile(
-          leading: CircleAvatar(backgroundColor: AdminPanelContent.aViolet, child: Text(s['name']!.split(' ').first[0], style: GoogleFonts.inter(color: Colors.white))),
-          title: Text(s['name']!, style: GoogleFonts.inter(color: Colors.white)),
-          subtitle: Text('${s['program']} • ${s['status']}', style: GoogleFonts.inter(color: Colors.white54)),
-          onTap: () => close(context, s),
-        );
-      },
+        separatorBuilder: (_, __) => const Divider(color: Colors.white10),
+        itemBuilder: (context, index) {
+          final s = results[index];
+          return ListTile(
+            leading: CircleAvatar(backgroundColor: AdminPanelContent.aViolet, child: Text(s['name']!.split(' ').first[0], style: GoogleFonts.inter(color: Colors.white))),
+            title: Text(s['name']!, style: GoogleFonts.inter(color: Colors.white)),
+            subtitle: Text('${s['program']} • ${s['status']}', style: GoogleFonts.inter(color: Colors.white54)),
+            onTap: () => close(context, s),
+          );
+        },
+      ),
     );
   }
 
@@ -711,18 +817,21 @@ class _AdmissionsSearchDelegate extends SearchDelegate<Map<String, String>?> {
                 s['status']!.toLowerCase().contains(q);
           }).toList();
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: suggestions.length,
-      itemBuilder: (context, index) {
-        final s = suggestions[index];
-        return ListTile(
-          leading: CircleAvatar(backgroundColor: AdminPanelContent.aViolet, child: Text(s['name']!.split(' ').first[0], style: GoogleFonts.inter(color: Colors.white))),
-          title: Text(s['name']!, style: GoogleFonts.inter(color: Colors.white)),
-          subtitle: Text('${s['program']} • ${s['status']}', style: GoogleFonts.inter(color: Colors.white54)),
-          onTap: () => query = s['name']!,
-        );
-      },
+    return Container(
+      color: const Color(0xFF0F071D),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: suggestions.length,
+        itemBuilder: (context, index) {
+          final s = suggestions[index];
+          return ListTile(
+            leading: CircleAvatar(backgroundColor: AdminPanelContent.aViolet, child: Text(s['name']!.split(' ').first[0], style: GoogleFonts.inter(color: Colors.white))),
+            title: Text(s['name']!, style: GoogleFonts.inter(color: Colors.white)),
+            subtitle: Text('${s['program']} • ${s['status']}', style: GoogleFonts.inter(color: Colors.white54)),
+            onTap: () => query = s['name']!,
+          );
+        },
+      ),
     );
   }
 }
