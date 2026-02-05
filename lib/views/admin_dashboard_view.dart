@@ -338,11 +338,11 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     bool isDestructive = false,
     VoidCallback? onTap,
   }) {
-    bool isSelected = _activeModuleIndex == index;
+    // Keep sidebar appearance uniform regardless of selection
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        color: isSelected ? aViolet.withOpacity(0.15) : Colors.transparent,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
@@ -350,19 +350,15 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         visualDensity: VisualDensity.compact,
         leading: Icon(
           icon,
-          color: isDestructive
-              ? Colors.redAccent
-              : (isSelected ? aViolet : textColor.withOpacity(0.4)),
+          color: isDestructive ? Colors.redAccent : textColor.withOpacity(0.4),
           size: 20,
         ),
         title: _isSidebarExpanded
             ? Text(
                 label,
                 style: GoogleFonts.inter(
-                  color: isDestructive
-                      ? Colors.redAccent
-                      : (isSelected ? textColor : textColor.withOpacity(0.6)),
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isDestructive ? Colors.redAccent : textColor.withOpacity(0.6),
+                  fontWeight: FontWeight.w500,
                   fontSize: 13,
                 ),
               )

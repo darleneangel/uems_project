@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../views/admissions_list_view.dart';
 
 class AdminPanelContent extends StatelessWidget {
   final String panelType;
@@ -18,11 +19,11 @@ class AdminPanelContent extends StatelessWidget {
       case 'announcements':
         return _buildAnnouncementsPanel();
       case 'admissions':
-        return _buildAdmissionsPanel();
+        return _buildAdmissionsPanel(context);
       case 'registrar':
         return _buildRegistrarPanel();
       case 'accounting':
-        return _buildAccountingPanel();
+        return _buildAccountingPanel(context);
       case 'study_loads':
         return _buildStudyLoadsPanel();
       case 'grade_recording':
@@ -182,20 +183,20 @@ class AdminPanelContent extends StatelessWidget {
     );
   }
 
-  Widget _buildAdmissionsPanel() {
+  Widget _buildAdmissionsPanel(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            _buildStatBox('Total Applications', '245', aViolet),
-            _buildStatBox('Pending Review', '43', Colors.orangeAccent),
-            _buildStatBox('Approved', '182', success),
-            _buildStatBox('Rejected', '20', Colors.redAccent),
+            _buildStatBox(context, 'Total Applications', '245', aViolet),
+            _buildStatBox(context, 'Pending Review', '43', Colors.orangeAccent),
+            _buildStatBox(context, 'Approved', '182', success),
+            _buildStatBox(context, 'Rejected', '20', Colors.redAccent),
           ],
         ),
         const SizedBox(height: 24),
-        _buildAdmissionsList(),
+        _buildAdmissionsList(context),
       ],
     );
   }
@@ -234,16 +235,16 @@ class AdminPanelContent extends StatelessWidget {
     );
   }
 
-  Widget _buildAccountingPanel() {
+  Widget _buildAccountingPanel(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            _buildStatBox('Total Revenue', '₱2.5M', success),
-            _buildStatBox('Pending Payments', '₱450K', Colors.orangeAccent),
-            _buildStatBox('Scholarships Awarded', '₱800K', aViolet),
-            _buildStatBox('Refunds Processed', '₱125K', Colors.redAccent),
+            _buildStatBox(context, 'Total Revenue', '₱2.5M', success),
+            _buildStatBox(context, 'Pending Payments', '₱450K', Colors.orangeAccent),
+            _buildStatBox(context, 'Scholarships Awarded', '₱800K', aViolet),
+            _buildStatBox(context, 'Refunds Processed', '₱125K', Colors.redAccent),
           ],
         ),
         const SizedBox(height: 24),
@@ -388,52 +389,88 @@ class AdminPanelContent extends StatelessWidget {
     );
   }
 
-  Widget _buildStatBox(String label, String value, Color color) {
+  Widget _buildStatBox(BuildContext context, String label, String value, Color color) {
+    bool isApplicationsStat = label.toLowerCase().contains('application') ||
+        label.toLowerCase().contains('pending') ||
+        label.toLowerCase().contains('approved') ||
+        label.toLowerCase().contains('rejected');
+
+    void handleTap() {
+      if (!isApplicationsStat) return;
+      String filter = 'all';
+      final lower = label.toLowerCase();
+      if (lower.contains('pending')) filter = 'pending';
+      if (lower.contains('approved')) filter = 'approved';
+      if (lower.contains('rejected')) filter = 'rejected';
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (c) => AdmissionsListView(filter: filter),
+      ));
+    }
+
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: surfaceDark,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: handleTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: surfaceDark,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(LucideIcons.barChart3, color: color, size: 20),
               ),
-              child: Icon(LucideIcons.barChart3, color: color, size: 20),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: color,
+              const SizedBox(height: 12),
+              Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
-            ),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                color: Colors.white54,
-                fontSize: 12,
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  color: Colors.white54,
+                  fontSize: 12,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildAdmissionsList() {
+  Widget _buildAdmissionsList(BuildContext context) {
+    final students = [
+      {'name': 'Alice Santos', 'status': 'pending', 'program': 'BSCS'},
+      {'name': 'Ben Delacruz', 'status': 'approved', 'program': 'BSIT'},
+      {'name': 'Carla Reyes', 'status': 'rejected', 'program': 'BSBA'},
+      {'name': 'Daniel Cruz', 'status': 'approved', 'program': 'BSCS'},
+      {'name': 'Eve Navarro', 'status': 'pending', 'program': 'BSIT'},
+      {'name': 'Francis Lopez', 'status': 'pending', 'program': 'BSCS'},
+      {'name': 'Gina Morales', 'status': 'approved', 'program': 'BSIT'},
+      {'name': 'Hector Ramos', 'status': 'rejected', 'program': 'BSEd'},
+      {'name': 'Ivy Santos', 'status': 'pending', 'program': 'BSCS'},
+      {'name': 'Jill Tan', 'status': 'approved', 'program': 'BSBA'},
+      {'name': 'Karl Ong', 'status': 'pending', 'program': 'BSCS'},
+      {'name': 'Lara Medina', 'status': 'approved', 'program': 'BSIT'},
+    ];
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: surfaceDark,
         borderRadius: BorderRadius.circular(20),
@@ -442,57 +479,88 @@ class AdminPanelContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Pending Applications',
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ...List.generate(3, (index) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: aViolet,
-                  child: Text(
-                    'A${index + 1}',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                title: Text(
-                  'Applicant ${index + 1}',
-                  style: GoogleFonts.inter(color: Colors.white),
-                ),
-                subtitle: Text(
-                  'BSCS Program',
-                  style: GoogleFonts.inter(color: Colors.white54),
-                ),
-                trailing: SizedBox(
-                  width: 100,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      IconButton(
-                        icon: Icon(LucideIcons.check,
-                            color: success, size: 18),
-                        onPressed: () {},
-                      ),
-                      IconButton(
-                        icon: Icon(LucideIcons.x,
-                            color: Colors.redAccent, size: 18),
-                        onPressed: () {},
-                      ),
-                    ],
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Applications',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-            );
-          }),
+              IconButton(
+                icon: const Icon(LucideIcons.search, color: Colors.white60),
+                onPressed: () async {
+                  await showSearch(
+                    context: context,
+                    delegate: _AdmissionsSearchDelegate(students),
+                  );
+                },
+                tooltip: 'Search applications',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 320,
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: ListView.separated(
+                itemCount: students.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final s = students[index];
+                  final status = s['status'] ?? 'pending';
+                  Color statusColor = status == 'approved'
+                      ? success
+                      : (status == 'rejected' ? Colors.redAccent : Colors.orangeAccent);
+
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white12,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: aViolet,
+                        child: Text(
+                          s['name']!.split(' ').first[0],
+                          style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      title: Text(s['name']!, style: GoogleFonts.inter(color: Colors.white)),
+                      subtitle: Text(s['program']!, style: GoogleFonts.inter(color: Colors.white54)),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(status.toUpperCase(), style: GoogleFonts.inter(color: statusColor, fontWeight: FontWeight.w700, fontSize: 12)),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(LucideIcons.check, color: success, size: 18),
+                            onPressed: () {},
+                          ),
+                          IconButton(
+                            icon: Icon(LucideIcons.x, color: Colors.redAccent, size: 18),
+                            onPressed: () {},
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -572,6 +640,89 @@ class AdminPanelContent extends StatelessWidget {
           style: GoogleFonts.inter(color: Colors.white70),
         ),
       ),
+    );
+  }
+}
+
+class _AdmissionsSearchDelegate extends SearchDelegate<Map<String, String>?> {
+  final List<Map<String, String>> students;
+
+  _AdmissionsSearchDelegate(this.students);
+
+  @override
+  String? get searchFieldLabel => 'Search applicants by name, program, status';
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      if (query.isNotEmpty)
+        IconButton(
+          icon: const Icon(LucideIcons.x),
+          onPressed: () => query = '',
+        ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(LucideIcons.chevronLeft),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    final results = students.where((s) {
+      final q = query.toLowerCase();
+      return s['name']!.toLowerCase().contains(q) ||
+          s['program']!.toLowerCase().contains(q) ||
+          s['status']!.toLowerCase().contains(q);
+    }).toList();
+
+    if (results.isEmpty) {
+      return Center(child: Text('No results', style: GoogleFonts.inter(color: Colors.white54)));
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(12),
+      itemCount: results.length,
+      separatorBuilder: (_, __) => const Divider(color: Colors.white10),
+      itemBuilder: (context, index) {
+        final s = results[index];
+        return ListTile(
+          leading: CircleAvatar(backgroundColor: AdminPanelContent.aViolet, child: Text(s['name']!.split(' ').first[0], style: GoogleFonts.inter(color: Colors.white))),
+          title: Text(s['name']!, style: GoogleFonts.inter(color: Colors.white)),
+          subtitle: Text('${s['program']} • ${s['status']}', style: GoogleFonts.inter(color: Colors.white54)),
+          onTap: () => close(context, s),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    final suggestions = query.isEmpty
+        ? students
+        : students.where((s) {
+            final q = query.toLowerCase();
+            return s['name']!.toLowerCase().contains(q) ||
+                s['program']!.toLowerCase().contains(q) ||
+                s['status']!.toLowerCase().contains(q);
+          }).toList();
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: suggestions.length,
+      itemBuilder: (context, index) {
+        final s = suggestions[index];
+        return ListTile(
+          leading: CircleAvatar(backgroundColor: AdminPanelContent.aViolet, child: Text(s['name']!.split(' ').first[0], style: GoogleFonts.inter(color: Colors.white))),
+          title: Text(s['name']!, style: GoogleFonts.inter(color: Colors.white)),
+          subtitle: Text('${s['program']} • ${s['status']}', style: GoogleFonts.inter(color: Colors.white54)),
+          onTap: () => query = s['name']!,
+        );
+      },
     );
   }
 }
