@@ -539,7 +539,7 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                     Divider(color: Colors.white10),
                   ],
                 );
-                }).toList(),
+                }),
             ],
           ),
         ),
@@ -933,7 +933,7 @@ class _StudentPanelContentState extends State<StudentPanelContent> {
                       _tableCell(g['final']!),
                       _tableCell(g['grade']!),
                     ]);
-                  }).toList(),
+                  }),
                 ],
               ),
             ],

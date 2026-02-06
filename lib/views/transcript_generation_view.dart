@@ -19,7 +19,7 @@ class TranscriptGenerationView extends StatelessWidget {
       {'studentId': '2025-006', 'name': 'Amanda Williams', 'requestDate': '2025-12-08', 'status': 'Completed', 'daysAgo': '4 days'},
     ];
 
-    Color _statusColor(String status) {
+    Color statusColor(String status) {
       switch (status) {
         case 'Completed':
           return success;
@@ -91,14 +91,14 @@ class TranscriptGenerationView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: _statusColor(transcript['status']!).withOpacity(0.15),
+                          color: statusColor(transcript['status']!).withOpacity(0.15),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: _statusColor(transcript['status']!).withOpacity(0.25)),
+                          border: Border.all(color: statusColor(transcript['status']!).withOpacity(0.25)),
                         ),
                         child: Text(
                           transcript['status']!,
                           style: GoogleFonts.inter(
-                            color: _statusColor(transcript['status']!),
+                            color: statusColor(transcript['status']!),
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),

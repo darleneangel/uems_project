@@ -20,7 +20,7 @@ class AcademicCalendarView extends StatelessWidget {
       {'event': 'Graduation Ceremony', 'date': '2025-06-21', 'type': 'Event'},
     ];
 
-    Color _typeColor(String type) {
+    Color typeColor(String type) {
       switch (type) {
         case 'Academic':
           return aViolet;
@@ -69,10 +69,10 @@ class AcademicCalendarView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: _typeColor(event['type']!).withOpacity(0.2),
+                          color: typeColor(event['type']!).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(Icons.calendar_month, color: _typeColor(event['type']!), size: 20),
+                        child: Icon(Icons.calendar_month, color: typeColor(event['type']!), size: 20),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -95,13 +95,13 @@ class AcademicCalendarView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _typeColor(event['type']!).withOpacity(0.15),
+                          color: typeColor(event['type']!).withOpacity(0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           event['type']!,
                           style: GoogleFonts.inter(
-                            color: _typeColor(event['type']!),
+                            color: typeColor(event['type']!),
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
