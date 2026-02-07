@@ -90,9 +90,11 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     final Widget panelContent = (_selectedIndex == 0)
         ? _buildPanelContentHome(cardColor, textColor, subTextColor)
         : StudentPanelContent(
+            isDarkMode: _isDarkMode, // <--- Add this line to fix the red error
             panelType: (_selectedIndex < _panelTypes.length)
                 ? _panelTypes[_selectedIndex]
-                : 'dashboard');
+                : 'dashboard',
+          );
 
     return DashboardPanelTemplate(
       panelTitle: panelTitle,
@@ -111,7 +113,8 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
       },
       selectedIndex: _selectedIndex,
       isSidebarExpanded: _isSidebarExpanded,
-      onSidebarToggle: (expanded) => setState(() => _isSidebarExpanded = expanded),
+      onSidebarToggle: (expanded) =>
+          setState(() => _isSidebarExpanded = expanded),
       isAdminPanel: false,
       themeToggle: () => setState(() => _isDarkMode = !_isDarkMode),
     );
