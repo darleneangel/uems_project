@@ -3,7 +3,12 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 class PaymentUploadPanel extends StatelessWidget {
   final bool isDarkMode;
-  const PaymentUploadPanel({super.key, required this.isDarkMode});
+  final Map<String, dynamic> studentData;
+  const PaymentUploadPanel({
+    super.key,
+    required this.isDarkMode,
+    required this.studentData,
+  });
 
   @override
   Widget build(BuildContext context) {
