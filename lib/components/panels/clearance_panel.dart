@@ -592,7 +592,7 @@ class _ClearancePanelState extends State<ClearancePanel> {
                     ),
                   ],
                 );
-              }).toList(),
+              }),
             ],
           ),
         ],

@@ -501,7 +501,7 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
                 ),
               ],
             );
-          }).toList(),
+          }),
         ],
       ),
     );

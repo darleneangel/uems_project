@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../components/dashboard_panel_template.dart';
 import '../components/admin_panel_content.dart';
 
 class AdminDashboardView extends StatefulWidget {
@@ -48,97 +47,85 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     final textColor = _isDarkMode ? Colors.white : pViolet;
     final subTextColor = _isDarkMode ? Colors.white54 : Colors.blueGrey;
 
-    // Show overview dashboard when index is 0
-    if (_activeModuleIndex == 0) {
-      return Scaffold(
-        backgroundColor: bgColor,
-        body: Row(
-          children: [
-            _buildSidebar(sideColor, textColor, subTextColor),
-            Expanded(
-              child: Column(
-                children: [
-                  _buildTopBar(sideColor, textColor, subTextColor),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(32),
-                      child: _buildDashboardIntelligence(
-                        textColor,
-                        subTextColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Show panel template for other views
-    final sidebarItems = [
-      PanelMenuItem(
-        title: 'System Overview',
-        icon: LucideIcons.layoutDashboard,
-      ),
-      PanelMenuItem(title: 'Announcements', icon: LucideIcons.megaphone),
-      PanelMenuItem(title: 'Admissions', icon: LucideIcons.userPlus),
-      PanelMenuItem(title: 'Registrar', icon: LucideIcons.users),
-      PanelMenuItem(title: 'Accounting', icon: LucideIcons.wallet),
-      PanelMenuItem(title: 'Study Loads', icon: LucideIcons.layers),
-      PanelMenuItem(title: 'Grade Recording', icon: LucideIcons.bookMarked),
-      PanelMenuItem(title: 'Secure Logout', icon: LucideIcons.logOut),
-    ];
-
+    // Build the panel content based on active module index
     String panelTitle = '';
+    Widget panelContent;
+
     switch (_activeModuleIndex) {
+      case 0:
+        panelTitle = 'System Overview';
+        panelContent = _buildDashboardIntelligence(textColor, subTextColor);
+        break;
       case 1:
         panelTitle = 'Announcements Management';
+        panelContent = AdminPanelContent(panelType: _panelTypes[1]);
         break;
       case 2:
         panelTitle = 'Admissions Management';
+        panelContent = AdminPanelContent(panelType: _panelTypes[2]);
         break;
       case 3:
         panelTitle = 'Registrar Services';
+        panelContent = AdminPanelContent(panelType: _panelTypes[3]);
         break;
       case 4:
         panelTitle = 'Accounting & Finance';
+        panelContent = AdminPanelContent(panelType: _panelTypes[4]);
         break;
       case 5:
         panelTitle = 'Study Loads Management';
+        panelContent = AdminPanelContent(panelType: _panelTypes[5]);
         break;
       case 6:
         panelTitle = 'Grade Recording System';
+        panelContent = AdminPanelContent(panelType: _panelTypes[6]);
         break;
+      default:
+        panelTitle = 'System Overview';
+        panelContent = _buildDashboardIntelligence(textColor, subTextColor);
     }
 
-    return DashboardPanelTemplate(
-      panelTitle: panelTitle,
-      subtitle: '',
-      panelContent: AdminPanelContent(
-        panelType: _panelTypes[_activeModuleIndex],
+    return Scaffold(
+      backgroundColor: bgColor,
+      body: Row(
+        children: [
+          // Custom sidebar with section headers (always consistent design)
+          _buildSidebar(sideColor, textColor, subTextColor),
+
+          // Main content area
+          Expanded(
+            child: Column(
+              children: [
+                _buildTopBar(sideColor, textColor, subTextColor, panelTitle),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          panelTitle,
+                          style: GoogleFonts.inter(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        panelContent,
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-      sidebarItems: sidebarItems,
-      onLogout: widget.onLogout,
-      isDarkMode: _isDarkMode,
-      onMenuItemSelected: (index) {
-        if (index == 7) {
-          widget.onLogout();
-        } else {
-          setState(() => _activeModuleIndex = index);
-        }
-      },
-      selectedIndex: _activeModuleIndex,
-      isSidebarExpanded: _isSidebarExpanded,
-      onSidebarToggle: (expanded) =>
-          setState(() => _isSidebarExpanded = expanded),
-      isAdminPanel: true,
-      themeToggle: () => setState(() => _isDarkMode = !_isDarkMode),
     );
   }
 
-  Widget _buildTopBar(Color sideColor, Color textColor, Color subTextColor) {
+  Widget _buildTopBar(Color sideColor, Color textColor, Color subTextColor, String panelTitle) {
     return Container(
       height: 80,
       padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -157,7 +144,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "System Integration Intelligence",
+                panelTitle,
                 style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
@@ -287,11 +274,11 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 _sidebarItem(LucideIcons.wallet, "Accounting", 4, textColor),
                 const SizedBox(height: 20),
                 _sidebarHeader("ACADEMIC CONTROL", subTextColor),
-                _sidebarItem(LucideIcons.layers, "Study Loads", 6, textColor),
+                _sidebarItem(LucideIcons.layers, "Study Loads", 5, textColor),
                 _sidebarItem(
                   LucideIcons.bookMarked,
                   "Grade Recording",
-                  7,
+                  6,
                   textColor,
                 ),
               ],
@@ -388,7 +375,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               Colors.blueAccent,
               textColor,
               onTap: () {
-                setState(() => _activeModuleIndex = 6); // Study Loads
+                setState(() => _activeModuleIndex = 5); // Study Loads
               },
             ),
             _buildStatCard(

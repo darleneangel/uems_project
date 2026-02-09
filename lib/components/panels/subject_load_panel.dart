@@ -365,7 +365,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel>
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: ["All", "Mon", "Tue", "Wed", "Thu", "Fri"].map((day) {
+              children: ["All", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) {
                 final isSelected = _selectedDayFilter == day;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
@@ -612,6 +612,12 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel>
     Color textColor,
     Color subTextColor,
   ) {
+    final scheduleParts = sub['schedule'].toString().split(' ');
+    final day = scheduleParts.isNotEmpty ? scheduleParts[0] : 'TBA';
+    final time = scheduleParts.length >= 4
+        ? "${scheduleParts[1]} ${scheduleParts[2]} ${scheduleParts[3]}"
+        : (scheduleParts.length > 1 ? scheduleParts.sublist(1).join(' ') : '');
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
@@ -620,7 +626,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel>
           SizedBox(
             width: 80,
             child: Text(
-              sub['schedule'].split(' ')[0],
+              day,
               style: GoogleFonts.inter(
                 color: const Color(0xFF8B5CF6),
                 fontWeight: FontWeight.bold,
@@ -633,11 +639,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  sub['schedule'].split(' ')[1] +
-                      " " +
-                      sub['schedule'].split(' ')[2] +
-                      " " +
-                      sub['schedule'].split(' ')[3],
+                  time,
                   style: TextStyle(
                     color: textColor,
                     fontWeight: FontWeight.bold,
