@@ -378,86 +378,103 @@ class AdminPanelContent extends StatelessWidget {
     );
   }
 
+// DELETE both old versions and paste this ONE version:
   Widget _buildGradeRecordingPanel() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: surfaceDark,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
-      ),
+      // We wrap it in a Column so it has a Header title like your other panels
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Grade Submissions Status',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: success.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '85% Complete',
-                  style: GoogleFonts.inter(
-                    color: success,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: 0.85,
-              minHeight: 12,
-              backgroundColor: Colors.white.withOpacity(0.1),
-              valueColor: AlwaysStoppedAnimation(success),
+          Text(
+            "Grade Recording",
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 20),
-          ...[
-            'CS 101: Submitted',
-            'CS 102: Submitted',
-            'CS 103: Submitted',
-            'CS 104: Pending',
-          ].map((subject) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Icon(
-                    subject.contains('Submitted')
-                        ? LucideIcons.checkCircle2
-                        : LucideIcons.clock,
-                    color: subject.contains('Submitted')
-                        ? success
-                        : Colors.orangeAccent,
-                    size: 18,
+          const SizedBox(height: 24),
+          // This is the functional UI card you wrote
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: surfaceDark,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Grade Submissions Status',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: success.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '85% Complete',
+                        style: GoogleFonts.inter(
+                          color: success,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: 0.85,
+                    minHeight: 12,
+                    backgroundColor: Colors.white.withOpacity(0.1),
+                    valueColor: const AlwaysStoppedAnimation(success),
                   ),
-                  const SizedBox(width: 12),
-                  Text(
-                    subject,
-                    style: GoogleFonts.inter(color: Colors.white70),
-                  ),
-                ],
-              ),
-            );
-          }),
+                ),
+                const SizedBox(height: 20),
+                ...[
+                  'CS 101: Submitted',
+                  'CS 102: Submitted',
+                  'CS 103: Submitted',
+                  'CS 104: Pending',
+                ].map((subject) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          subject.contains('Submitted')
+                              ? LucideIcons.checkCircle2
+                              : LucideIcons.clock,
+                          color: subject.contains('Submitted')
+                              ? success
+                              : Colors.orangeAccent,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          subject,
+                          style: GoogleFonts.inter(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
         ],
       ),
     );
