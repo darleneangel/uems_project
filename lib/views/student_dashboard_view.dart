@@ -26,7 +26,6 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     'grade_book',
     'clearance',
     'profile',
-    'payment_upload',
     'offices',
   ];
 
@@ -46,7 +45,6 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
       PanelMenuItem(title: 'Grade Book', icon: LucideIcons.book),
       PanelMenuItem(title: 'Clearance', icon: LucideIcons.shield),
       PanelMenuItem(title: 'Profile', icon: LucideIcons.user),
-      PanelMenuItem(title: 'Bank Payment', icon: LucideIcons.creditCard),
       PanelMenuItem(title: 'Offices & Requests', icon: LucideIcons.building),
       PanelMenuItem(title: 'Logout', icon: LucideIcons.logOut),
     ];
@@ -71,9 +69,6 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
         panelTitle = 'My Profile';
         break;
       case 6:
-        panelTitle = 'Payment Upload';
-        break;
-      case 7:
         panelTitle = 'Offices & Requests';
         break;
       default:
@@ -90,9 +85,11 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     final Widget panelContent = (_selectedIndex == 0)
         ? _buildPanelContentHome(cardColor, textColor, subTextColor)
         : StudentPanelContent(
+            isDarkMode: _isDarkMode, // <--- Add this line to fix the red error
             panelType: (_selectedIndex < _panelTypes.length)
                 ? _panelTypes[_selectedIndex]
-                : 'dashboard');
+                : 'dashboard',
+          );
 
     return DashboardPanelTemplate(
       panelTitle: panelTitle,
@@ -111,7 +108,8 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
       },
       selectedIndex: _selectedIndex,
       isSidebarExpanded: _isSidebarExpanded,
-      onSidebarToggle: (expanded) => setState(() => _isSidebarExpanded = expanded),
+      onSidebarToggle: (expanded) =>
+          setState(() => _isSidebarExpanded = expanded),
       isAdminPanel: false,
       themeToggle: () => setState(() => _isDarkMode = !_isDarkMode),
     );
@@ -126,8 +124,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // The panel title is rendered by the template. Keep only the enroll banner here.
-        Align(alignment: Alignment.topRight, child: _buildEnrollNowBanner()),
+        _buildNextClassCard(cardColor, textColor, subTextColor),
+        const SizedBox(height: 32),
+        _buildQuickStats(cardColor, textColor),
         const SizedBox(height: 32),
         _buildEnrollmentTrackSection(cardColor, textColor, subTextColor),
         const SizedBox(height: 32),
@@ -136,44 +135,242 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     );
   }
 
-  Widget _buildEnrollNowBanner() {
+  Widget _buildNextClassCard(
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [pViolet, aViolet]),
-        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: _isDarkMode
+              ? [const Color(0xFF2E1065), const Color(0xFF4C1D95)]
+              : [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
             color: aViolet.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Row(
         children: [
-          const Icon(LucideIcons.laptop, color: Colors.white, size: 30),
-          const SizedBox(width: 15),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "ENROLL NOW",
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                ),
-              ),
-              Text(
-                "2nd Semester SY 2025-2026",
-                style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(LucideIcons.clock, color: Colors.white, size: 32),
           ),
-          const SizedBox(width: 20),
-          const Icon(LucideIcons.chevronRight, color: Colors.white),
+          const SizedBox(width: 24),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      "UP NEXT",
+                      style: GoogleFonts.inter(
+                        color: success,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 4,
+                      height: 4,
+                      decoration: const BoxDecoration(
+                        color: Colors.white54,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      "TODAY, 10:00 AM",
+                      style: GoogleFonts.inter(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Systems Integration & Architecture",
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(
+                      LucideIcons.mapPin,
+                      color: Colors.white70,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      "Computer Lab 102 • Prof. R. Manalastas",
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 24),
+          ElevatedButton.icon(
+            onPressed: () => setState(() => _selectedIndex = 1),
+            icon: const Icon(LucideIcons.arrowRight, size: 18),
+            label: const Text("View Schedule"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: pViolet,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              textStyle: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickStats(Color cardColor, Color textColor) {
+    return Row(
+      children: [
+        _statCard(
+          "GWA Standing",
+          "1.25",
+          LucideIcons.trendingUp,
+          Colors.blueAccent,
+          cardColor,
+          textColor,
+        ),
+        const SizedBox(width: 16),
+        _statCard(
+          "Units Enrolled",
+          "21.0",
+          LucideIcons.layers,
+          aViolet,
+          cardColor,
+          textColor,
+        ),
+        const SizedBox(width: 16),
+        _statCard(
+          "Account Balance",
+          "₱0.00",
+          LucideIcons.wallet,
+          success,
+          cardColor,
+          textColor,
+        ),
+      ],
+    );
+  }
+
+  Widget _statCard(
+    String label,
+    String value,
+    IconData icon,
+    Color iconColor,
+    Color cardColor,
+    Color textColor,
+  ) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: _isDarkMode ? Colors.white10 : Colors.black12,
+          ),
+          boxShadow: [
+            if (!_isDarkMode)
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: iconColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 20),
+                ),
+                if (label == "Account Balance")
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: success.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      "CLEARED",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: success,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.blueGrey,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -257,48 +454,6 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
               _statusIndicator("Advising", true, success),
               _statusIndicator("Assessment", false, aViolet, isCurrent: true),
             ],
-          ),
-          const SizedBox(height: 40),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: _isDarkMode
-                  ? Colors.white.withOpacity(0.03)
-                  : Colors.black.withOpacity(0.02),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: _isDarkMode ? Colors.white10 : Colors.black12,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "For BANK PAYMENT, upload your deposit slip here.",
-                  style: GoogleFonts.inter(color: subTextColor, fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: 250,
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      // navigate to the payment upload panel (index 6)
-                      setState(() => _selectedIndex = 6);
-                    },
-                    icon: const Icon(LucideIcons.upload, size: 18),
-                    label: const Text("UPLOAD & SEND"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: success,
-                      foregroundColor: pViolet,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),

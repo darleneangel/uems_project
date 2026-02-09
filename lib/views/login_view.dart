@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'dart:math' as math;
 // Import your student dashboard file here
 import 'student_dashboard_view.dart';
 import 'admin_dashboard_view.dart';
@@ -138,6 +139,24 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     _passwordController.clear();
   }
 
+  Widget _buildAnimatedItem(Widget child, int index) {
+    final double start = 0.4 + (index * 0.05);
+    final double end = (start + 0.4).clamp(0.0, 1.0);
+
+    final animation = CurvedAnimation(
+      parent: _entranceController,
+      curve: Interval(start, end, curve: Curves.easeOutBack),
+    );
+
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, 0.2),
+        end: Offset.zero,
+      ).animate(animation),
+      child: FadeTransition(opacity: animation, child: child),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // ROUTING SWITCH - Directs to your separate files
@@ -180,211 +199,257 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width > 900;
 
-    // Theme Variables
-    final Color bgColor = _isDarkMode ? tertiaryDark : const Color(0xFFF8FAFC);
-    final Color cardColor = _isDarkMode
-        ? surfaceDark.withOpacity(0.9)
-        : Colors.white;
-    final Color borderColor = _isDarkMode
-        ? Colors.white.withOpacity(0.1)
-        : Colors.black.withOpacity(0.05);
-
     return Scaffold(
-      backgroundColor: bgColor,
-      body: AnimatedBuilder(
-        animation: _bgAnimation,
-        builder: (context, child) {
-          return Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [_bgAnimation.value ?? primaryViolet, bgColor],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Stack(
-              children: [
-                Opacity(
-                  opacity: _isDarkMode ? 0.05 : 0.02,
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: NetworkImage(
-                          "https://www.transparenttextures.com/patterns/cubes.png",
+      body: Stack(
+        children: [
+          // Background Layer
+          Container(
+            color: _isDarkMode
+                ? const Color(0xFF0F071D)
+                : const Color(0xFFF1F5F9),
+          ),
+
+          // Ambient Background Elements
+          AnimatedBuilder(
+            animation: _bgController,
+            builder: (context, child) {
+              final t = _bgController.value;
+              final offset1 = Offset(
+                50 * math.sin(t * 2 * math.pi),
+                50 * math.cos(t * 2 * math.pi),
+              );
+              final offset2 = Offset(
+                30 * math.sin((t + 0.5) * 2 * math.pi),
+                30 * math.cos((t + 0.5) * 2 * math.pi),
+              );
+
+              return Stack(
+                children: [
+                  Positioned(
+                    top: -100 + offset1.dy,
+                    left: -100 + offset1.dx,
+                    child: Container(
+                      width: 500,
+                      height: 500,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            accentViolet.withOpacity(0.15),
+                            Colors.transparent,
+                          ],
                         ),
-                        repeat: ImageRepeat.repeat,
                       ),
                     ),
                   ),
-                ),
-                child!,
-              ],
-            ),
-          );
-        },
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: FadeTransition(
-              opacity: _formOpacity,
-              child: SlideTransition(
-                position: _formSlide,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 500),
-                  width: isDesktop
-                      ? (size.width > 1200 ? 1000 : size.width * 0.95)
-                      : size.width,
-                  constraints: const BoxConstraints(minHeight: 600),
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(color: borderColor),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _isDarkMode
-                            ? Colors.black.withOpacity(0.6)
-                            : Colors.indigo.withOpacity(0.1),
-                        blurRadius: 100,
-                        offset: const Offset(0, 50),
+                  Positioned(
+                    bottom: -100 + offset2.dy,
+                    right: -100 + offset2.dx,
+                    child: Container(
+                      width: 600,
+                      height: 600,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            secondaryViolet.withOpacity(0.1),
+                            Colors.transparent,
+                          ],
+                        ),
                       ),
-                    ],
+                    ),
                   ),
-                  child: IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (isDesktop) _buildLeftBanner(),
-                        Expanded(flex: 7, child: _buildRightForm(isDesktop)),
+                ],
+              );
+            },
+          ),
+
+          // Main Content
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: FadeTransition(
+                opacity: _formOpacity,
+                child: SlideTransition(
+                  position: _formSlide,
+                  child: Container(
+                    width: isDesktop ? 1000 : 450,
+                    constraints: const BoxConstraints(minHeight: 600),
+                    decoration: BoxDecoration(
+                      color: _isDarkMode ? surfaceDark : Colors.white,
+                      borderRadius: BorderRadius.circular(32),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.1),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentViolet.withOpacity(0.15),
+                          blurRadius: 80,
+                          offset: const Offset(0, 20),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 30,
+                          offset: const Offset(0, 10),
+                        ),
                       ],
                     ),
+                    clipBehavior: Clip.antiAlias,
+                    child: isDesktop
+                        ? IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(child: _buildLeftBanner()),
+                                Expanded(child: _buildRightForm(isDesktop)),
+                              ],
+                            ),
+                          )
+                        : _buildRightForm(isDesktop),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildLeftBanner() {
-    return Expanded(
-      flex: 5,
-      child: Container(
-        decoration: BoxDecoration(
-          color: _isDarkMode ? primaryViolet : primaryViolet.withOpacity(0.05),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(32),
-            bottomLeft: Radius.circular(32),
+    return Container(
+      padding: const EdgeInsets.all(60),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: _isDarkMode
+              ? [const Color(0xFF2E1065), const Color(0xFF4C1D95)]
+              : [const Color(0xFF4C1D95), const Color(0xFF6D28D9)],
+        ),
+        image: DecorationImage(
+          image: const NetworkImage(
+            "https://www.transparenttextures.com/patterns/cubes.png",
+          ),
+          repeat: ImageRepeat.repeat,
+          colorFilter: ColorFilter.mode(
+            Colors.black.withOpacity(0.1),
+            BlendMode.dstATop,
           ),
         ),
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Logo Area (Animated)
+          _buildAnimatedItem(
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: accentViolet.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    LucideIcons.shield,
-                    color: _isDarkMode ? accentViolet : primaryViolet,
-                    size: 30,
+                  child: const Icon(
+                    LucideIcons.graduationCap,
+                    color: Colors.white,
+                    size: 28,
                   ),
                 ),
-                const SizedBox(width: 18),
+                const SizedBox(width: 16),
                 Text(
-                  "UEMS",
-                  style: GoogleFonts.orbitron(
-                    color: _isDarkMode ? Colors.white : primaryViolet,
-                    fontSize: 24,
+                  "UEMS PORTAL",
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2,
                   ),
                 ),
               ],
             ),
-            const Spacer(),
+            0,
+          ),
+          const Spacer(),
+          _buildAnimatedItem(
             Text(
-              "Unified Education\nManagement System",
+              "Welcome!",
               style: GoogleFonts.inter(
-                color: _isDarkMode ? Colors.white : primaryViolet,
-                fontSize: 38,
+                color: Colors.white,
+                fontSize: 48,
                 fontWeight: FontWeight.w900,
                 height: 1.1,
-                letterSpacing: -1.5,
               ),
             ),
-            const SizedBox(height: 24),
-            Container(
-              width: 45,
-              height: 6,
-              decoration: BoxDecoration(
-                color: accentViolet,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              "The modernized administrative core designed for ultimate security, seamless academic integration, and real-time efficiency.",
-              style: GoogleFonts.inter(
-                color: _isDarkMode
-                    ? Colors.white.withOpacity(0.6)
-                    : primaryViolet.withOpacity(0.7),
-                fontSize: 15,
-                height: 1.6,
-              ),
-            ),
-            const Spacer(),
-            _buildSecurityBadge(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSecurityBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: _isDarkMode
-            ? Colors.white.withOpacity(0.04)
-            : primaryViolet.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: _isDarkMode
-              ? Colors.white.withOpacity(0.1)
-              : Colors.transparent,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            LucideIcons.fingerprint,
-            color: _isDarkMode ? successColor : Colors.green.shade600,
-            size: 20,
+            1,
           ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              "SECURE PIPELINE",
-              overflow: TextOverflow.ellipsis,
+          const SizedBox(height: 24),
+          _buildAnimatedItem(
+            Text(
+              "Login to access your student portal, view grades, manage subjects, and more. Your academic journey starts here.",
               style: GoogleFonts.inter(
-                color: _isDarkMode
-                    ? Colors.white.withOpacity(0.9)
-                    : primaryViolet,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 16,
+                height: 1.5,
               ),
             ),
+            2,
+          ),
+          const SizedBox(height: 32),
+          _buildAnimatedItem(
+            OutlinedButton(
+              onPressed: () {},
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: Colors.white),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+              ),
+              child: Text(
+                "Learn More",
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              ),
+            ),
+            3,
+          ),
+          const Spacer(),
+          // Security Badge
+          _buildAnimatedItem(
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(color: Colors.white.withOpacity(0.2)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    LucideIcons.shieldCheck,
+                    color: successColor,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Secure Environment",
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            4,
           ),
         ],
       ),
@@ -392,84 +457,116 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   }
 
   Widget _buildRightForm(bool isDesktop) {
-    final Color titleColor = _isDarkMode ? Colors.white : primaryViolet;
-    final Color subTitleColor = _isDarkMode
-        ? Colors.white70
-        : Colors.blueGrey.shade600;
-
-    return Padding(
-      padding: EdgeInsets.all(isDesktop ? 40.0 : 24.0),
+    return Container(
+      padding: const EdgeInsets.all(60),
+      color: _isDarkMode ? surfaceDark : Colors.white,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "System Login",
-                style: GoogleFonts.inter(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  color: titleColor,
-                  letterSpacing: -1.2,
+          _buildAnimatedItem(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Sign in",
+                  style: GoogleFonts.inter(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: _isDarkMode ? Colors.white : const Color(0xFF1E293B),
+                  ),
                 ),
-              ),
-              IconButton(
-                onPressed: _toggleTheme,
-                icon: Icon(
-                  _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
-                  color: accentViolet,
+                IconButton(
+                  onPressed: _toggleTheme,
+                  icon: Icon(
+                    _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
+                    color: _isDarkMode ? Colors.white54 : Colors.grey,
+                  ),
+                  tooltip: "Toggle Theme",
                 ),
-                tooltip: "Toggle Theme",
-              ),
-            ],
+              ],
+            ),
+            0,
           ),
-          const SizedBox(height: 10),
-          Text(
-            "Enter your portal credentials to proceed.",
-            style: GoogleFonts.inter(color: subTitleColor, fontSize: 14),
+
+          const SizedBox(height: 48),
+
+          _buildAnimatedItem(
+            _buildInputField(
+              controller: _idController,
+              label: "User Name",
+              hint: "Enter Username",
+              icon: LucideIcons.user,
+            ),
+            1,
           ),
+          const SizedBox(height: 24),
+          _buildAnimatedItem(
+            _buildInputField(
+              controller: _passwordController,
+              label: "Password",
+              hint: "Enter your password",
+              icon: LucideIcons.lock,
+              isPassword: true,
+            ),
+            2,
+          ),
+
+          const SizedBox(height: 32),
+          _buildAnimatedItem(_buildLoginButton(), 3),
+
           const SizedBox(height: 40),
-
-          _buildInputField(
-            controller: _idController,
-            label: "User Identification",
-            hint: "123 (Student) or 456 (Admin)",
-            icon: LucideIcons.user,
-          ),
-          const SizedBox(height: 20),
-          _buildInputField(
-            controller: _passwordController,
-            label: "Security Key",
-            hint: "••••••••",
-            icon: LucideIcons.key,
-            isPassword: true,
-          ),
-
-          const SizedBox(height: 40),
-          _buildLoginButton(),
-
-          const SizedBox(height: 30),
-          Center(
-            child: TextButton(
-              onPressed: () {},
+          _buildAnimatedItem(
+            Center(
               child: Text(
-                "Authorized Personnel Access Only",
-                textAlign: TextAlign.center,
+                "Or sign in with",
                 style: GoogleFonts.inter(
-                  color: _isDarkMode
-                      ? Colors.white38
-                      : Colors.blueGrey.shade400,
-                  fontWeight: FontWeight.w700,
+                  color: _isDarkMode ? Colors.white54 : Colors.grey,
                   fontSize: 12,
-                  letterSpacing: 0.5,
                 ),
               ),
             ),
+            4,
+          ),
+          const SizedBox(height: 20),
+          _buildAnimatedItem(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _socialIcon(LucideIcons.facebook),
+                const SizedBox(width: 20),
+                _socialIcon(LucideIcons.instagram),
+                const SizedBox(width: 20),
+                _socialIcon(LucideIcons.twitter),
+              ],
+            ),
+            5,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _socialIcon(IconData icon) {
+    return InkWell(
+      onTap: () {},
+      borderRadius: BorderRadius.circular(50),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: _isDarkMode ? Colors.white24 : Colors.grey.shade300,
+          ),
+          shape: BoxShape.circle,
+          color: _isDarkMode
+              ? Colors.white.withOpacity(0.05)
+              : Colors.transparent,
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: _isDarkMode ? Colors.white70 : Colors.grey.shade700,
+        ),
       ),
     );
   }
@@ -481,88 +578,65 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     required IconData icon,
     bool isPassword = false,
   }) {
-    final Color labelColor = _isDarkMode
-        ? accentViolet.withOpacity(0.8)
-        : primaryViolet;
-    final Color inputColor = _isDarkMode ? Colors.white : primaryViolet;
-    final Color fillColor = _isDarkMode
-        ? Colors.white.withOpacity(0.05)
-        : Colors.grey.shade100;
+    final textColor = _isDarkMode ? Colors.white : const Color(0xFF1E293B);
+    final hintColor = _isDarkMode ? Colors.white38 : Colors.grey[400];
+    final fillColor = _isDarkMode
+        ? const Color(0xFF2D2445)
+        : const Color(0xFFF8FAFC);
+    final borderColor = _isDarkMode ? Colors.white10 : Colors.grey[200]!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            label.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.5,
-              color: labelColor,
-            ),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _isDarkMode ? Colors.white70 : Colors.grey[700],
           ),
         ),
-        TextField(
-          controller: controller,
-          obscureText: isPassword && !_isPasswordVisible,
-          cursorColor: accentViolet,
-          style: GoogleFonts.inter(
-            fontSize: 15,
-            color: inputColor,
-            fontWeight: FontWeight.w600,
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: fillColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor),
           ),
-          decoration: InputDecoration(
-            prefixIcon: Icon(
-              icon,
-              color: _isDarkMode ? Colors.white30 : Colors.blueGrey.shade300,
-              size: 22,
+          child: TextField(
+            controller: controller,
+            obscureText: isPassword && !_isPasswordVisible,
+            style: GoogleFonts.inter(
+              color: textColor,
+              fontWeight: FontWeight.w500,
             ),
-            suffixIcon: isPassword
-                ? IconButton(
-                    icon: Icon(
-                      _isPasswordVisible ? LucideIcons.eye : LucideIcons.eyeOff,
-                      size: 20,
-                      color: _isDarkMode
-                          ? Colors.white30
-                          : Colors.blueGrey.shade300,
-                    ),
-                    onPressed: () => setState(
-                      () => _isPasswordVisible = !_isPasswordVisible,
-                    ),
-                  )
-                : null,
-            hintText: hint,
-            hintStyle: GoogleFonts.inter(
-              color: _isDarkMode ? Colors.white10 : Colors.blueGrey.shade200,
-              fontSize: 14,
-            ),
-            filled: true,
-            fillColor: fillColor,
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 18,
-              horizontal: 20,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: BorderSide(
-                color: _isDarkMode
-                    ? Colors.white.withOpacity(0.1)
-                    : Colors.transparent,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: GoogleFonts.inter(color: hintColor),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 16,
               ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: BorderSide(
-                color: _isDarkMode
-                    ? Colors.white.withOpacity(0.05)
-                    : Colors.transparent,
+              prefixIcon: Icon(
+                icon,
+                color: _isDarkMode ? Colors.white30 : Colors.grey[400],
+                size: 20,
               ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: const BorderSide(color: accentViolet, width: 2),
+              suffixIcon: isPassword
+                  ? IconButton(
+                      icon: Icon(
+                        _isPasswordVisible
+                            ? LucideIcons.eye
+                            : LucideIcons.eyeOff,
+                        color: _isDarkMode ? Colors.white30 : Colors.grey[400],
+                        size: 20,
+                      ),
+                      onPressed: () => setState(
+                        () => _isPasswordVisible = !_isPasswordVisible,
+                      ),
+                    )
+                  : null,
             ),
           ),
         ),
@@ -571,52 +645,35 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   }
 
   Widget _buildLoginButton() {
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      height: 60,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: accentViolet.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+      height: 56,
       child: ElevatedButton(
         onPressed: _isLoading ? null : _handleLogin,
         style: ElevatedButton.styleFrom(
           backgroundColor: accentViolet,
           foregroundColor: Colors.white,
-          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
           ),
+          elevation: 8,
+          shadowColor: accentViolet.withOpacity(0.4),
         ),
         child: _isLoading
             ? const SizedBox(
-                height: 28,
-                width: 28,
+                height: 24,
+                width: 24,
                 child: CircularProgressIndicator(
                   color: Colors.white,
-                  strokeWidth: 3,
+                  strokeWidth: 2.5,
                 ),
               )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "AUTHORIZE LOGIN",
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 2,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  const Icon(LucideIcons.arrowRight, size: 22),
-                ],
+            : Text(
+                "Sign In",
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
       ),
     );

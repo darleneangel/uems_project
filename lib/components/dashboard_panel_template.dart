@@ -42,29 +42,84 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
   static const Color tDark = Color(0xFF0F071D);
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color surfaceDark = Color(0xFF1E1033);
-  
+
   // Temporary hardcoded notifications (can be replaced with live data)
   final List<Map<String, String>> _notifications = [
     {
       'title': 'Grades Available',
       'subtitle': 'Grades for 2nd Semester are now available.',
-      'time': '2h ago'
+      'time': '2h ago',
     },
     {
       'title': 'Advising Schedule',
       'subtitle': 'Advising is scheduled next week. Check your calendar.',
-      'time': '1d ago'
+      'time': '1d ago',
     },
   ];
 
   // Build searchable labels from the sidebar items so search stays in sync.
-  List<String> get _searchLabels => widget.sidebarItems.map((e) => e.title).toList();
+  List<String> get _searchLabels =>
+      widget.sidebarItems.map((e) => e.title).toList();
+
+  void _handleLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: widget.isDarkMode
+            ? const Color(0xFF1E1B4B)
+            : Colors.white,
+        title: Text(
+          "Confirm Logout",
+          style: GoogleFonts.inter(
+            color: widget.isDarkMode ? Colors.white : const Color(0xFF2E1065),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          "Are you sure you want to log out?",
+          style: GoogleFonts.inter(
+            color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              "No",
+              style: GoogleFonts.inter(
+                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onLogout();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              "Yes",
+              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final bgColor = widget.isDarkMode ? tDark : const Color(0xFFF8FAFC);
-    final sidebarColor =
-        widget.isAdminPanel ? surfaceDark : (widget.isDarkMode ? pViolet : const Color(0xFFF1F5F9));
+    final sidebarColor = widget.isAdminPanel
+        ? surfaceDark
+        : (widget.isDarkMode ? pViolet : const Color(0xFFF1F5F9));
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
     final subTextColor = widget.isDarkMode ? Colors.white70 : Colors.blueGrey;
 
@@ -116,23 +171,31 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    children: List.generate(widget.sidebarItems.length, (index) {
+                    children: List.generate(widget.sidebarItems.length, (
+                      index,
+                    ) {
                       final item = widget.sidebarItems[index];
                       // Keep sidebar appearance uniform regardless of selection.
                       bool isDestructive =
                           item.title.toLowerCase() == 'logout' ||
-                              item.title.toLowerCase() == 'secure logout';
+                          item.title.toLowerCase() == 'secure logout';
+                      final bool isSelected = widget.selectedIndex == index;
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
-                          color: Colors.transparent,
+                          color: isSelected
+                              ? aViolet.withOpacity(0.15)
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
+                          border: isSelected
+                              ? Border.all(color: aViolet.withOpacity(0.3))
+                              : null,
                         ),
                         child: ListTile(
                           onTap: () {
                             if (isDestructive) {
-                              widget.onLogout();
+                              _handleLogout();
                             } else {
                               widget.onMenuItemSelected(index);
                             }
@@ -142,7 +205,13 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                             item.icon,
                             color: isDestructive
                                 ? Colors.redAccent
-                                : (widget.isDarkMode ? Colors.white54 : Colors.blueGrey),
+                                : (isSelected
+                                      ? (widget.isDarkMode
+                                            ? Colors.white
+                                            : pViolet)
+                                      : (widget.isDarkMode
+                                            ? Colors.white54
+                                            : Colors.blueGrey)),
                             size: 20,
                           ),
                           title: widget.isSidebarExpanded
@@ -151,8 +220,16 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                                   style: GoogleFonts.inter(
                                     color: isDestructive
                                         ? Colors.redAccent
-                                        : (widget.isDarkMode ? Colors.white60 : Colors.blueGrey),
-                                    fontWeight: FontWeight.w500,
+                                        : (isSelected
+                                              ? (widget.isDarkMode
+                                                    ? Colors.white
+                                                    : pViolet)
+                                              : (widget.isDarkMode
+                                                    ? Colors.white60
+                                                    : Colors.blueGrey)),
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
                                     fontSize: 14,
                                   ),
                                 )
@@ -283,11 +360,23 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Notifications', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: widget.isDarkMode ? Colors.white : Colors.black)),
+                              Text(
+                                'Notifications',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: widget.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                ),
+                              ),
                               IconButton(
                                 icon: const Icon(LucideIcons.x),
                                 onPressed: () => Navigator.of(ctx).pop(),
@@ -298,14 +387,45 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                         const Divider(),
                         ..._notifications.map((n) {
                           return ListTile(
-                            leading: const Icon(LucideIcons.megaphone, size: 20, color: Colors.deepPurpleAccent),
-                            title: Text(n['title']!, style: GoogleFonts.inter(color: widget.isDarkMode ? Colors.white : Colors.black, fontWeight: FontWeight.w700)),
-                            subtitle: Text(n['subtitle']!, style: GoogleFonts.inter(color: widget.isDarkMode ? Colors.white70 : Colors.black54)),
-                            trailing: Text(n['time']!, style: GoogleFonts.inter(fontSize: 12, color: widget.isDarkMode ? Colors.white54 : Colors.black45)),
+                            leading: const Icon(
+                              LucideIcons.megaphone,
+                              size: 20,
+                              color: Colors.deepPurpleAccent,
+                            ),
+                            title: Text(
+                              n['title']!,
+                              style: GoogleFonts.inter(
+                                color: widget.isDarkMode
+                                    ? Colors.white
+                                    : Colors.black,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              n['subtitle']!,
+                              style: GoogleFonts.inter(
+                                color: widget.isDarkMode
+                                    ? Colors.white70
+                                    : Colors.black54,
+                              ),
+                            ),
+                            trailing: Text(
+                              n['time']!,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: widget.isDarkMode
+                                    ? Colors.white54
+                                    : Colors.black45,
+                              ),
+                            ),
                             onTap: () {
                               Navigator.of(ctx).pop();
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('${n['title']}: ${n['subtitle']}')),
+                                SnackBar(
+                                  content: Text(
+                                    '${n['title']}: ${n['subtitle']}',
+                                  ),
+                                ),
                               );
                             },
                           );
@@ -381,17 +501,17 @@ class _PanelSearchDialogState extends State<_PanelSearchDialog> {
   void initState() {
     super.initState();
     _searchController = TextEditingController();
-    
+
     // Build all items excluding logout items
     for (int i = 0; i < widget.items.length; i++) {
       final item = widget.items[i];
-      if (item.title.isNotEmpty && 
-          item.title.toLowerCase() != 'logout' && 
+      if (item.title.isNotEmpty &&
+          item.title.toLowerCase() != 'logout' &&
           item.title.toLowerCase() != 'secure logout') {
         _allItems.add(MapEntry(i, item));
       }
     }
-    
+
     _filteredItems = _allItems;
   }
 
@@ -407,8 +527,10 @@ class _PanelSearchDialogState extends State<_PanelSearchDialog> {
         _filteredItems = _allItems;
       } else {
         _filteredItems = _allItems
-            .where((item) =>
-                item.value.title.toLowerCase().contains(query.toLowerCase()))
+            .where(
+              (item) =>
+                  item.value.title.toLowerCase().contains(query.toLowerCase()),
+            )
             .toList();
       }
     });
@@ -434,7 +556,9 @@ class _PanelSearchDialogState extends State<_PanelSearchDialog> {
           color: sideColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: widget.isDarkMode ? Colors.white10 : aViolet.withOpacity(0.2),
+            color: widget.isDarkMode
+                ? Colors.white10
+                : aViolet.withOpacity(0.2),
           ),
         ),
         child: Padding(
@@ -456,10 +580,7 @@ class _PanelSearchDialogState extends State<_PanelSearchDialog> {
                 onChanged: _filterItems,
                 decoration: InputDecoration(
                   hintText: 'Type to search...',
-                  prefixIcon: Icon(
-                    LucideIcons.search,
-                    color: aViolet,
-                  ),
+                  prefixIcon: Icon(LucideIcons.search, color: aViolet),
                   filled: true,
                   fillColor: widget.isDarkMode
                       ? Colors.white.withOpacity(0.05)
@@ -484,9 +605,7 @@ class _PanelSearchDialogState extends State<_PanelSearchDialog> {
                     ? Center(
                         child: Text(
                           'No items found',
-                          style: GoogleFonts.inter(
-                            color: Colors.blueGrey,
-                          ),
+                          style: GoogleFonts.inter(color: Colors.blueGrey),
                         ),
                       )
                     : ListView.builder(
@@ -542,18 +661,13 @@ class _SmartSearchDelegate extends SearchDelegate<String?> {
   @override
   ThemeData appBarTheme(BuildContext context) {
     return Theme.of(context).copyWith(
-      appBarTheme: AppBarTheme(
-        backgroundColor: pViolet,
-        elevation: 0,
-      ),
+      appBarTheme: AppBarTheme(backgroundColor: pViolet, elevation: 0),
       inputDecorationTheme: InputDecorationTheme(
         border: InputBorder.none,
         hintStyle: GoogleFonts.inter(color: Colors.white70),
       ),
       scaffoldBackgroundColor: lBg,
-      textTheme: TextTheme(
-        bodyMedium: GoogleFonts.inter(color: pViolet),
-      ),
+      textTheme: TextTheme(bodyMedium: GoogleFonts.inter(color: pViolet)),
     );
   }
 
@@ -564,7 +678,7 @@ class _SmartSearchDelegate extends SearchDelegate<String?> {
         IconButton(
           icon: const Icon(LucideIcons.x, color: Colors.white),
           onPressed: () => query = '',
-        )
+        ),
     ];
   }
 
@@ -578,13 +692,18 @@ class _SmartSearchDelegate extends SearchDelegate<String?> {
 
   @override
   Widget buildResults(BuildContext context) {
-    final results = items.where((i) => i.toLowerCase().contains(query.toLowerCase())).toList();
+    final results = items
+        .where((i) => i.toLowerCase().contains(query.toLowerCase()))
+        .toList();
     return ListView(
       children: results.map((r) {
         return ListTile(
           title: Text(
             r,
-            style: GoogleFonts.inter(color: pViolet, fontWeight: FontWeight.w500),
+            style: GoogleFonts.inter(
+              color: pViolet,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           onTap: () => close(context, r),
           hoverColor: aViolet.withOpacity(0.1),
@@ -597,14 +716,19 @@ class _SmartSearchDelegate extends SearchDelegate<String?> {
   Widget buildSuggestions(BuildContext context) {
     final suggestions = query.isEmpty
         ? items.take(6).toList()
-        : items.where((i) => i.toLowerCase().contains(query.toLowerCase())).toList();
+        : items
+              .where((i) => i.toLowerCase().contains(query.toLowerCase()))
+              .toList();
     return ListView(
       children: suggestions.map((s) {
         return ListTile(
           leading: Icon(LucideIcons.search, color: aViolet, size: 18),
           title: Text(
             s,
-            style: GoogleFonts.inter(color: pViolet, fontWeight: FontWeight.w500),
+            style: GoogleFonts.inter(
+              color: pViolet,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           onTap: () => close(context, s),
           hoverColor: aViolet.withOpacity(0.1),
