@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../components/admin_panel_content.dart';
+import '../components/office_request_form.dart';
+import '../components/program_chair_panel.dart';
 
 class AdminDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -21,9 +23,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
   final List<String> _panelTypes = [
     'overview',
     'announcements',
-    'admissions',
-    'registrar',
-    'accounting',
+    'office_admin',
+    'program_chair',
     'study_loads',
     'grade_recording',
   ];
@@ -61,24 +62,20 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         panelContent = AdminPanelContent(panelType: _panelTypes[1]);
         break;
       case 2:
-        panelTitle = 'Admissions Management';
+        panelTitle = 'Office Admin - Service Requests';
         panelContent = AdminPanelContent(panelType: _panelTypes[2]);
         break;
       case 3:
-        panelTitle = 'Registrar Services';
-        panelContent = AdminPanelContent(panelType: _panelTypes[3]);
+        panelTitle = 'Program Chair Administration';
+        panelContent = const ProgramChairPanel();
         break;
       case 4:
-        panelTitle = 'Accounting & Finance';
+        panelTitle = 'Study Loads Management';
         panelContent = AdminPanelContent(panelType: _panelTypes[4]);
         break;
       case 5:
-        panelTitle = 'Study Loads Management';
-        panelContent = AdminPanelContent(panelType: _panelTypes[5]);
-        break;
-      case 6:
         panelTitle = 'Grade Recording System';
-        panelContent = AdminPanelContent(panelType: _panelTypes[6]);
+        panelContent = AdminPanelContent(panelType: _panelTypes[5]);
         break;
       default:
         panelTitle = 'System Overview';
@@ -269,16 +266,15 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 ),
                 const SizedBox(height: 20),
                 _sidebarHeader("OFFICE MANAGEMENT", subTextColor),
-                _sidebarItem(LucideIcons.userPlus, "Admissions", 2, textColor),
-                _sidebarItem(LucideIcons.users, "Registrar", 3, textColor),
-                _sidebarItem(LucideIcons.wallet, "Accounting", 4, textColor),
+                _sidebarItem(LucideIcons.briefcase, "Office Admin", 2, textColor),
+                _sidebarItem(LucideIcons.userCheck, "Program Chair", 3, textColor),
                 const SizedBox(height: 20),
                 _sidebarHeader("ACADEMIC CONTROL", subTextColor),
-                _sidebarItem(LucideIcons.layers, "Study Loads", 5, textColor),
+                _sidebarItem(LucideIcons.layers, "Study Loads", 4, textColor),
                 _sidebarItem(
                   LucideIcons.bookMarked,
                   "Grade Recording",
-                  6,
+                  5,
                   textColor,
                 ),
               ],
@@ -365,7 +361,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               aViolet,
               textColor,
               onTap: () {
-                setState(() => _activeModuleIndex = 2); // Admissions
+                // Open Study Loads for enrollment details
+                setState(() => _activeModuleIndex = 4);
               },
             ),
             _buildStatCard(
@@ -375,7 +372,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               Colors.blueAccent,
               textColor,
               onTap: () {
-                setState(() => _activeModuleIndex = 5); // Study Loads
+                setState(() => _activeModuleIndex = 4); // Study Loads
               },
             ),
             _buildStatCard(
@@ -385,7 +382,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               success,
               textColor,
               onTap: () {
-                setState(() => _activeModuleIndex = 4); // Accounting
+                // Route to Office Admin requests (covers accounting now)
+                setState(() => _activeModuleIndex = 2);
               },
             ),
             _buildStatCard(

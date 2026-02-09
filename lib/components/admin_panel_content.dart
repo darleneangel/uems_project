@@ -11,6 +11,8 @@ import '../views/student_records_view.dart';
 import '../views/transcript_generation_view.dart';
 import '../views/academic_calendar_view.dart';
 import '../views/course_catalog_view.dart';
+import '../services/office_request_service.dart';
+import 'office_request_form.dart';
 
 class AdminPanelContent extends StatelessWidget {
   final String panelType;
@@ -27,6 +29,8 @@ class AdminPanelContent extends StatelessWidget {
     switch (panelType) {
       case 'announcements':
         return _buildAnnouncementsPanel();
+      case 'office_admin':
+        return _buildOfficeAdminPanel();
       case 'admissions':
         return _buildAdmissionsPanel(context);
       case 'registrar':
@@ -378,7 +382,11 @@ class AdminPanelContent extends StatelessWidget {
     );
   }
 
-// DELETE both old versions and paste this ONE version:
+  Widget _buildOfficeAdminPanel() {
+    return const OfficeAdminPanel();
+  }
+
+  // DELETE both old versions and paste this ONE version:
   Widget _buildGradeRecordingPanel() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -756,6 +764,309 @@ class AdminPanelContent extends StatelessWidget {
           'Panel not implemented yet',
           style: GoogleFonts.inter(color: Colors.white70),
         ),
+      ),
+    );
+  }
+}
+
+class OfficeAdminPanel extends StatefulWidget {
+  const OfficeAdminPanel({super.key});
+
+  @override
+  State<OfficeAdminPanel> createState() => _OfficeAdminPanelState();
+}
+
+class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
+  final OfficeRequestService _service = OfficeRequestService();
+  int _activeTab = 0;
+  static const List<String> _tabs = ['Create', 'Review', 'Update', 'Archive'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: _tabs.asMap().entries.map((e) {
+            final idx = e.key;
+            final label = e.value;
+            final selected = _activeTab == idx;
+            return Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: ElevatedButton(
+                onPressed: () => setState(() => _activeTab = idx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: selected ? AdminPanelContent.aViolet : Colors.white10,
+                  foregroundColor: selected ? Colors.white : Colors.white70,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 240),
+          child: _buildActiveTab(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActiveTab() {
+    switch (_activeTab) {
+      case 0:
+        return Container(
+          key: const ValueKey('create'),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(color: AdminPanelContent.surfaceDark, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
+          child: const OfficeRequestForm(),
+        );
+      case 1:
+        return _buildReviewTab();
+      case 2:
+        return _buildUpdateTab();
+      case 3:
+        return _buildArchiveTab();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildReviewTab() {
+    return Container(
+      key: const ValueKey('review'),
+      child: ValueListenableBuilder<List<OfficeRequest>>(
+        valueListenable: _service.notifier,
+        builder: (context, list, _) {
+          final pending = list.where((r) => r.status == 'pending').toList();
+          if (pending.isEmpty) return const Text('No pending requests.', style: TextStyle(color: Colors.white70));
+          return ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: pending.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (ctx, i) {
+              final r = pending[i];
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white10)),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${r.office.toUpperCase()} - ${r.requestType}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 6),
+                          Text(r.details, style: GoogleFonts.inter(color: Colors.white70)),
+                          const SizedBox(height: 6),
+                          Text('Submitted: ${r.createdAt}', style: GoogleFonts.inter(color: Colors.white38, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: () => _service.approve(r.id),
+                          style: ElevatedButton.styleFrom(backgroundColor: AdminPanelContent.success),
+                          child: const Text('Approve'),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: () => _service.reject(r.id),
+                          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)),
+                          child: const Text('Reject'),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: () => _showDetailsDialog(context, r),
+                          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)),
+                          child: const Text('View'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildUpdateTab() {
+    return Container(
+      key: const ValueKey('update'),
+      child: ValueListenableBuilder<List<OfficeRequest>>(
+        valueListenable: _service.notifier,
+        builder: (context, list, _) {
+          final items = list.where((r) => r.status != 'archived').toList();
+          if (items.isEmpty) return const Text('No records to update.', style: TextStyle(color: Colors.white70));
+          return ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (ctx, i) {
+              final r = items[i];
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white10)),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${r.office.toUpperCase()} - ${r.requestType}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 6),
+                          Text(r.details, style: GoogleFonts.inter(color: Colors.white70)),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: () => _showEditDialog(context, r),
+                          style: ElevatedButton.styleFrom(backgroundColor: AdminPanelContent.aViolet),
+                          child: const Text('Edit'),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: () => _service.archive(r.id),
+                          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)),
+                          child: const Text('Archive'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildArchiveTab() {
+    return Container(
+      key: const ValueKey('archive'),
+      child: ValueListenableBuilder<List<OfficeRequest>>(
+        valueListenable: _service.notifier,
+        builder: (context, list, _) {
+          final items = list.where((r) => r.status == 'archived').toList();
+          if (items.isEmpty) return const Text('No archived items.', style: TextStyle(color: Colors.white70));
+          return ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (ctx, i) {
+              final r = items[i];
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white10)),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${r.office.toUpperCase()} - ${r.requestType}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 6),
+                          Text(r.details, style: GoogleFonts.inter(color: Colors.white70)),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: () => _service.restore(r.id),
+                          style: ElevatedButton.styleFrom(backgroundColor: AdminPanelContent.success),
+                          child: const Text('Restore'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _showDetailsDialog(BuildContext ctx, OfficeRequest r) {
+    showDialog(
+      context: ctx,
+      builder: (c) => AlertDialog(
+        backgroundColor: AdminPanelContent.surfaceDark,
+        title: Text('${r.office.toUpperCase()} - ${r.requestType}', style: GoogleFonts.inter(color: Colors.white)),
+        content: SingleChildScrollView(child: Text(r.details, style: GoogleFonts.inter(color: Colors.white70))),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext ctx, OfficeRequest r) {
+    final typeCtl = TextEditingController(text: r.requestType);
+    final detailsCtl = TextEditingController(text: r.details);
+    showDialog(
+      context: ctx,
+      builder: (c) => AlertDialog(
+        backgroundColor: AdminPanelContent.surfaceDark,
+        title: Text('Edit Request', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: typeCtl,
+              style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                labelText: 'Request Type',
+                labelStyle: GoogleFonts.inter(color: Colors.white70, fontSize: 13),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AdminPanelContent.aViolet, width: 2)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: detailsCtl,
+              maxLines: 4,
+              style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                labelText: 'Details',
+                labelStyle: GoogleFonts.inter(color: Colors.white70, fontSize: 13),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AdminPanelContent.aViolet, width: 2)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(c).pop(), child: Text('Cancel', style: GoogleFonts.inter(color: Colors.white70, fontWeight: FontWeight.w600))),
+          ElevatedButton(
+            onPressed: () {
+              _service.updateRequest(r.id, requestType: typeCtl.text.trim(), details: detailsCtl.text.trim());
+              Navigator.of(c).pop();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AdminPanelContent.aViolet),
+            child: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
