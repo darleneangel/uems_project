@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:uems_project/components/registrar_panel_content.dart';
 
 class RegistrarDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -11,12 +12,25 @@ class RegistrarDashboardView extends StatefulWidget {
 }
 
 class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
-  // Navigation & Theme State
   bool _isDarkMode = true;
   bool _isSidebarExpanded = true;
   int _selectedIndex = 0;
 
-  // Standardized Violet/Plum Palette
+  // Map sidebar index to the Hub's panel types
+  final List<String> _panelTypes = [
+    'overview', // 0
+    'records', // 1
+    'enrollment', // 2
+    'add_drop', // 3
+    'grades', // 4
+    'credentials', // 5
+    'eligibility', // 6
+    'curriculum', // 7
+    'reports', // 8
+    'messages', // Added for inbox
+    'requests', // Added for student requests
+  ];
+
   static const Color pViolet = Color(0xFF2E1065);
   static const Color tDark = Color(0xFF0F071D);
   static const Color aViolet = Color(0xFF8B5CF6);
@@ -29,9 +43,8 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
 
   @override
   Widget build(BuildContext context) {
-    // Dynamic theme colors
     final bgColor = _isDarkMode ? tDark : const Color(0xFFF8FAFC);
-    final panelColor = _isDarkMode ? surfaceDark : Colors.white;
+    final sideColor = _isDarkMode ? pViolet : const Color(0xFFF1F5F9);
     final textColor = _isDarkMode ? Colors.white : pViolet;
     final subTextColor = _isDarkMode ? Colors.white54 : Colors.blueGrey;
 
@@ -39,21 +52,21 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
       backgroundColor: bgColor,
       body: Row(
         children: [
-          // 1. FIXED TOGGLEABLE SIDEBAR (Identical UI Layout)
-          _buildSidebar(panelColor, textColor, subTextColor),
+          // 1. SIDEBAR
+          _buildSidebar(sideColor, textColor, subTextColor),
 
-          // 2. MAIN PANEL AREA
+          // 2. MAIN PANEL
           Expanded(
             child: Column(
               children: [
                 _buildTopBar(textColor, subTextColor),
                 Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: _buildPanelContent(
-                      panelColor,
-                      textColor,
-                      subTextColor,
+                  child: Container(
+                    margin: const EdgeInsets.all(24),
+                    // THE BRIDGE: This calls the modular Registrar Hub
+                    child: RegistrarPanelContent(
+                      isDarkMode: _isDarkMode,
+                      panelType: _panelTypes[_selectedIndex],
                     ),
                   ),
                 ),
@@ -88,11 +101,11 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
           ),
           const SizedBox(width: 16),
           Text(
-            "Registrar Office Intelligence System",
+            "Registrar Intelligence Core",
             style: GoogleFonts.inter(
               color: textColor,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
             ),
           ),
@@ -126,7 +139,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
                 ),
               ),
               Text(
-                "Record Control Active",
+                "Verified Session",
                 style: GoogleFonts.inter(
                   color: success,
                   fontSize: 10,
@@ -138,78 +151,50 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
           const SizedBox(width: 12),
           CircleAvatar(
             backgroundColor: aViolet,
-            child: const Icon(LucideIcons.users, color: Colors.white, size: 18),
+            child: const Icon(
+              LucideIcons.shieldCheck,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSidebar(Color panelColor, Color textColor, Color subTextColor) {
+  Widget _buildSidebar(Color sideColor, Color textColor, Color subTextColor) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      width: _isSidebarExpanded ? 280 : 85,
-      color: _isDarkMode ? pViolet : const Color(0xFFF1F5F9),
+      width: _isSidebarExpanded ? 260 : 85,
+      color: sideColor,
       child: Column(
         children: [
           const SizedBox(height: 30),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: aViolet.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  LucideIcons.bookOpen,
-                  color: aViolet,
-                  size: 24,
-                ),
-              ),
-              if (_isSidebarExpanded) ...[
-                const SizedBox(width: 12),
-                Text(
-                  "UEMS Records",
-                  style: GoogleFonts.orbitron(
-                    color: textColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ],
-          ),
+          _buildLogo(textColor),
           const SizedBox(height: 40),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
                 _menuItem(LucideIcons.layoutDashboard, "Overview", 0),
-                _sidebarHeader("RECORDS MANAGEMENT"),
+                _sidebarHeader("RECORDS"),
                 _menuItem(LucideIcons.contact, "Student Directory", 1),
                 _menuItem(LucideIcons.clipboardCheck, "Enrollment Verify", 2),
-                _menuItem(LucideIcons.gitPullRequest, "Add/Drop Requests", 3),
+                _menuItem(LucideIcons.gitPullRequest, "Add/Drop Approval", 3),
                 _sidebarHeader("ACADEMICS"),
                 _menuItem(LucideIcons.star, "Grade Management", 4),
-                _menuItem(LucideIcons.fileText, "Transcripts & Certs", 5),
-                _menuItem(
-                  LucideIcons.graduationCap,
-                  "Graduation Eligibility",
-                  6,
-                ),
-                _sidebarHeader("INSTITUTIONAL"),
-                _menuItem(LucideIcons.layers, "Curriculum & Catalog", 7),
-                _menuItem(LucideIcons.barChart, "Statistics & Reports", 8),
+                _menuItem(LucideIcons.fileText, "Transcripts & TOR", 5),
+                _sidebarHeader("SYSTEM"),
+                _menuItem(LucideIcons.mail, "Student Inbox", 9),
+                _menuItem(LucideIcons.fileSignature, "Document Requests", 10),
               ],
             ),
           ),
           const Divider(color: Colors.white10),
           _menuItem(
             LucideIcons.logOut,
-            "Logout System",
-            9,
+            "Logout",
+            11,
             isDestructive: true,
             onTap: widget.onLogout,
           ),
@@ -232,7 +217,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
         color: isSelected ? aViolet.withOpacity(0.15) : Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
         onTap: onTap ?? () => setState(() => _selectedIndex = index),
@@ -240,7 +225,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
         leading: Icon(
           icon,
           color: isSelected ? activeColor : Colors.blueGrey,
-          size: 20,
+          size: 18,
         ),
         title: _isSidebarExpanded
             ? Text(
@@ -272,243 +257,23 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
     );
   }
 
-  Widget _buildPanelContent(
-    Color panelColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
-    switch (_selectedIndex) {
-      case 1:
-        return _buildDirectoryPanel(panelColor, textColor);
-      case 4:
-        return _buildGradesPanel(panelColor, textColor);
-      case 8:
-        return _buildStatsPanel(panelColor, textColor);
-      case 0:
-      default:
-        return _buildOverviewPanel(panelColor, textColor);
-    }
-  }
-
-  // --- MODULE: OVERVIEW ---
-  Widget _buildOverviewPanel(Color panelColor, Color textColor) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Registrar Overview",
-            style: GoogleFonts.inter(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              _statCard(
-                "Total Enrolled",
-                "4,291",
-                LucideIcons.users,
-                success,
-                textColor,
-              ),
-              _statCard(
-                "Graduation Ready",
-                "856",
-                LucideIcons.graduationCap,
-                Colors.blueAccent,
-                textColor,
-              ),
-              _statCard(
-                "Pending Petitions",
-                "24",
-                LucideIcons.alertCircle,
-                Colors.orangeAccent,
-                textColor,
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          _buildActionGrid(panelColor, textColor),
-        ],
-      ),
-    );
-  }
-
-  // --- MODULE: STUDENT DIRECTORY ---
-  Widget _buildDirectoryPanel(Color panelColor, Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Centralized Student Records",
-            style: GoogleFonts.inter(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            style: TextStyle(color: textColor),
-            decoration: InputDecoration(
-              hintText: "Search by Student ID, Name, or Program...",
-              prefixIcon: const Icon(LucideIcons.search),
-              filled: true,
-              fillColor: panelColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: panelColor,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Center(
-                child: Text(
-                  "Database Query: Records loading...",
-                  style: TextStyle(color: Colors.white24),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- MODULE: GRADES ---
-  Widget _buildGradesPanel(Color panelColor, Color textColor) {
-    return Center(
-      child: Text(
-        "Grade Management Hub: syncing with Teacher Modules...",
-        style: TextStyle(color: textColor.withOpacity(0.5)),
-      ),
-    );
-  }
-
-  // --- MODULE: STATISTICS ---
-  Widget _buildStatsPanel(Color panelColor, Color textColor) {
-    return Center(
-      child: Text(
-        "Generating Government & Accreditation Reports...",
-        style: TextStyle(color: textColor.withOpacity(0.5)),
-      ),
-    );
-  }
-
-  // --- UI HELPERS ---
-
-  Widget _statCard(
-    String label,
-    String val,
-    IconData icon,
-    Color color,
-    Color textColor,
-  ) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: _isDarkMode ? surfaceDark : Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: _isDarkMode ? Colors.white10 : Colors.black12,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(height: 15),
-            Text(
-              val,
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: textColor,
-              ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.blueGrey,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionGrid(Color panelColor, Color textColor) {
-    return GridView.count(
-      shrinkWrap: true,
-      crossAxisCount: 2,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 3,
+  Widget _buildLogo(Color textColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _quickActionButton("Issue Transcript", LucideIcons.fileText, aViolet),
-        _quickActionButton(
-          "Verify Enrollment",
-          LucideIcons.checkSquare,
-          success,
-        ),
-        _quickActionButton(
-          "Update Curriculum",
-          LucideIcons.bookOpen,
-          Colors.blue,
-        ),
-        _quickActionButton(
-          "Graduation Audit",
-          LucideIcons.award,
-          Colors.orange,
-        ),
-      ],
-    );
-  }
-
-  Widget _quickActionButton(String label, IconData icon, Color color) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _isDarkMode ? surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: _isDarkMode ? Colors.white10 : Colors.black12,
-        ),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: color),
-        title: Text(
-          label,
-          style: TextStyle(
-            color: _isDarkMode ? Colors.white : pViolet,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
+        const Icon(LucideIcons.bookOpen, color: aViolet, size: 24),
+        if (_isSidebarExpanded) ...[
+          const SizedBox(width: 12),
+          Text(
+            "UEMS Records",
+            style: GoogleFonts.orbitron(
+              color: textColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
           ),
-        ),
-        trailing: const Icon(
-          LucideIcons.chevronRight,
-          size: 16,
-          color: Colors.white24,
-        ),
-        onTap: () {},
-      ),
+        ],
+      ],
     );
   }
 

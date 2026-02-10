@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'panels/subject_load_panel.dart';
 import 'panels/assessment_panel.dart';
 import 'panels/grade_book_panel.dart';
-import 'panels/clearance_panel.dart';
 import 'panels/profile_panel.dart';
 import 'panels/offices_panel.dart';
 
@@ -66,11 +65,6 @@ class StudentPanelContent extends StatelessWidget {
         );
       case 'grade_book':
         return GradeBookPanel(
-          isDarkMode: isDarkMode,
-          studentData: mockStudentData, // Added to satisfy your update
-        );
-      case 'clearance':
-        return ClearancePanel(
           isDarkMode: isDarkMode,
           studentData: mockStudentData, // Added to satisfy your update
         );
