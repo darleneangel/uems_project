@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart' as file_picker;
 import 'package:file_picker/file_picker.dart' show PlatformFile;
+import '../services/office_request_service.dart';
 
 class OfficeRequestView extends StatefulWidget {
   final String officeKey;
@@ -56,6 +57,7 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
   final TextEditingController _notes = TextEditingController();
   String _delivery = 'Pickup';
   List<PlatformFile> _attachments = [];
+  String? _docType;
 
   @override
   void dispose() {
@@ -93,7 +95,7 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
                   child: Text('Enrollment Verification (Employer)'),
                 ),
               ],
-              onChanged: (_) {},
+              onChanged: (v) => setState(() => _docType = v),
               decoration: const InputDecoration(labelText: 'Document Type'),
             ),
             const SizedBox(height: 12),
@@ -209,9 +211,31 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     final id = DateTime.now().millisecondsSinceEpoch.toString().substring(7);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Request submitted — Ref: REQ-$id')));
+
+    // Build a compact details string for the admin queue
+    final details = StringBuffer()
+      ..writeln('Student ID: ${_studentId.text}')
+      ..writeln('Name: ${_name.text}')
+      ..writeln('Program: ${_program.text} (${_year.text})')
+      ..writeln('Contact: ${_contact.text}')
+      ..writeln('Delivery: $_delivery')
+      ..writeln('Notes: ${_notes.text}');
+    if (_attachments.isNotEmpty) {
+      details.writeln('Attachments: ${_attachments.map((a) => a.name).join(', ')}');
+    }
+
+    // Use the selected document type if present, otherwise use officeKey
+    final requestType = _docType ?? widget.officeKey;
+
+    OfficeRequestService().addRequest(
+      office: widget.officeKey,
+      requestType: requestType,
+      details: details.toString(),
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Request submitted — Ref: REQ-$id (pending admin approval)')),
+    );
     // For embedded panel, we won't pop a route; parent can clear selected office
   }
 

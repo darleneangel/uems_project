@@ -1,0 +1,5 @@
+- [x] Modify _buildSubjectTable() in study_load_management_view.dart to display subjects as stat cards instead of DataTable
+- [x] Create a _subjectCard() method similar to _statCard in accounting dashboard
+- [x] Use GridView or ListView to layout the cards
+- [x] Ensure delete action is included in each card
+- [x] Test the UI changes

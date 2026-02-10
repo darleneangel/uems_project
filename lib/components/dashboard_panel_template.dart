@@ -119,9 +119,12 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
   @override
   Widget build(BuildContext context) {
     final bgColor = widget.isDarkMode ? tDark : const Color(0xFFF8FAFC);
+    // Use the primary violet for the admin sidebar so it matches the
+    // main admin styling. Non-admin panels keep the original logic.
     final sidebarColor = widget.isAdminPanel
         ? (widget.isDarkMode ? surfaceDark : Colors.white)
         : (widget.isDarkMode ? pViolet : const Color(0xFFF1F5F9));
+
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
     final subTextColor = widget.isDarkMode ? Colors.white70 : Colors.blueGrey;
 
@@ -132,15 +135,16 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
           // SIDEBAR
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            width: widget.isSidebarExpanded ? 260 : 80,
+            // Slightly wider for admin to match the desired layout
+            width: widget.isSidebarExpanded ? 280 : 80,
             color: sidebarColor,
             child: Column(
               children: [
                 const SizedBox(height: 30),
                 // Logo Section
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    const SizedBox(width: 12),
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -169,8 +173,28 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                         ),
                       ),
                     ],
+                    const Spacer(),
+                    // Provide a chevron inside the sidebar for admin so the
+                    // collapsed/expanded affordance matches the reference design.
+                    if (widget.isSidebarExpanded && widget.isAdminPanel)
+                      IconButton(
+                        icon: Icon(
+                          LucideIcons.chevronLeft,
+                          color: subTextColor,
+                          size: 18,
+                        ),
+                        onPressed: () => widget.onSidebarToggle(false),
+                      ),
                   ],
                 ),
+                // When collapsed, show a centered expand chevron to match the reference
+                if (!widget.isSidebarExpanded)
+                  Center(
+                    child: IconButton(
+                      icon: Icon(LucideIcons.chevronRight, color: subTextColor),
+                      onPressed: () => widget.onSidebarToggle(true),
+                    ),
+                  ),
                 const SizedBox(height: 40),
                 // Menu Items
                 Expanded(

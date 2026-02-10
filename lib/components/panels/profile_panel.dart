@@ -29,7 +29,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
 
   // State variables
   String _gender = 'Female';
-  String _studentCategory = 'Continuing Student';
+  final String _studentCategory = 'Continuing Student';
   final String _course = 'BACHELOR OF SCIENCE IN INFORMATION TECHNOLOGY';
   bool _isEditing = false;
 
