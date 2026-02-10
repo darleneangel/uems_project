@@ -21,11 +21,55 @@ class OfficeRequest {
 class OfficeRequestService {
   OfficeRequestService._internal();
   static final OfficeRequestService _instance = OfficeRequestService._internal();
-  factory OfficeRequestService() => _instance;
+  factory OfficeRequestService() {
+    // ensure demo data seeded on first access
+    _instance._seedDemoData();
+    return _instance;
+  }
 
   final ValueNotifier<List<OfficeRequest>> notifier = ValueNotifier([]);
   int _nextId = 1;
 
+  // Seed some demo data once for testing/development.
+  // This helper is invoked from the singleton constructor area when first loaded.
+  // It only adds entries if the notifier is empty to avoid duplicates.
+  void _seedDemoData() {
+    if (notifier.value.isNotEmpty) return;
+    notifier.value = [
+      OfficeRequest(
+        id: _nextId++,
+        office: 'admissions',
+        requestType: 'Application Status',
+        details: 'Inquiry about application #A12345 status.',
+        createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+        status: 'pending',
+      ),
+      OfficeRequest(
+        id: _nextId++,
+        office: 'registrar',
+        requestType: 'Transcript Request',
+        details: 'Requesting transcript for Jane Doe.',
+        createdAt: DateTime.now().subtract(const Duration(days: 1, hours: 2)),
+        status: 'approved',
+      ),
+      OfficeRequest(
+        id: _nextId++,
+        office: 'accounting',
+        requestType: 'Refund Request',
+        details: 'Refund for overpayment invoice #INV-789.',
+        createdAt: DateTime.now().subtract(const Duration(minutes: 45)),
+        status: 'pending',
+      ),
+      OfficeRequest(
+        id: _nextId++,
+        office: 'admissions',
+        requestType: 'Schedule Campus Tour',
+        details: 'Family tour request for next week.',
+        createdAt: DateTime.now().subtract(const Duration(days: 2)),
+        status: 'archived',
+      ),
+    ];
+  }
   void addRequest({required String office, required String requestType, required String details}) {
     final req = OfficeRequest(
       id: _nextId++,

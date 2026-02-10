@@ -90,12 +90,12 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
                   padding: const EdgeInsets.all(16),
                   margin: const EdgeInsets.symmetric(horizontal: 8),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? entry.value['color'].withOpacity(0.2)
-                        : surfaceDark,
-                    border: Border.all(
-                      color: isSelected ? entry.value['color'] : Colors.white10,
-                      width: isSelected ? 2 : 1,
+                      color: isSelected
+                          ? entry.value['color'].withOpacity(0.2)
+                          : surfaceDark,
+                      border: Border.all(
+                        color: isSelected ? entry.value['color'] : aViolet.withOpacity(0.12),
+                        width: isSelected ? 2 : 1,
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -149,13 +149,13 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? aViolet.withOpacity(0.3)
-                              : Colors.white.withOpacity(0.05),
-                          border: Border.all(
                             color: isSelected
-                                ? aViolet
-                                : Colors.white.withOpacity(0.1),
+                                ? aViolet.withOpacity(0.3)
+                                : aViolet.withOpacity(0.04),
+                          border: Border.all(
+                              color: isSelected
+                                  ? aViolet
+                                  : aViolet.withOpacity(0.12),
                           ),
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -187,7 +187,7 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
           ),
         ),
         const SizedBox(height: 12),
-        TextField(
+          TextField(
           controller: _descriptionController,
           maxLines: 4,
           style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
@@ -195,7 +195,7 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
             hintText: 'Provide any additional information...',
             hintStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 14),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.12),
+            fillColor: aViolet.withOpacity(0.08),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
@@ -236,7 +236,7 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: aViolet,
-                  disabledBackgroundColor: Colors.white10,
+                    disabledBackgroundColor: aViolet.withOpacity(0.06),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -260,7 +260,7 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
                   setState(() => _requestType = '');
                 },
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white10),
+                    side: BorderSide(color: aViolet.withOpacity(0.12)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

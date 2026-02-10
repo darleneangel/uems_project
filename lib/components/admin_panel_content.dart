@@ -13,6 +13,7 @@ import '../views/academic_calendar_view.dart';
 import '../views/course_catalog_view.dart';
 import '../services/office_request_service.dart';
 import 'office_request_form.dart';
+import 'request_receiver.dart';
 
 class AdminPanelContent extends StatelessWidget {
   final String panelType;
@@ -81,7 +82,7 @@ class AdminPanelContent extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'Announcement Title',
               filled: true,
-              fillColor: Colors.white.withOpacity(0.05),
+              fillColor: AdminPanelContent.aViolet.withOpacity(0.06),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
@@ -96,7 +97,7 @@ class AdminPanelContent extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'Announcement Content',
               filled: true,
-              fillColor: Colors.white.withOpacity(0.05),
+              fillColor: AdminPanelContent.aViolet.withOpacity(0.06),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
@@ -778,61 +779,18 @@ class OfficeAdminPanel extends StatefulWidget {
 
 class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
   final OfficeRequestService _service = OfficeRequestService();
-  int _activeTab = 0;
-  static const List<String> _tabs = ['Create', 'Review', 'Update', 'Archive'];
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: _tabs.asMap().entries.map((e) {
-            final idx = e.key;
-            final label = e.value;
-            final selected = _activeTab == idx;
-            return Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: ElevatedButton(
-                onPressed: () => setState(() => _activeTab = idx),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: selected ? AdminPanelContent.aViolet : Colors.white10,
-                  foregroundColor: selected ? Colors.white : Colors.white70,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-              ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 16),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 240),
-          child: _buildActiveTab(),
-        ),
-      ],
+    // Render the Request Receiver directly — tabs removed because actions
+    // (Details, Approve, Reject, Archive) are available on each request card.
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: AdminPanelContent.surfaceDark, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
+      child: const RequestReceiver(),
     );
   }
 
-  Widget _buildActiveTab() {
-    switch (_activeTab) {
-      case 0:
-        return Container(
-          key: const ValueKey('create'),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(color: AdminPanelContent.surfaceDark, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
-          child: const OfficeRequestForm(),
-        );
-      case 1:
-        return _buildReviewTab();
-      case 2:
-        return _buildUpdateTab();
-      case 3:
-        return _buildArchiveTab();
-      default:
-        return const SizedBox.shrink();
-    }
-  }
 
   Widget _buildReviewTab() {
     return Container(
@@ -851,7 +809,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
               final r = pending[i];
               return Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white10)),
+                decoration: BoxDecoration(color: AdminPanelContent.aViolet.withOpacity(0.04), borderRadius: BorderRadius.circular(10), border: Border.all(color: AdminPanelContent.aViolet.withOpacity(0.08))),
                 child: Row(
                   children: [
                     Expanded(
@@ -914,7 +872,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
               final r = items[i];
               return Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white10)),
+                decoration: BoxDecoration(color: AdminPanelContent.aViolet.withOpacity(0.04), borderRadius: BorderRadius.circular(10), border: Border.all(color: AdminPanelContent.aViolet.withOpacity(0.08))),
                 child: Row(
                   children: [
                     Expanded(
@@ -969,7 +927,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
               final r = items[i];
               return Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white10)),
+                decoration: BoxDecoration(color: AdminPanelContent.aViolet.withOpacity(0.04), borderRadius: BorderRadius.circular(10), border: Border.all(color: AdminPanelContent.aViolet.withOpacity(0.08))),
                 child: Row(
                   children: [
                     Expanded(
@@ -1033,7 +991,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
                 labelText: 'Request Type',
                 labelStyle: GoogleFonts.inter(color: Colors.white70, fontSize: 13),
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.12),
+                  fillColor: AdminPanelContent.aViolet.withOpacity(0.08),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AdminPanelContent.aViolet, width: 2)),
@@ -1048,7 +1006,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
                 labelText: 'Details',
                 labelStyle: GoogleFonts.inter(color: Colors.white70, fontSize: 13),
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.12),
+                fillColor: AdminPanelContent.aViolet.withOpacity(0.08),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AdminPanelContent.aViolet, width: 2)),
