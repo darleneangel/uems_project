@@ -4,6 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../components/admin_panel_content.dart';
 import '../components/program_chair_panel.dart';
+import '../components/messaging_panel.dart';
+import '../components/hr_panel.dart';
+import '../components/report_panel.dart';
 
 class AdminDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -26,6 +29,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     'program_chair',
     'study_loads',
     'grade_recording',
+    'hr',
+    'messaging',
+    'reports',
   ];
 
   // Violet Theme Colors (Dark)
@@ -75,6 +81,18 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       case 5:
         panelTitle = 'Grade Recording System';
         panelContent = AdminPanelContent(panelType: _panelTypes[5]);
+        break;
+      case 6:
+        panelTitle = 'Human Resources';
+        panelContent = const HRPanel();
+        break;
+      case 7:
+        panelTitle = 'Messaging';
+        panelContent = const MessagingPanel();
+        break;
+      case 8:
+        panelTitle = 'Error Reports & System Issues';
+        panelContent = const ReportPanel();
         break;
       default:
         panelTitle = 'System Overview';
@@ -267,15 +285,10 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 _sidebarHeader("OFFICE MANAGEMENT", subTextColor),
                 _sidebarItem(LucideIcons.briefcase, "Office Admin", 2, textColor),
                 _sidebarItem(LucideIcons.userCheck, "Program Chair", 3, textColor),
-                const SizedBox(height: 20),
-                _sidebarHeader("ACADEMIC CONTROL", subTextColor),
-                _sidebarItem(LucideIcons.layers, "Study Loads", 4, textColor),
-                _sidebarItem(
-                  LucideIcons.bookMarked,
-                  "Grade Recording",
-                  5,
-                  textColor,
-                ),
+                _sidebarItem(LucideIcons.users, "HR", 6, textColor),
+                _sidebarItem(LucideIcons.messageSquare, "Messaging", 7, textColor),
+                _sidebarItem(LucideIcons.alertTriangle, "Reports", 8, textColor),
+
               ],
             ),
           ),
@@ -1102,4 +1115,10 @@ class PieChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  
+  @override
+  bool hitTest(Offset position) => false;
+  
+  @override
+  SemanticsBuilderCallback? get semanticsBuilder => null;
 }

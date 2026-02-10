@@ -26,12 +26,22 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
   // Form controllers
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _departmentController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _employeeIdController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   DateTime? _effectiveDate;
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _nameController.dispose();
+    _departmentController.dispose();
+    _emailController.dispose();
+    _employeeIdController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -41,6 +51,11 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
       _editingItem = null;
       _titleController.clear();
       _descriptionController.clear();
+      _nameController.clear();
+      _departmentController.clear();
+      _emailController.clear();
+      _employeeIdController.clear();
+      _passwordController.clear();
       _effectiveDate = null;
     });
   }
@@ -52,6 +67,11 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
       _editingItem = item;
       _titleController.text = item['title'] ?? '';
       _descriptionController.text = item['description'] ?? '';
+      _nameController.text = item['name'] ?? '';
+      _departmentController.text = item['department'] ?? '';
+      _emailController.text = item['email'] ?? '';
+      _employeeIdController.text = item['employeeId'] ?? '';
+      _passwordController.text = item['password'] ?? '';
       _effectiveDate = item['effectiveDate'];
     });
   }
@@ -59,10 +79,14 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
   void _startArchive() => setState(() => _selectedAction = 'archive');
 
   void _submitCreateOrUpdate() {
-    final title = _titleController.text.trim();
-    final desc = _descriptionController.text.trim();
-    if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Title is required')));
+    final name = _nameController.text.trim();
+    final department = _departmentController.text.trim();
+    final email = _emailController.text.trim();
+    final employeeId = _employeeIdController.text.trim();
+    final password = _passwordController.text.trim();
+    
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name is required')));
       return;
     }
 
@@ -70,21 +94,30 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
       // create
       final newItem = {
         'id': _nextId++,
-        'title': title,
-        'description': desc,
+        'title': name,
+        'description': '',
+        'name': name,
+        'department': department,
+        'email': email,
+        'employeeId': employeeId,
+        'password': password,
         'effectiveDate': _effectiveDate,
         'archived': false,
       };
       setState(() => _items.insert(0, newItem));
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Program item created')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Program chair created')));
     } else {
       // update
       setState(() {
-        _editingItem!['title'] = title;
-        _editingItem!['description'] = desc;
+        _editingItem!['name'] = name;
+        _editingItem!['title'] = name;
+        _editingItem!['department'] = department;
+        _editingItem!['email'] = email;
+        _editingItem!['employeeId'] = employeeId;
+        _editingItem!['password'] = password;
         _editingItem!['effectiveDate'] = _effectiveDate;
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Program item updated')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Program chair updated')));
     }
 
     // go to review
@@ -166,13 +199,13 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Create Program Item', style: GoogleFonts.inter(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        Text('Administrator Details', style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         TextField(
-          controller: _titleController,
+          controller: _nameController,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
-            hintText: 'Title',
+            hintText: 'Name',
             hintStyle: TextStyle(color: Colors.white30),
             filled: true,
             fillColor: Colors.white10,
@@ -181,11 +214,10 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         ),
         const SizedBox(height: 12),
         TextField(
-          controller: _descriptionController,
+          controller: _departmentController,
           style: const TextStyle(color: Colors.white),
-          maxLines: 4,
           decoration: InputDecoration(
-            hintText: 'Description',
+            hintText: 'Department',
             hintStyle: TextStyle(color: Colors.white30),
             filled: true,
             fillColor: Colors.white10,
@@ -193,6 +225,43 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
           ),
         ),
         const SizedBox(height: 12),
+        TextField(
+          controller: _emailController,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Personal Email',
+            hintStyle: TextStyle(color: Colors.white30),
+            filled: true,
+            fillColor: Colors.white10,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _employeeIdController,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Employee ID',
+            hintStyle: TextStyle(color: Colors.white30),
+            filled: true,
+            fillColor: Colors.white10,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _passwordController,
+          style: const TextStyle(color: Colors.white),
+          obscureText: true,
+          decoration: InputDecoration(
+            hintText: 'Password (Temporary)',
+            hintStyle: TextStyle(color: Colors.white30),
+            filled: true,
+            fillColor: Colors.white10,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+          ),
+        ),
+        const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
@@ -207,6 +276,11 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
               onPressed: () {
                 _titleController.clear();
                 _descriptionController.clear();
+                _nameController.clear();
+                _departmentController.clear();
+                _emailController.clear();
+                _employeeIdController.clear();
+                _passwordController.clear();
                 setState(() => _effectiveDate = null);
               },
               style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)),

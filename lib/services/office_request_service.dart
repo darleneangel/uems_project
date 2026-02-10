@@ -8,6 +8,11 @@ class OfficeRequest {
     required this.details,
     required this.createdAt,
     this.status = 'pending',
+    this.department,
+    this.priority,
+    this.targetAudience,
+    this.proposedAnnouncement,
+    this.isAnnouncement = false,
   });
 
   final int id;
@@ -16,6 +21,13 @@ class OfficeRequest {
   String details;
   final DateTime createdAt;
   String status; // 'pending','approved','rejected'
+  
+  // Announcement-specific fields
+  final String? department;
+  final String? priority;
+  final String? targetAudience;
+  final String? proposedAnnouncement;
+  final bool isAnnouncement;
 }
 
 class OfficeRequestService {
@@ -67,6 +79,46 @@ class OfficeRequestService {
         details: 'Family tour request for next week.',
         createdAt: DateTime.now().subtract(const Duration(days: 2)),
         status: 'archived',
+      ),
+      // Announcements
+      OfficeRequest(
+        id: _nextId++,
+        office: 'admissions',
+        requestType: 'Application Status Update',
+        details: 'Congratulations to all Fall 2026 applicants! Your preliminary application review is now complete. Please log into your Student Portal by Friday, February 20th, to check for any missing \'Action Items.\'\n\nCommon missing documents include:\n• Final High School Transcripts\n• Letters of Recommendation\n• Proof of Residency\n\nFailure to submit these by the deadline may result in a delay in your admission decision.',
+        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+        status: 'pending',
+        department: 'Undergraduate Admissions',
+        priority: 'High',
+        targetAudience: 'Prospective Students / Applicants',
+        proposedAnnouncement: 'Congratulations to all Fall 2026 applicants! Your preliminary application review is now complete. Please log into your Student Portal by Friday, February 20th, to check for any missing \'Action Items.\'\n\nCommon missing documents include:\n• Final High School Transcripts\n• Letters of Recommendation\n• Proof of Residency\n\nFailure to submit these by the deadline may result in a delay in your admission decision.',
+        isAnnouncement: true,
+      ),
+      OfficeRequest(
+        id: _nextId++,
+        office: 'registrar',
+        requestType: 'Spring Semester Registration',
+        details: 'Spring 2026 registration is now open for all continuing students.',
+        createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+        status: 'pending',
+        department: 'Records and Registration',
+        priority: 'High',
+        targetAudience: 'Continuing Students',
+        proposedAnnouncement: 'Spring 2026 course registration begins on Monday, February 16th, 2026. All continuing students are required to register by Friday, March 5th. Please visit the Student Portal to select your courses. Course codes and schedules are available in the Course Catalog.',
+        isAnnouncement: true,
+      ),
+      OfficeRequest(
+        id: _nextId++,
+        office: 'accounting',
+        requestType: 'Payment Deadline Notice',
+        details: 'Final payment deadline for Spring 2026 semester.',
+        createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+        status: 'pending',
+        department: 'Accounting and Finance',
+        priority: 'Critical',
+        targetAudience: 'All Students',
+        proposedAnnouncement: 'IMPORTANT: The final payment deadline for Spring 2026 tuition and fees is Thursday, March 1st, 2026. Students who do not pay by this date will have a hold placed on their account, which may prevent registration for future semesters. Payment can be made online through the Student Portal or at the cashier\'s office. Contact Accounting if you need a payment plan.',
+        isAnnouncement: true,
       ),
     ];
   }

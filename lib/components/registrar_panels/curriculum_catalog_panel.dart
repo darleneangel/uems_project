@@ -238,7 +238,7 @@ class _CurriculumCatalogPanelState extends State<CurriculumCatalogPanel> {
                       ],
                     ),
                   )
-                  .toList(),
+                  ,
             ],
           ),
         ],

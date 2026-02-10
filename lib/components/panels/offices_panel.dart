@@ -686,7 +686,7 @@ class _OfficesPanelState extends State<OfficesPanel>
                                   subTextColor,
                                 ),
                               )
-                              .toList(),
+                              ,
                           const SizedBox(height: 16),
                           _buildMessageInputField(textColor, subTextColor),
                         ],

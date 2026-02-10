@@ -463,7 +463,9 @@ Widget _buildBarGraphCard(
         ),
         const SizedBox(height: 24),
         Expanded(
-          child: CustomPaint(painter: _BarGraphPainter(), size: Size.infinite),
+          child: CustomPaint(
+            painter: _BarGraphPainter(),
+          ),
         ),
       ],
     ),
@@ -501,7 +503,9 @@ Widget _buildHistogramCard(
         ),
         const SizedBox(height: 24),
         Expanded(
-          child: CustomPaint(painter: _HistogramPainter(), size: Size.infinite),
+          child: CustomPaint(
+            painter: _HistogramPainter(),
+          ),
         ),
       ],
     ),
@@ -575,6 +579,12 @@ class _PieChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  
+  @override
+  bool hitTest(Offset position) => false;
+  
+  @override
+  SemanticsBuilderCallback? get semanticsBuilder => null;
 }
 
 class _HistogramPainter extends CustomPainter {
@@ -608,6 +618,12 @@ class _HistogramPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  
+  @override
+  bool hitTest(Offset position) => false;
+  
+  @override
+  SemanticsBuilderCallback? get semanticsBuilder => null;
 }
 
 class _BarGraphPainter extends CustomPainter {
@@ -642,4 +658,10 @@ class _BarGraphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  
+  @override
+  bool hitTest(Offset position) => false;
+  
+  @override
+  SemanticsBuilderCallback? get semanticsBuilder => null;
 }

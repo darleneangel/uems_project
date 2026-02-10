@@ -80,7 +80,7 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
     AnnouncementService().addAnnouncement(
       office: widget.officeKey,
       title: _title.text.trim(),
-      content: _content.text.trim() + '\n\nPosted by: ${_author.text.trim()}',
+      content: '${_content.text.trim()}\n\nPosted by: ${_author.text.trim()}',
       attachments: _attachments.isNotEmpty
           ? _attachments.map((a) => a.name).toList()
           : null,
