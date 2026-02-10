@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:async';
 
 class ReportPanel extends StatefulWidget {
   const ReportPanel({super.key});
@@ -172,8 +171,8 @@ class _ReportPanelState extends State<ReportPanel> {
         }
       }
       parts.add(current);
-      return parts.length >= 5
-          ? {
+      final result = parts.length >= 5
+          ? <String, String>{
               'office': parts[0],
               'category': parts[1],
               'description': parts[2],
@@ -181,7 +180,8 @@ class _ReportPanelState extends State<ReportPanel> {
               'priority': parts[4],
               'timestamp': DateTime.now().toString(),
             }
-          : {};
+          : <String, String>{};
+      return result;
     }).where((m) => m.isNotEmpty).toList();
   }
 
@@ -287,13 +287,13 @@ class _ReportPanelState extends State<ReportPanel> {
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: _getPriorityColor(report['priority'] ?? 'Medium').withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+                decoration: BoxDecoration(color: _getPriorityColor(report['priority'] ?? 'Medium').withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
                 child: Text(report['priority'] ?? 'Medium', style: GoogleFonts.inter(color: _getPriorityColor(report['priority'] ?? 'Medium'), fontWeight: FontWeight.w600)),
               ),
               const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: _getStatusColor(report['status'] ?? 'Open').withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+                decoration: BoxDecoration(color: _getStatusColor(report['status'] ?? 'Open').withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
                 child: Text(report['status'] ?? 'Open', style: GoogleFonts.inter(color: _getStatusColor(report['status'] ?? 'Open'), fontWeight: FontWeight.w600)),
               ),
             ],
@@ -315,9 +315,14 @@ class _ReportPanelState extends State<ReportPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
         // Left panel: Create/Edit Report
         Expanded(
           flex: 1,
@@ -349,7 +354,7 @@ class _ReportPanelState extends State<ReportPanel> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _officeCtl.text.isEmpty ? null : _officeCtl.text,
+                  initialValue: _officeCtl.text.isEmpty ? null : _officeCtl.text,
                   items: _offices.map((o) => DropdownMenuItem(value: o, child: Text(o, style: GoogleFonts.inter()))).toList(),
                   onChanged: (v) => setState(() => _officeCtl.text = v ?? ''),
                   decoration: InputDecoration(
@@ -363,7 +368,7 @@ class _ReportPanelState extends State<ReportPanel> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _categoryCtl.text.isEmpty ? null : _categoryCtl.text,
+                  initialValue: _categoryCtl.text.isEmpty ? null : _categoryCtl.text,
                   items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c, style: GoogleFonts.inter()))).toList(),
                   onChanged: (v) => setState(() => _categoryCtl.text = v ?? ''),
                   decoration: InputDecoration(
@@ -418,10 +423,12 @@ class _ReportPanelState extends State<ReportPanel> {
               children: [
                 Text('Reports Directory (${_reports.length})', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 16),
-                Expanded(
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.6),
                   child: _reports.isEmpty
                       ? Center(child: Text('No reports yet', style: GoogleFonts.inter(color: Colors.white54)))
                       : ListView.builder(
+                          shrinkWrap: true,
                           itemCount: _reports.length,
                           itemBuilder: (ctx, idx) {
                             final r = _reports[idx];
@@ -442,7 +449,7 @@ class _ReportPanelState extends State<ReportPanel> {
                                       Row(children: [
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(color: _getPriorityColor(r['priority'] ?? 'Medium').withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
+                                          decoration: BoxDecoration(color: _getPriorityColor(r['priority'] ?? 'Medium').withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
                                           child: Text(r['priority'] ?? '', style: GoogleFonts.inter(color: _getPriorityColor(r['priority'] ?? 'Medium'), fontSize: 11, fontWeight: FontWeight.w600)),
                                         ),
                                         const SizedBox(width: 8),
@@ -451,7 +458,7 @@ class _ReportPanelState extends State<ReportPanel> {
                                           itemBuilder: (ctx) => _statuses.map((s) => PopupMenuItem(value: s, child: Text(s, style: GoogleFonts.inter()))).toList(),
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(color: _getStatusColor(r['status'] ?? 'Open').withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
+                                            decoration: BoxDecoration(color: _getStatusColor(r['status'] ?? 'Open').withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
                                             child: Text(r['status'] ?? '', style: GoogleFonts.inter(color: _getStatusColor(r['status'] ?? 'Open'), fontSize: 11, fontWeight: FontWeight.w600)),
                                           ),
                                         ),
@@ -495,7 +502,11 @@ class _ReportPanelState extends State<ReportPanel> {
             ),
           ),
         ),
-      ],
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 

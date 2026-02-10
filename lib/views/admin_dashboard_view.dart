@@ -286,6 +286,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 _sidebarItem(LucideIcons.briefcase, "Office Admin", 2, textColor),
                 _sidebarItem(LucideIcons.userCheck, "Program Chair", 3, textColor),
                 _sidebarItem(LucideIcons.users, "HR", 6, textColor),
+                const SizedBox(height: 20),
+                _sidebarHeader("UTILITIES", subTextColor),
                 _sidebarItem(LucideIcons.messageSquare, "Messaging", 7, textColor),
                 _sidebarItem(LucideIcons.alertTriangle, "Reports", 8, textColor),
 
