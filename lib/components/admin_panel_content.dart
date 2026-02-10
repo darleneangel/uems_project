@@ -14,6 +14,7 @@ import '../views/course_catalog_view.dart';
 import '../services/office_request_service.dart';
 import 'office_request_form.dart';
 import 'request_receiver.dart';
+import 'office_admin_service_requests_panel.dart';
 
 class AdminPanelContent extends StatelessWidget {
   final String panelType;
@@ -384,7 +385,8 @@ class AdminPanelContent extends StatelessWidget {
   }
 
   Widget _buildOfficeAdminPanel() {
-    return const OfficeAdminPanel();
+    // instantiate non-const to ensure state/init runs reliably
+    return OfficeAdminServiceRequestsPanel();
   }
 
   // DELETE both old versions and paste this ONE version:

@@ -10,19 +10,52 @@ class RefundsListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final refunds = [
-      {'name': 'Emily Thompson', 'amount': '₱15,000', 'reason': 'Withdrawal', 'date': '2025-12-10'},
-      {'name': 'Robert Jackson', 'amount': '₱22,500', 'reason': 'Course Cancellation', 'date': '2025-12-09'},
-      {'name': 'Patricia Brown', 'amount': '₱18,000', 'reason': 'Fee Adjustment', 'date': '2025-12-08'},
-      {'name': 'Joseph Martin', 'amount': '₱12,000', 'reason': 'Duplicate Payment', 'date': '2025-12-07'},
-      {'name': 'Jennifer Lee', 'amount': '₱25,000', 'reason': 'Scholarship Credited', 'date': '2025-12-06'},
-      {'name': 'Christopher Davis', 'amount': '₱32,500', 'reason': 'Overpayment', 'date': '2025-12-05'},
+      {
+        'name': 'Emily Thompson',
+        'amount': '₱15,000',
+        'reason': 'Withdrawal',
+        'date': '2025-12-10',
+      },
+      {
+        'name': 'Robert Jackson',
+        'amount': '₱22,500',
+        'reason': 'Course Cancellation',
+        'date': '2025-12-09',
+      },
+      {
+        'name': 'Patricia Brown',
+        'amount': '₱18,000',
+        'reason': 'Fee Adjustment',
+        'date': '2025-12-08',
+      },
+      {
+        'name': 'Joseph Martin',
+        'amount': '₱12,000',
+        'reason': 'Duplicate Payment',
+        'date': '2025-12-07',
+      },
+      {
+        'name': 'Jennifer Lee',
+        'amount': '₱25,000',
+        'reason': 'Scholarship Credited',
+        'date': '2025-12-06',
+      },
+      {
+        'name': 'Christopher Davis',
+        'amount': '₱32,500',
+        'reason': 'Overpayment',
+        'date': '2025-12-05',
+      },
     ];
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: surfaceDark,
         elevation: 0,
-        title: Text('Refunds Processed', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(
+          'Refunds Processed',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
         iconTheme: const IconThemeData(color: Colors.white70),
       ),
       backgroundColor: const Color(0xFF0F0820),
@@ -55,7 +88,10 @@ class RefundsListView extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final refund = refunds[index];
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white12,
                           borderRadius: BorderRadius.circular(12),
@@ -66,7 +102,10 @@ class RefundsListView extends StatelessWidget {
                               backgroundColor: aViolet,
                               child: Text(
                                 refund['name']!.split(' ').first[0],
-                                style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -74,11 +113,21 @@ class RefundsListView extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(refund['name']!, 
-                                    style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+                                  Text(
+                                    refund['name']!,
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                   const SizedBox(height: 4),
-                                  Text('${refund['reason']} • ${refund['date']}', 
-                                    style: GoogleFonts.inter(color: Colors.white54, fontSize: 11)),
+                                  Text(
+                                    '${refund['reason']} • ${refund['date']}',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white54,
+                                      fontSize: 11,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),

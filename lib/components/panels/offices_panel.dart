@@ -94,6 +94,18 @@ class _OfficesPanelState extends State<OfficesPanel>
           "msg": "Ready for pickup at Window 3.",
         },
       ],
+      "messages": [
+        {
+          "sender": "Registrar",
+          "text": "Your document is ready for pickup.",
+          "time": "Feb 14, 08:01 AM",
+        },
+        {
+          "sender": "You",
+          "text": "Thank you! I will get it tomorrow.",
+          "time": "Feb 14, 09:15 AM",
+        },
+      ],
     },
     {
       "id": "REQ-2026-9005",
@@ -112,6 +124,19 @@ class _OfficesPanelState extends State<OfficesPanel>
           "status": "In Review",
           "time": "Mar 26, 08:45 AM",
           "msg": "Assigned to Finance Officer.",
+        },
+      ],
+      "messages": [
+        {
+          "sender": "You",
+          "text":
+              "Hello, I submitted my promissory note. Is there anything else needed?",
+          "time": "Mar 25, 01:16 PM",
+        },
+        {
+          "sender": "Accounting",
+          "text": "We are currently reviewing it. We will let you know.",
+          "time": "Mar 26, 08:46 AM",
         },
       ],
     },
@@ -143,6 +168,9 @@ class _OfficesPanelState extends State<OfficesPanel>
             "time": now,
             "msg": "Request submitted via portal.",
           },
+        ],
+        "messages": [
+          {"sender": "You", "text": _messageController.text, "time": now},
         ],
       });
 
@@ -626,6 +654,44 @@ class _OfficesPanelState extends State<OfficesPanel>
                         ],
                       );
                     }),
+                    const SizedBox(height: 24),
+                    Text(
+                      "MESSAGES",
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: subTextColor,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: widget.isDarkMode
+                            ? Colors.black.withOpacity(0.2)
+                            : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          ...(req['messages'] as List<Map<String, dynamic>>)
+                              .map(
+                                (msg) => _buildMessageBubble(
+                                  msg['sender'],
+                                  msg['text'],
+                                  msg['time'],
+                                  msg['sender'] == 'You',
+                                  textColor,
+                                  subTextColor,
+                                ),
+                              )
+                              .toList(),
+                          const SizedBox(height: 16),
+                          _buildMessageInputField(textColor, subTextColor),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -633,6 +699,72 @@ class _OfficesPanelState extends State<OfficesPanel>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildMessageBubble(
+    String sender,
+    String text,
+    String time,
+    bool isMe,
+    Color textColor,
+    Color subTextColor,
+  ) {
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isMe
+              ? const Color(0xFF8B5CF6)
+              : (widget.isDarkMode
+                    ? Colors.white.withOpacity(0.1)
+                    : Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: isMe
+                ? Colors.white
+                : (widget.isDarkMode ? Colors.white70 : Colors.black87),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageInputField(Color textColor, Color subTextColor) {
+    final inputFill = widget.isDarkMode
+        ? Colors.white.withOpacity(0.05)
+        : Colors.white;
+    return TextField(
+      style: TextStyle(color: textColor),
+      decoration: InputDecoration(
+        hintText: "Type a reply...",
+        hintStyle: TextStyle(color: subTextColor),
+        filled: true,
+        fillColor: inputFill,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        suffixIcon: IconButton(
+          icon: const Icon(
+            LucideIcons.send,
+            color: Color(0xFF8B5CF6),
+            size: 18,
+          ),
+          onPressed: () {
+            // In a real app, this would send the message
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text("Message sent!")));
+          },
+        ),
+      ),
     );
   }
 

@@ -24,7 +24,6 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     'subject_load',
     'assessment',
     'grade_book',
-    'clearance',
     'profile',
     'offices',
   ];
@@ -43,7 +42,6 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
       PanelMenuItem(title: 'Subject Load', icon: LucideIcons.bookOpen),
       PanelMenuItem(title: 'Assessment', icon: LucideIcons.barChart3),
       PanelMenuItem(title: 'Grade Book', icon: LucideIcons.book),
-      PanelMenuItem(title: 'Clearance', icon: LucideIcons.shield),
       PanelMenuItem(title: 'Profile', icon: LucideIcons.user),
       PanelMenuItem(title: 'Offices & Requests', icon: LucideIcons.building),
       PanelMenuItem(title: 'Logout', icon: LucideIcons.logOut),
@@ -63,12 +61,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
         panelTitle = 'Grade Book';
         break;
       case 4:
-        panelTitle = 'Clearance';
-        break;
-      case 5:
         panelTitle = 'My Profile';
         break;
-      case 6:
+      case 5:
         panelTitle = 'Offices & Requests';
         break;
       default:

@@ -15,6 +15,7 @@ class DashboardPanelTemplate extends StatefulWidget {
   final Function(bool) onSidebarToggle;
   final bool isAdminPanel;
   final VoidCallback? themeToggle;
+  final String? logoText;
 
   const DashboardPanelTemplate({
     super.key,
@@ -30,6 +31,7 @@ class DashboardPanelTemplate extends StatefulWidget {
     required this.onSidebarToggle,
     this.isAdminPanel = false,
     this.themeToggle,
+    this.logoText,
   });
 
   @override
@@ -120,7 +122,7 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
     // Use the primary violet for the admin sidebar so it matches the
     // main admin styling. Non-admin panels keep the original logic.
     final sidebarColor = widget.isAdminPanel
-      ? pViolet
+      ? (widget.isDarkMode ? surfaceDark : Colors.white)
       : (widget.isDarkMode ? pViolet : const Color(0xFFF1F5F9));
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
     final subTextColor = widget.isDarkMode ? Colors.white70 : Colors.blueGrey;
@@ -157,7 +159,10 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                     if (widget.isSidebarExpanded) ...[
                       const SizedBox(width: 12),
                       Text(
-                        widget.isAdminPanel ? "UEMS ADMIN" : "UEMS Portal",
+                        widget.logoText ??
+                            (widget.isAdminPanel
+                                ? "UEMS ADMIN"
+                                : "UEMS Portal"),
                         style: GoogleFonts.orbitron(
                           color: textColor,
                           fontWeight: FontWeight.bold,
