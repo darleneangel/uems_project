@@ -62,7 +62,9 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
     final title = _titleController.text.trim();
     final desc = _descriptionController.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Title is required')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Title is required')));
       return;
     }
 
@@ -76,7 +78,9 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         'archived': false,
       };
       setState(() => _items.insert(0, newItem));
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Program item created')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Program item created')));
     } else {
       // update
       setState(() {
@@ -84,7 +88,9 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         _editingItem!['description'] = desc;
         _editingItem!['effectiveDate'] = _effectiveDate;
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Program item updated')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Program item updated')));
     }
 
     // go to review
@@ -93,12 +99,16 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
 
   void _archiveItem(Map<String, dynamic> item) {
     setState(() => item['archived'] = true);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Archived')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Archived')));
   }
 
   void _restoreItem(Map<String, dynamic> item) {
     setState(() => item['archived'] = false);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Restored')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Restored')));
   }
 
   // Styled action card
@@ -133,7 +143,9 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         decoration: BoxDecoration(
           gradient: bg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? aViolet.withOpacity(0.6) : Colors.white10),
+          border: Border.all(
+            color: selected ? aViolet.withOpacity(0.6) : Colors.white10,
+          ),
         ),
         child: Row(
           children: [
@@ -143,7 +155,11 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                 color: selected ? Colors.white24 : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: selected ? Colors.white : Colors.white70, size: 20),
+              child: Icon(
+                icon,
+                color: selected ? Colors.white : Colors.white70,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -166,7 +182,14 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Create Program Item', style: GoogleFonts.inter(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(
+          'Create Program Item',
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 12),
         TextField(
           controller: _titleController,
@@ -176,7 +199,10 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
             hintStyle: TextStyle(color: Colors.white30),
             filled: true,
             fillColor: Colors.white10,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Colors.white10),
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -189,7 +215,10 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
             hintStyle: TextStyle(color: Colors.white30),
             filled: true,
             fillColor: Colors.white10,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Colors.white10),
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -199,7 +228,13 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
               child: ElevatedButton(
                 onPressed: _submitCreateOrUpdate,
                 style: ElevatedButton.styleFrom(backgroundColor: aViolet),
-                child: Text(_editingItem == null ? 'Create' : 'Update', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: Text(
+                  _editingItem == null ? 'Create' : 'Update',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -209,8 +244,13 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                 _descriptionController.clear();
                 setState(() => _effectiveDate = null);
               },
-              style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)),
-              child: Text('Clear', style: GoogleFonts.inter(color: Colors.white70)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.white10),
+              ),
+              child: Text(
+                'Clear',
+                style: GoogleFonts.inter(color: Colors.white70),
+              ),
             ),
           ],
         ),
@@ -220,7 +260,11 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
 
   Widget _buildReviewList() {
     final visible = _items.where((i) => i['archived'] == false).toList();
-    if (visible.isEmpty) return const Text('No program items found.', style: TextStyle(color: Colors.white70));
+    if (visible.isEmpty)
+      return const Text(
+        'No program items found.',
+        style: TextStyle(color: Colors.white70),
+      );
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -230,16 +274,32 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         final item = visible[idx];
         return Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white10)),
+          decoration: BoxDecoration(
+            color: Colors.white10,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white10),
+          ),
           child: Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item['title'], style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(
+                      item['title'],
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 6),
-                    Text(item['description'] ?? '', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13)),
+                    Text(
+                      item['description'] ?? '',
+                      style: GoogleFonts.inter(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -251,7 +311,10 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                   ),
                   IconButton(
                     onPressed: () => _archiveItem(item),
-                    icon: const Icon(LucideIcons.archive, color: Colors.white70),
+                    icon: const Icon(
+                      LucideIcons.archive,
+                      color: Colors.white70,
+                    ),
                   ),
                 ],
               ),
@@ -264,7 +327,11 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
 
   Widget _buildArchiveList() {
     final archived = _items.where((i) => i['archived'] == true).toList();
-    if (archived.isEmpty) return const Text('No archived items.', style: TextStyle(color: Colors.white70));
+    if (archived.isEmpty)
+      return const Text(
+        'No archived items.',
+        style: TextStyle(color: Colors.white70),
+      );
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -274,16 +341,32 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         final item = archived[idx];
         return Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white10)),
+          decoration: BoxDecoration(
+            color: Colors.white10,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white10),
+          ),
           child: Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item['title'], style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(
+                      item['title'],
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 6),
-                    Text(item['description'] ?? '', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13)),
+                    Text(
+                      item['description'] ?? '',
+                      style: GoogleFonts.inter(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -317,10 +400,25 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
           crossAxisSpacing: 12,
           childAspectRatio: 3.5,
           children: [
-            _actionCard('create', 'Create', LucideIcons.plusSquare, selectedCreate),
-            _actionCard('review', 'Review', LucideIcons.clipboardList, selectedReview),
+            _actionCard(
+              'create',
+              'Create',
+              LucideIcons.plusSquare,
+              selectedCreate,
+            ),
+            _actionCard(
+              'review',
+              'Review',
+              LucideIcons.clipboardList,
+              selectedReview,
+            ),
             _actionCard('update', 'Update', LucideIcons.edit3, selectedUpdate),
-            _actionCard('archive', 'Archive', LucideIcons.archive, selectedArchive),
+            _actionCard(
+              'archive',
+              'Archive',
+              LucideIcons.archive,
+              selectedArchive,
+            ),
           ],
         ),
         const SizedBox(height: 20),

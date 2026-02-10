@@ -1,27 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../components/admission_panel_content.dart';
+import 'teacher_panel_content.dart';
 
-class AdmissionDashboardView extends StatefulWidget {
+class TeacherDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
-  const AdmissionDashboardView({super.key, required this.onLogout});
+  const TeacherDashboardView({super.key, required this.onLogout});
 
   @override
-  State<AdmissionDashboardView> createState() => _AdmissionDashboardViewState();
+  State<TeacherDashboardView> createState() => _TeacherDashboardViewState();
 }
 
-class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
-  // Navigation & Theme State
+class _TeacherDashboardViewState extends State<TeacherDashboardView> {
   bool _isDarkMode = true;
   bool _isSidebarExpanded = true;
   int _selectedIndex = 0;
 
-  // Standardized Violet/Plum Palette
   static const Color pViolet = Color(0xFF2E1065);
   static const Color tDark = Color(0xFF0F071D);
   static const Color aViolet = Color(0xFF8B5CF6);
-  static const Color surfaceDark = Color(0xFF1E1B4B);
   static const Color success = Color(0xFF69F0AE);
 
   void _toggleSidebar() =>
@@ -30,31 +27,26 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
 
   @override
   Widget build(BuildContext context) {
-    // Dynamic theme colors
     final bgColor = _isDarkMode ? tDark : const Color(0xFFF8FAFC);
-    final panelColor = _isDarkMode ? surfaceDark : Colors.white;
     final textColor = _isDarkMode ? Colors.white : pViolet;
-    final subTextColor = _isDarkMode ? Colors.white54 : Colors.blueGrey;
 
     return Scaffold(
       backgroundColor: bgColor,
       body: Row(
         children: [
-          // 1. FIXED TOGGLEABLE SIDEBAR
-          _buildSidebar(panelColor, textColor, subTextColor),
-
-          // 2. MAIN PANEL AREA
+          _buildSidebar(textColor),
           Expanded(
             child: Column(
               children: [
-                _buildTopBar(textColor, subTextColor),
+                _buildTopBar(textColor),
                 Expanded(
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1400),
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
-                        child: AdmissionPanelContent(
+                        child: TeacherPanelContent(
+                          key: ValueKey(_selectedIndex),
                           selectedIndex: _selectedIndex,
                           isDarkMode: _isDarkMode,
                         ),
@@ -70,7 +62,7 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
     );
   }
 
-  Widget _buildTopBar(Color textColor, Color subTextColor) {
+  Widget _buildTopBar(Color textColor) {
     return Container(
       height: 75,
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -93,12 +85,11 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
           ),
           const SizedBox(width: 16),
           Text(
-            "Admissions Intelligence & Recruitment",
+            "Faculty Instruction Portal",
             style: GoogleFonts.inter(
               color: textColor,
               fontSize: 16,
               fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
             ),
           ),
           const Spacer(),
@@ -109,21 +100,13 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
               color: aViolet,
             ),
           ),
-          const SizedBox(width: 20),
-          _headerAction(LucideIcons.bell, subTextColor),
-          const SizedBox(width: 24),
-          const VerticalDivider(
-            color: Colors.white10,
-            indent: 20,
-            endIndent: 20,
-          ),
           const SizedBox(width: 24),
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                "ADMISSIONS_OFFICER",
+                "PROF_ACCESS_HUB",
                 style: GoogleFonts.inter(
                   color: textColor,
                   fontWeight: FontWeight.bold,
@@ -131,7 +114,7 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
                 ),
               ),
               Text(
-                "Verified Access",
+                "Active Faculty",
                 style: GoogleFonts.inter(
                   color: success,
                   fontSize: 10,
@@ -141,20 +124,16 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
             ],
           ),
           const SizedBox(width: 12),
-          CircleAvatar(
+          const CircleAvatar(
             backgroundColor: aViolet,
-            child: const Icon(
-              LucideIcons.userPlus,
-              color: Colors.white,
-              size: 18,
-            ),
+            child: Icon(LucideIcons.user, color: Colors.white, size: 18),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSidebar(Color panelColor, Color textColor, Color subTextColor) {
+  Widget _buildSidebar(Color textColor) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       width: _isSidebarExpanded ? 280 : 85,
@@ -162,56 +141,65 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
       child: Column(
         children: [
           const SizedBox(height: 30),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: aViolet.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(LucideIcons.school, color: aViolet, size: 24),
-              ),
-              if (_isSidebarExpanded) ...[
-                const SizedBox(width: 12),
-                Text(
-                  "UEMS Admissions",
-                  style: GoogleFonts.orbitron(
-                    color: textColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ],
-          ),
+          _buildLogo(textColor),
           const SizedBox(height: 40),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
                 _menuItem(LucideIcons.layoutDashboard, "Overview", 0),
-                _sidebarHeader("APPLICANT MANAGEMENT"),
-                _menuItem(LucideIcons.fileText, "Applications", 1),
-                _menuItem(LucideIcons.clipboardList, "Interview Management", 2),
-                _menuItem(LucideIcons.shieldCheck, "Document Verification", 3),
-                _sidebarHeader("MESSAGES"),
-                _menuItem(LucideIcons.mail, "Admission Letters", 4),
+                _sidebarHeader("INSTRUCTION"),
+                _menuItem(LucideIcons.bookOpen, "Teaching Load", 1),
+                _sidebarHeader("STUDENT TRACKING"),
+                _menuItem(LucideIcons.edit3, "Grade Encoding", 2),
+                _menuItem(LucideIcons.barChart2, "Progress Reports", 3),
+                _sidebarHeader("COMMUNICATION"),
+                _menuItem(LucideIcons.mail, "Messages", 4),
               ],
             ),
           ),
           const Divider(color: Colors.white10),
           _menuItem(
             LucideIcons.logOut,
-            "Logout System",
-            8,
+            "Logout",
+            9,
             isDestructive: true,
             onTap: widget.onLogout,
           ),
           const SizedBox(height: 20),
         ],
       ),
+    );
+  }
+
+  Widget _buildLogo(Color textColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: aViolet.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(
+            LucideIcons.graduationCap,
+            color: aViolet,
+            size: 24,
+          ),
+        ),
+        if (_isSidebarExpanded) ...[
+          const SizedBox(width: 12),
+          Text(
+            "UEMS Faculty",
+            style: GoogleFonts.orbitron(
+              color: textColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -232,7 +220,6 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
       ),
       child: ListTile(
         onTap: onTap ?? () => setState(() => _selectedIndex = index),
-        visualDensity: VisualDensity.compact,
         leading: Icon(
           icon,
           color: isSelected ? activeColor : Colors.blueGrey,
@@ -267,13 +254,4 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
       ),
     );
   }
-
-  Widget _headerAction(IconData icon, Color color) => Container(
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.05),
-      shape: BoxShape.circle,
-    ),
-    child: Icon(icon, color: color, size: 20),
-  );
 }
