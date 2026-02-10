@@ -122,9 +122,8 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
     // Use the primary violet for the admin sidebar so it matches the
     // main admin styling. Non-admin panels keep the original logic.
     final sidebarColor = widget.isAdminPanel
-        ? (widget.isDarkMode ? surfaceDark : Colors.white)
+        ? pViolet
         : (widget.isDarkMode ? pViolet : const Color(0xFFF1F5F9));
-
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
     final subTextColor = widget.isDarkMode ? Colors.white70 : Colors.blueGrey;
 

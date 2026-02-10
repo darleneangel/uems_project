@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart' as file_picker;
 import 'package:file_picker/file_picker.dart' show PlatformFile;
-import '../services/office_request_service.dart';
+import '../services/announcement_service.dart';
 
 class OfficeRequestView extends StatefulWidget {
   final String officeKey;
@@ -43,158 +43,23 @@ class OfficeRequestForm extends StatefulWidget {
 
 class _OfficeRequestFormState extends State<OfficeRequestForm> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _studentId = TextEditingController(
-    text: '2025-00001',
-  );
-  final TextEditingController _name = TextEditingController(
-    text: 'DARLENE ANGEL',
-  );
-  final TextEditingController _program = TextEditingController(
-    text: 'BS Computer Science',
-  );
-  final TextEditingController _year = TextEditingController(text: '3');
-  final TextEditingController _contact = TextEditingController();
-  final TextEditingController _notes = TextEditingController();
-  String _delivery = 'Pickup';
+  final TextEditingController _author = TextEditingController();
+  final TextEditingController _title = TextEditingController();
+  final TextEditingController _department = TextEditingController();
+  final TextEditingController _priority = TextEditingController();
+  final TextEditingController _targetAudience = TextEditingController();
+  final TextEditingController _content = TextEditingController();
   List<PlatformFile> _attachments = [];
-  String? _docType;
 
   @override
   void dispose() {
-    _studentId.dispose();
-    _name.dispose();
-    _program.dispose();
-    _year.dispose();
-    _contact.dispose();
-    _notes.dispose();
+    _author.dispose();
+    _title.dispose();
+    _department.dispose();
+    _priority.dispose();
+    _targetAudience.dispose();
+    _content.dispose();
     super.dispose();
-  }
-
-  Widget _officeSpecificFields() {
-    switch (widget.officeKey) {
-      case 'registrar':
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DropdownButtonFormField<String>(
-              items: const [
-                DropdownMenuItem(
-                  value: 'transcript',
-                  child: Text('Official Transcript'),
-                ),
-                DropdownMenuItem(
-                  value: 'enrollment',
-                  child: Text('Certification of Enrollment'),
-                ),
-                DropdownMenuItem(
-                  value: 'graduation',
-                  child: Text('Graduation/Diploma Request'),
-                ),
-                DropdownMenuItem(
-                  value: 'verification',
-                  child: Text('Enrollment Verification (Employer)'),
-                ),
-              ],
-              onChanged: (v) => setState(() => _docType = v),
-              decoration: const InputDecoration(labelText: 'Document Type'),
-            ),
-            const SizedBox(height: 12),
-          ],
-        );
-      case 'cashier':
-        return Column(
-          children: [
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Payment Reference (if any)',
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-        );
-      case 'financial_aid':
-        return Column(
-          children: [
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Scholarship / Aid Type',
-              ),
-            ),
-          ],
-        );
-      case 'library':
-        return Column(
-          children: [
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Book Title / Record',
-              ),
-            ),
-          ],
-        );
-      case 'student_affairs':
-        return Column(
-          children: [
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Request Type (ID / Leave / Permission)',
-              ),
-            ),
-          ],
-        );
-      case 'health':
-        return Column(
-          children: [
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Medical Certificate Type',
-              ),
-            ),
-          ],
-        );
-      case 'it':
-        return Column(
-          children: [
-            TextFormField(
-              decoration: const InputDecoration(labelText: 'System / Service'),
-            ),
-            const SizedBox(height: 8),
-            Text('Examples: Account, Password Reset, Access Request'),
-          ],
-        );
-      case 'career':
-        return Column(
-          children: [
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Employer / Company',
-              ),
-            ),
-          ],
-        );
-      case 'alumni':
-        return Column(
-          children: [
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Degree Verification Type',
-              ),
-            ),
-          ],
-        );
-      case 'exams':
-        return Column(
-          children: [
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Exam / Grade Issue',
-              ),
-            ),
-          ],
-        );
-      default:
-        return const SizedBox.shrink();
-    }
   }
 
   Future<void> _pickFiles() async {
@@ -210,130 +75,121 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    final id = DateTime.now().millisecondsSinceEpoch.toString().substring(7);
+    final ref = DateTime.now().millisecondsSinceEpoch.toString().substring(7);
 
-    // Build a compact details string for the admin queue
-    final details = StringBuffer()
-      ..writeln('Student ID: ${_studentId.text}')
-      ..writeln('Name: ${_name.text}')
-      ..writeln('Program: ${_program.text} (${_year.text})')
-      ..writeln('Contact: ${_contact.text}')
-      ..writeln('Delivery: $_delivery')
-      ..writeln('Notes: ${_notes.text}');
-    if (_attachments.isNotEmpty) {
-      details.writeln('Attachments: ${_attachments.map((a) => a.name).join(', ')}');
-    }
-
-    // Use the selected document type if present, otherwise use officeKey
-    final requestType = _docType ?? widget.officeKey;
-
-    OfficeRequestService().addRequest(
+    AnnouncementService().addAnnouncement(
       office: widget.officeKey,
-      requestType: requestType,
-      details: details.toString(),
+      title: _title.text.trim(),
+      content: '${_content.text.trim()}\n\nPosted by: ${_author.text.trim()}',
+      attachments: _attachments.isNotEmpty
+          ? _attachments.map((a) => a.name).toList()
+          : null,
+      department: _department.text.trim().isNotEmpty ? _department.text.trim() : null,
+      priority: _priority.text.trim().isNotEmpty ? _priority.text.trim() : null,
+      targetAudience: _targetAudience.text.trim().isNotEmpty ? _targetAudience.text.trim() : null,
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Request submitted — Ref: REQ-$id (pending admin approval)')),
+      SnackBar(content: Text('Announcement submitted — Ref: ANN-$ref (pending admin verification)')),
     );
-    // For embedded panel, we won't pop a route; parent can clear selected office
+
+    // Clear form for next announcement
+    _author.clear();
+    _title.clear();
+    _department.clear();
+    _priority.clear();
+    _targetAudience.clear();
+    _content.clear();
+    setState(() => _attachments = []);
   }
 
   @override
   Widget build(BuildContext context) {
     return Form(
       key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextFormField(
-            controller: _studentId,
-            decoration: const InputDecoration(labelText: 'Student ID'),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _name,
-            decoration: const InputDecoration(labelText: 'Full Name'),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _program,
-            decoration: const InputDecoration(labelText: 'Program'),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _year,
-            decoration: const InputDecoration(labelText: 'Year / Level'),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _contact,
-            decoration: const InputDecoration(
-              labelText: 'Contact (Email / Phone)',
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextFormField(
+              controller: _author,
+              decoration: const InputDecoration(labelText: 'Author / Office Contact'),
+              validator: (v) => (v == null || v.isEmpty) ? 'Provide a name or contact' : null,
             ),
-            validator: (v) =>
-                (v == null || v.isEmpty) ? 'Provide contact' : null,
-          ),
-          const SizedBox(height: 12),
-
-          _officeSpecificFields(),
-
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: _delivery,
-            items: const [
-              DropdownMenuItem(value: 'Pickup', child: Text('Pickup')),
-              DropdownMenuItem(value: 'Email', child: Text('Email (PDF)')),
-              DropdownMenuItem(value: 'Courier', child: Text('Courier')),
-            ],
-            onChanged: (v) => setState(() => _delivery = v ?? 'Pickup'),
-            decoration: const InputDecoration(labelText: 'Delivery Method'),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _notes,
-            decoration: const InputDecoration(
-              labelText: 'Notes / Additional Info',
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _title,
+              decoration: const InputDecoration(labelText: 'Announcement Title'),
+              validator: (v) => (v == null || v.isEmpty) ? 'Provide a title' : null,
             ),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _department,
+              decoration: const InputDecoration(
+                labelText: 'Department (optional)',
+                hintText: 'e.g., Undergraduate Admissions',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _priority,
+              decoration: const InputDecoration(
+                labelText: 'Priority (optional)',
+                hintText: 'e.g., High, Medium, Critical',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _targetAudience,
+              decoration: const InputDecoration(
+                labelText: 'Target Audience (optional)',
+                hintText: 'e.g., All Students, Graduating Seniors',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _content,
+              decoration: const InputDecoration(labelText: 'Announcement Content'),
+              maxLines: 8,
+              validator: (v) => (v == null || v.isEmpty) ? 'Provide announcement content' : null,
+            ),
+            const SizedBox(height: 16),
 
-          // attachments
-          Text(
-            'Attachments (ID, Authorization files)',
-            style: TextStyle(color: Colors.grey[700]),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              ElevatedButton(
-                onPressed: _pickFiles,
-                child: const Text('Upload'),
+            Text(
+              'Attachments (images, PDFs)',
+              style: TextStyle(color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: _pickFiles,
+                  child: const Text('Upload'),
+                ),
+              ],
+            ),
+            if (_attachments.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: _attachments.map((f) => Text(f.name)).toList(),
               ),
             ],
-          ),
-          if (_attachments.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _attachments.map((f) => Text(f.name)).toList(),
+            const SizedBox(height: 24),
+
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6B21A8),
+                ),
+                child: const Text('Submit Announcement'),
+              ),
             ),
           ],
-          const SizedBox(height: 24),
-
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6B21A8),
-              ),
-              child: const Text('Submit Request'),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

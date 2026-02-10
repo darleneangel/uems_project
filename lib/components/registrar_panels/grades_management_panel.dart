@@ -260,7 +260,7 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
                         ],
                       ),
                     )
-                    .toList(),
+                    ,
               ],
             ),
           ),

@@ -86,49 +86,147 @@ class _RequestReceiverState extends State<RequestReceiver> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Office:',
-                style: GoogleFonts.inter(
-                  color: Colors.white70,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
+              // Display different content based on whether this is an announcement
+              if (request.isAnnouncement) ...[
+                // Announcement Format
+                Text(
+                  'Office:',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                officeInfo[request.office]?['name'] ?? request.office,
-                style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Request Type:',
-                style: GoogleFonts.inter(
-                  color: Colors.white70,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                const SizedBox(height: 4),
+                Text(
+                  officeInfo[request.office]?['name'] ?? request.office,
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                request.requestType,
-                style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Details:',
-                style: GoogleFonts.inter(
-                  color: Colors.white70,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                const SizedBox(height: 16),
+                Text(
+                  'Department:',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                request.details.isNotEmpty
-                    ? request.details
-                    : 'No additional details',
-                style: GoogleFonts.inter(color: Colors.white70, fontSize: 14),
-              ),
+                const SizedBox(height: 4),
+                Text(
+                  request.department ?? 'N/A',
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Priority:',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getPriorityColor(request.priority).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    request.priority ?? 'N/A',
+                    style: GoogleFonts.inter(
+                      color: _getPriorityColor(request.priority),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Target Audience:',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  request.targetAudience ?? 'N/A',
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Proposed Announcement:',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: aViolet.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: aViolet.withOpacity(0.2)),
+                  ),
+                  child: Text(
+                    request.proposedAnnouncement?.isNotEmpty == true
+                        ? request.proposedAnnouncement!
+                        : (request.details.isNotEmpty
+                            ? request.details
+                            : 'No announcement content'),
+                    style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, height: 1.5),
+                  ),
+                ),
+              ] else ...[
+                // Regular Request Format
+                Text(
+                  'Office:',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  officeInfo[request.office]?['name'] ?? request.office,
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Request Type:',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  request.requestType,
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Details:',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  request.details.isNotEmpty
+                      ? request.details
+                      : 'No additional details',
+                  style: GoogleFonts.inter(color: Colors.white70, fontSize: 14),
+                ),
+              ],
               const SizedBox(height: 16),
               Text(
                 'Submitted:',
@@ -189,6 +287,21 @@ class _RequestReceiverState extends State<RequestReceiver> {
         ],
       ),
     );
+  }
+
+  Color _getPriorityColor(String? priority) {
+    switch (priority?.toLowerCase()) {
+      case 'critical':
+        return const Color(0xFFEF5350); // Red
+      case 'high':
+        return const Color(0xFFFF9800); // Orange
+      case 'medium':
+        return const Color(0xFFFFD54F); // Yellow
+      case 'low':
+        return Colors.greenAccent;
+      default:
+        return Colors.white70;
+    }
   }
 
   String _formatDateTime(DateTime dt) {
@@ -299,7 +412,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                     ),
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         ),

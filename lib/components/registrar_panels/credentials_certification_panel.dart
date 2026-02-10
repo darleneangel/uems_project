@@ -115,7 +115,7 @@ class _CredentialsCertificationPanelState
     try {
       final dir = await getTemporaryDirectory();
       final file = File(
-        "${dir.path}/${type.replaceAll(' ', '_')}_${_selectedId}.pdf",
+        "${dir.path}/${type.replaceAll(' ', '_')}_$_selectedId.pdf",
       );
       await file.writeAsBytes(await pdf.save());
       await OpenFile.open(file.path);

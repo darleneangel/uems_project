@@ -26,12 +26,22 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
   // Form controllers
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _departmentController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _employeeIdController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   DateTime? _effectiveDate;
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _nameController.dispose();
+    _departmentController.dispose();
+    _emailController.dispose();
+    _employeeIdController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -41,6 +51,11 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
       _editingItem = null;
       _titleController.clear();
       _descriptionController.clear();
+      _nameController.clear();
+      _departmentController.clear();
+      _emailController.clear();
+      _employeeIdController.clear();
+      _passwordController.clear();
       _effectiveDate = null;
     });
   }
@@ -52,6 +67,11 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
       _editingItem = item;
       _titleController.text = item['title'] ?? '';
       _descriptionController.text = item['description'] ?? '';
+      _nameController.text = item['name'] ?? '';
+      _departmentController.text = item['department'] ?? '';
+      _emailController.text = item['email'] ?? '';
+      _employeeIdController.text = item['employeeId'] ?? '';
+      _passwordController.text = item['password'] ?? '';
       _effectiveDate = item['effectiveDate'];
     });
   }
@@ -72,8 +92,13 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
       // create
       final newItem = {
         'id': _nextId++,
-        'title': title,
-        'description': desc,
+        'title': name,
+        'description': '',
+        'name': name,
+        'department': department,
+        'email': email,
+        'employeeId': employeeId,
+        'password': password,
         'effectiveDate': _effectiveDate,
         'archived': false,
       };
@@ -84,8 +109,12 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
     } else {
       // update
       setState(() {
-        _editingItem!['title'] = title;
-        _editingItem!['description'] = desc;
+        _editingItem!['name'] = name;
+        _editingItem!['title'] = name;
+        _editingItem!['department'] = department;
+        _editingItem!['email'] = email;
+        _editingItem!['employeeId'] = employeeId;
+        _editingItem!['password'] = password;
         _editingItem!['effectiveDate'] = _effectiveDate;
       });
       ScaffoldMessenger.of(
@@ -242,6 +271,11 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
               onPressed: () {
                 _titleController.clear();
                 _descriptionController.clear();
+                _nameController.clear();
+                _departmentController.clear();
+                _emailController.clear();
+                _employeeIdController.clear();
+                _passwordController.clear();
                 setState(() => _effectiveDate = null);
               },
               style: OutlinedButton.styleFrom(

@@ -12,7 +12,6 @@ import '../views/transcript_generation_view.dart';
 import '../views/academic_calendar_view.dart';
 import '../views/course_catalog_view.dart';
 import '../services/office_request_service.dart';
-import 'office_request_form.dart';
 import 'request_receiver.dart';
 
 class AdminPanelContent extends StatelessWidget {
@@ -384,7 +383,15 @@ class AdminPanelContent extends StatelessWidget {
   }
 
   Widget _buildOfficeAdminPanel() {
-    return const OfficeAdminPanel();
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: surfaceDark,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: const RequestReceiver(),
+    );
   }
 
   // DELETE both old versions and paste this ONE version:
