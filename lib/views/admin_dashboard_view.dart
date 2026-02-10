@@ -7,6 +7,8 @@ import '../components/program_chair_panel.dart';
 import '../components/messaging_panel.dart';
 import '../components/hr_panel.dart';
 import '../components/report_panel.dart';
+import '../components/department_management_panel.dart';
+import '../components/course_management_panel.dart';
 
 class AdminDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -93,6 +95,14 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       case 8:
         panelTitle = 'Error Reports & System Issues';
         panelContent = const ReportPanel();
+        break;
+      case 10:
+        panelTitle = 'Department Management';
+        panelContent = const DepartmentManagementPanel();
+        break;
+      case 11:
+        panelTitle = 'Course Management';
+        panelContent = const CourseManagementPanel();
         break;
       default:
         panelTitle = 'System Overview';
@@ -286,6 +296,10 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 _sidebarItem(LucideIcons.briefcase, "Office Admin", 2, textColor),
                 _sidebarItem(LucideIcons.userCheck, "Program Chair", 3, textColor),
                 _sidebarItem(LucideIcons.users, "HR", 6, textColor),
+                const SizedBox(height: 20),
+                _sidebarHeader("ACADEMIC MANAGEMENT", subTextColor),
+                _sidebarItem(LucideIcons.building, "Departments", 10, textColor),
+                _sidebarItem(LucideIcons.bookOpen, "Courses", 11, textColor),
                 const SizedBox(height: 20),
                 _sidebarHeader("UTILITIES", subTextColor),
                 _sidebarItem(LucideIcons.messageSquare, "Messaging", 7, textColor),
