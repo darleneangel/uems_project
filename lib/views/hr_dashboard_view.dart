@@ -2,16 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-class ProgramChairDashboardView extends StatefulWidget {
+class HrDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
-  const ProgramChairDashboardView({super.key, required this.onLogout});
+  const HrDashboardView({super.key, required this.onLogout});
 
   @override
-  State<ProgramChairDashboardView> createState() =>
-      _ProgramChairDashboardViewState();
+  State<HrDashboardView> createState() => _HrDashboardViewState();
 }
 
-class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
+class _HrDashboardViewState extends State<HrDashboardView> {
   // Navigation & Theme State
   bool _isDarkMode = true;
   bool _isSidebarExpanded = true;
@@ -89,7 +88,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
           ),
           const SizedBox(width: 16),
           Text(
-            "Program Chair Academic Operations",
+            "heuheuhuehueh try",
             style: GoogleFonts.inter(
               color: textColor,
               fontSize: 16,
@@ -104,6 +103,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
               _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
               color: aViolet,
             ),
+            tooltip: "Switch Theme",
           ),
           const SizedBox(width: 20),
           _headerAction(LucideIcons.bell, subTextColor),
@@ -119,7 +119,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                "DEAN_CHAIR_USER",
+                "PROF_MANALASTAS",
                 style: GoogleFonts.inter(
                   color: textColor,
                   fontWeight: FontWeight.bold,
@@ -127,7 +127,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
                 ),
               ),
               Text(
-                "Academic Oversight",
+                "Academic Faculty",
                 style: GoogleFonts.inter(
                   color: success,
                   fontSize: 10,
@@ -139,11 +139,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
           const SizedBox(width: 12),
           CircleAvatar(
             backgroundColor: aViolet,
-            child: const Icon(
-              LucideIcons.shieldCheck,
-              color: Colors.white,
-              size: 18,
-            ),
+            child: const Icon(LucideIcons.user, color: Colors.white, size: 18),
           ),
         ],
       ),
@@ -176,7 +172,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
               if (_isSidebarExpanded) ...[
                 const SizedBox(width: 12),
                 Text(
-                  "UEMS Faculty",
+                  "UEMS Teacher",
                   style: GoogleFonts.orbitron(
                     color: textColor,
                     fontWeight: FontWeight.bold,
@@ -191,18 +187,22 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
-                _menuItem(LucideIcons.layoutDashboard, "Overview", 0),
-                _sidebarHeader("CURRICULUM"),
-                _menuItem(LucideIcons.layers, "Curriculum Design", 1),
-                _menuItem(LucideIcons.bookOpen, "Course Catalog", 2),
-                _sidebarHeader("FACULTY & STAFF"),
-                _menuItem(LucideIcons.users, "Teaching Loads", 3),
-                _menuItem(LucideIcons.activity, "Evaluations", 4),
-                _sidebarHeader("STUDENT SERVICES"),
-                _menuItem(LucideIcons.gitPullRequest, "Petitions & Cases", 5),
-                _menuItem(LucideIcons.calendar, "Academic Events", 6),
-                _sidebarHeader("ANALYTICS"),
-                _menuItem(LucideIcons.pieChart, "QA & Reports", 7),
+                _menuItem(LucideIcons.layoutDashboard, "TESTING", 0),
+                _sidebarHeader("INSTRUCTION"),
+                _menuItem(LucideIcons.calendar, "Classes & Schedules", 1),
+                _menuItem(LucideIcons.uploadCloud, "Syllabi & Materials", 2),
+                _menuItem(LucideIcons.bookOpen, "Learning Resources", 3),
+                _sidebarHeader("ACADEMICS"),
+                _menuItem(
+                  LucideIcons.clipboardCheck,
+                  "Attendance & Participation",
+                  4,
+                ),
+                _menuItem(LucideIcons.star, "Grade Recording", 5),
+                _menuItem(LucideIcons.filePieChart, "Progress Reports", 6),
+                _sidebarHeader("FACULTY SERVICES"),
+                _menuItem(LucideIcons.messagesSquare, "Communications", 7),
+                _menuItem(LucideIcons.briefcase, "Teaching Load & Payroll", 8),
               ],
             ),
           ),
@@ -210,7 +210,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
           _menuItem(
             LucideIcons.logOut,
             "Logout System",
-            8,
+            9,
             isDestructive: true,
             onTap: widget.onLogout,
           ),
@@ -280,11 +280,11 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
   ) {
     switch (_selectedIndex) {
       case 1:
-        return _buildCurriculumPanel(panelColor, textColor);
-      case 3:
-        return _buildFacultyPanel(panelColor, textColor);
+        return _buildSchedulePanel(panelColor, textColor);
       case 5:
-        return _buildPetitionsPanel(panelColor, textColor);
+        return _buildGradingPanel(panelColor, textColor);
+      case 8:
+        return _buildFacultyServicesPanel(panelColor, textColor);
       case 0:
       default:
         return _buildOverviewPanel(panelColor, textColor);
@@ -299,7 +299,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Program Overview",
+            "Faculty Overview",
             style: GoogleFonts.inter(
               fontSize: 28,
               fontWeight: FontWeight.w900,
@@ -310,24 +310,24 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
           Row(
             children: [
               _statCard(
-                "Active Faculty",
-                "24",
-                LucideIcons.userCheck,
+                "Students Taught",
+                "185",
+                LucideIcons.users,
                 aViolet,
                 textColor,
               ),
               _statCard(
-                "Major Students",
-                "452",
-                LucideIcons.users,
-                Colors.blueAccent,
+                "Grading Progress",
+                "72%",
+                LucideIcons.trendingUp,
+                success,
                 textColor,
               ),
               _statCard(
-                "Pending Petitions",
-                "12",
-                LucideIcons.alertCircle,
-                success,
+                "Classes Today",
+                "4",
+                LucideIcons.calendar,
+                Colors.blueAccent,
                 textColor,
               ),
             ],
@@ -339,81 +339,20 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
     );
   }
 
-  // --- MODULE: CURRICULUM ---
-  Widget _buildCurriculumPanel(Color panelColor, Color textColor) {
+  // --- MODULE: SCHEDULES ---
+  Widget _buildSchedulePanel(Color panelColor, Color textColor) {
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Curriculum Management",
+            "Assigned Courses & Schedules",
             style: GoogleFonts.inter(
               fontSize: 28,
               fontWeight: FontWeight.w900,
               color: textColor,
             ),
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: panelColor,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                children: [
-                  _quickActionButton(
-                    "Approve Course Revision",
-                    LucideIcons.fileCheck,
-                    Colors.blue,
-                  ),
-                  const SizedBox(height: 12),
-                  _quickActionButton(
-                    "Add New Course to Catalog",
-                    LucideIcons.plusCircle,
-                    success,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- MODULE: FACULTY ---
-  Widget _buildFacultyPanel(Color panelColor, Color textColor) {
-    return Center(
-      child: Text(
-        "Faculty Workload Monitor: Distributing Teaching Loads...",
-        style: TextStyle(color: textColor.withOpacity(0.5)),
-      ),
-    );
-  }
-
-  // --- MODULE: PETITIONS ---
-  Widget _buildPetitionsPanel(Color panelColor, Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Student Petitions & Cases",
-            style: GoogleFonts.inter(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            "Pending approvals for substitutions and overloads:",
-            style: TextStyle(color: Colors.white38),
           ),
           const SizedBox(height: 24),
           Expanded(
@@ -425,11 +364,103 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
               ),
               child: const Center(
                 child: Text(
-                  "Loading case files...",
+                  "Loading Timetable...",
                   style: TextStyle(color: Colors.white24),
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- MODULE: GRADING ---
+  Widget _buildGradingPanel(Color panelColor, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Grade Recording Hub",
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            "Select class to encode grades for assignments and exams:",
+            style: TextStyle(color: textColor.withOpacity(0.5)),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: 2,
+              childAspectRatio: 4,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              children: [
+                _classCard(
+                  "System Integration 101",
+                  "BSCS-4A",
+                  panelColor,
+                  textColor,
+                ),
+                _classCard(
+                  "Software Engineering",
+                  "BSCS-3B",
+                  panelColor,
+                  textColor,
+                ),
+                _classCard("Data Structures", "BSCS-2A", panelColor, textColor),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- MODULE: HR & PAYROLL ---
+  Widget _buildFacultyServicesPanel(Color panelColor, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Faculty Services & HR",
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              _serviceCard(
+                "Payroll & Payslips",
+                LucideIcons.wallet,
+                panelColor,
+                textColor,
+              ),
+              _serviceCard(
+                "Teaching Load Report",
+                LucideIcons.fileText,
+                panelColor,
+                textColor,
+              ),
+              _serviceCard(
+                "HR Information",
+                LucideIcons.userCircle,
+                panelColor,
+                textColor,
+              ),
+            ],
           ),
         ],
       ),
@@ -491,22 +522,14 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
       crossAxisSpacing: 16,
       childAspectRatio: 3.5,
       children: [
-        _quickActionButton("Assign Loading", LucideIcons.users, aViolet),
+        _quickActionButton("Post Announcement", LucideIcons.megaphone, aViolet),
+        _quickActionButton("Upload Resources", LucideIcons.share2, Colors.blue),
         _quickActionButton(
-          "Curriculum Audit",
-          LucideIcons.clipboardCheck,
-          Colors.blue,
-        ),
-        _quickActionButton(
-          "Organize Thesis Defense",
-          LucideIcons.graduationCap,
+          "Generate Progress Report",
+          LucideIcons.filePieChart,
           success,
         ),
-        _quickActionButton(
-          "Compliance Reports",
-          LucideIcons.barChart,
-          Colors.orange,
-        ),
+        _quickActionButton("Exam Schedules", LucideIcons.clock, Colors.orange),
       ],
     );
   }
@@ -536,6 +559,87 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
           color: Colors.white24,
         ),
         onTap: () {},
+      ),
+    );
+  }
+
+  Widget _classCard(
+    String name,
+    String section,
+    Color panelColor,
+    Color textColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: panelColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          const Icon(LucideIcons.book, color: aViolet, size: 20),
+          const SizedBox(width: 15),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: TextStyle(
+                  color: textColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                section,
+                style: const TextStyle(color: Colors.white24, fontSize: 12),
+              ),
+            ],
+          ),
+          const Spacer(),
+          const Icon(LucideIcons.arrowRight, color: Colors.white12, size: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _serviceCard(
+    String title,
+    IconData icon,
+    Color panelColor,
+    Color textColor,
+  ) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: panelColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: aViolet, size: 32),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Access Details",
+              style: TextStyle(color: aViolet, fontSize: 11),
+            ),
+          ],
+        ),
       ),
     );
   }

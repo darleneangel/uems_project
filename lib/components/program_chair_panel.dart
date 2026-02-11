@@ -89,14 +89,12 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
   void _startArchive() => setState(() => _selectedAction = 'archive');
 
   void _submitCreateOrUpdate() {
-    final name = _nameController.text.trim();
-    final department = _departmentController.text.trim();
-    final email = _emailController.text.trim();
-    final employeeId = _employeeIdController.text.trim();
-    final password = _passwordController.text.trim();
-    
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name is required')));
+    final title = _titleController.text.trim();
+    final desc = _descriptionController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Title is required')));
       return;
     }
 
@@ -104,30 +102,35 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
       // create
       final newItem = {
         'id': _nextId++,
-        'title': name,
-        'description': '',
-        'name': name,
-        'department': department,
-        'email': email,
-        'employeeId': employeeId,
-        'password': password,
+        'title': title,
+        'description': desc,
+        'name': _nameController.text,
+        'department': _departmentController.text,
+        'email': _emailController.text,
+        'employeeId': _employeeIdController.text,
+        'password': _passwordController.text,
         'effectiveDate': _effectiveDate,
         'archived': false,
       };
       setState(() => _items.insert(0, newItem));
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Program chair created')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Program item created')));
     } else {
       // update
       setState(() {
-        _editingItem!['name'] = name;
-        _editingItem!['title'] = name;
-        _editingItem!['department'] = department;
-        _editingItem!['email'] = email;
-        _editingItem!['employeeId'] = employeeId;
-        _editingItem!['password'] = password;
+        _editingItem!['name'] = _nameController.text;
+        _editingItem!['title'] = title;
+        _editingItem!['description'] = desc;
+        _editingItem!['department'] = _departmentController.text;
+        _editingItem!['email'] = _emailController.text;
+        _editingItem!['employeeId'] = _employeeIdController.text;
+        _editingItem!['password'] = _passwordController.text;
         _editingItem!['effectiveDate'] = _effectiveDate;
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Program chair updated')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Program item updated')));
     }
 
     // go to review
@@ -136,12 +139,16 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
 
   void _archiveItem(Map<String, dynamic> item) {
     setState(() => item['archived'] = true);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Archived')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Archived')));
   }
 
   void _restoreItem(Map<String, dynamic> item) {
     setState(() => item['archived'] = false);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Restored')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Restored')));
   }
 
   // Styled action card
@@ -176,7 +183,7 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         decoration: BoxDecoration(
           gradient: bg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? aViolet.withOpacity(0.6) : (_isDarkMode ? Colors.white10 : Colors.black12)),
+          border: Border.all(color: selected ? aViolet.withOpacity(0.6) : Colors.white10),
         ),
         child: Row(
           children: [
@@ -186,7 +193,7 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                 color: selected ? (_isDarkMode ? Colors.white24 : Colors.black12) : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: selected ? Colors.white : (_isDarkMode ? Colors.white70 : Colors.black54), size: 20),
+              child: Icon(icon, color: selected ? Colors.white : Colors.white70, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -209,66 +216,66 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Administrator Details', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontSize: 14, fontWeight: FontWeight.bold)),
+        Text('Administrator Details', style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         TextField(
           controller: _nameController,
-          style: TextStyle(color: _isDarkMode ? Colors.white : pViolet),
+          style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'Name',
-            hintStyle: TextStyle(color: _isDarkMode ? Colors.white30 : Colors.grey.shade400),
+            hintStyle: TextStyle(color: Colors.white30),
             filled: true,
-            fillColor: _isDarkMode ? Colors.white10 : Colors.grey.shade50,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white10 : Colors.black12)),
+            fillColor: Colors.white10,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _departmentController,
-          style: TextStyle(color: _isDarkMode ? Colors.white : pViolet),
+          style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'Department',
-            hintStyle: TextStyle(color: _isDarkMode ? Colors.white30 : Colors.grey.shade400),
+            hintStyle: TextStyle(color: Colors.white30),
             filled: true,
-            fillColor: _isDarkMode ? Colors.white10 : Colors.grey.shade50,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white10 : Colors.black12)),
+            fillColor: Colors.white10,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _emailController,
-          style: TextStyle(color: _isDarkMode ? Colors.white : pViolet),
+          style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'Personal Email',
-            hintStyle: TextStyle(color: _isDarkMode ? Colors.white30 : Colors.grey.shade400),
+            hintStyle: TextStyle(color: Colors.white30),
             filled: true,
-            fillColor: _isDarkMode ? Colors.white10 : Colors.grey.shade50,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white10 : Colors.black12)),
+            fillColor: Colors.white10,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _employeeIdController,
-          style: TextStyle(color: _isDarkMode ? Colors.white : pViolet),
+          style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'Employee ID',
-            hintStyle: TextStyle(color: _isDarkMode ? Colors.white30 : Colors.grey.shade400),
+            hintStyle: TextStyle(color: Colors.white30),
             filled: true,
-            fillColor: _isDarkMode ? Colors.white10 : Colors.grey.shade50,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white10 : Colors.black12)),
+            fillColor: Colors.white10,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _passwordController,
-          style: TextStyle(color: _isDarkMode ? Colors.white : pViolet),
+          style: const TextStyle(color: Colors.white),
           obscureText: true,
           decoration: InputDecoration(
             hintText: 'Password (Temporary)',
-            hintStyle: TextStyle(color: _isDarkMode ? Colors.white30 : Colors.grey.shade400),
+            hintStyle: TextStyle(color: Colors.white30),
             filled: true,
-            fillColor: _isDarkMode ? Colors.white10 : Colors.grey.shade50,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white10 : Colors.black12)),
+            fillColor: Colors.white10,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
           ),
         ),
         const SizedBox(height: 16),
@@ -278,7 +285,13 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
               child: ElevatedButton(
                 onPressed: _submitCreateOrUpdate,
                 style: ElevatedButton.styleFrom(backgroundColor: aViolet),
-                child: Text(_editingItem == null ? 'Create' : 'Update', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: Text(
+                  _editingItem == null ? 'Create' : 'Update',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -293,8 +306,13 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                 _passwordController.clear();
                 setState(() => _effectiveDate = null);
               },
-              style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)),
-              child: Text('Clear', style: GoogleFonts.inter(color: Colors.white70)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.white10),
+              ),
+              child: Text(
+                'Clear',
+                style: GoogleFonts.inter(color: Colors.white70),
+              ),
             ),
           ],
         ),
@@ -304,7 +322,11 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
 
   Widget _buildReviewList() {
     final visible = _items.where((i) => i['archived'] == false).toList();
-    if (visible.isEmpty) return const Text('No program items found.', style: TextStyle(color: Colors.white70));
+    if (visible.isEmpty)
+      return const Text(
+        'No program items found.',
+        style: TextStyle(color: Colors.white70),
+      );
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -314,16 +336,32 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         final item = visible[idx];
         return Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white10)),
+          decoration: BoxDecoration(
+            color: Colors.white10,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white10),
+          ),
           child: Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item['title'], style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(
+                      item['title'],
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 6),
-                    Text(item['description'] ?? '', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13)),
+                    Text(
+                      item['description'] ?? '',
+                      style: GoogleFonts.inter(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -335,7 +373,10 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                   ),
                   IconButton(
                     onPressed: () => _archiveItem(item),
-                    icon: const Icon(LucideIcons.archive, color: Colors.white70),
+                    icon: const Icon(
+                      LucideIcons.archive,
+                      color: Colors.white70,
+                    ),
                   ),
                 ],
               ),
@@ -348,7 +389,11 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
 
   Widget _buildArchiveList() {
     final archived = _items.where((i) => i['archived'] == true).toList();
-    if (archived.isEmpty) return const Text('No archived items.', style: TextStyle(color: Colors.white70));
+    if (archived.isEmpty)
+      return const Text(
+        'No archived items.',
+        style: TextStyle(color: Colors.white70),
+      );
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -358,16 +403,32 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         final item = archived[idx];
         return Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white10)),
+          decoration: BoxDecoration(
+            color: Colors.white10,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white10),
+          ),
           child: Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item['title'], style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(
+                      item['title'],
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 6),
-                    Text(item['description'] ?? '', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13)),
+                    Text(
+                      item['description'] ?? '',
+                      style: GoogleFonts.inter(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -401,10 +462,25 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
           crossAxisSpacing: 12,
           childAspectRatio: 3.5,
           children: [
-            _actionCard('create', 'Create', LucideIcons.plusSquare, selectedCreate),
-            _actionCard('review', 'Review', LucideIcons.clipboardList, selectedReview),
+            _actionCard(
+              'create',
+              'Create',
+              LucideIcons.plusSquare,
+              selectedCreate,
+            ),
+            _actionCard(
+              'review',
+              'Review',
+              LucideIcons.clipboardList,
+              selectedReview,
+            ),
             _actionCard('update', 'Update', LucideIcons.edit3, selectedUpdate),
-            _actionCard('archive', 'Archive', LucideIcons.archive, selectedArchive),
+            _actionCard(
+              'archive',
+              'Archive',
+              LucideIcons.archive,
+              selectedArchive,
+            ),
           ],
         ),
         const SizedBox(height: 20),

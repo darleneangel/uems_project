@@ -91,17 +91,34 @@ class _HRPanelState extends State<HRPanel> {
       context: context,
       builder: (c) => AlertDialog(
         backgroundColor: const Color(0xFF1E1033),
-        title: Text('Confirm Delete', style: GoogleFonts.inter(color: Colors.white)),
-        content: Text('Delete ${_employees[index]['name']}?', style: GoogleFonts.inter(color: Colors.white70)),
+        title: Text(
+          'Confirm Delete',
+          style: GoogleFonts.inter(color: Colors.white),
+        ),
+        content: Text(
+          'Delete ${_employees[index]['name']}?',
+          style: GoogleFonts.inter(color: Colors.white70),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(c).pop(), child: Text('Cancel', style: GoogleFonts.inter(color: Colors.white70))),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: Colors.white70),
+            ),
+          ),
           ElevatedButton(
             onPressed: () {
               setState(() => _employees.removeAt(index));
               Navigator.of(c).pop();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)),
-            child: Text('Delete', style: GoogleFonts.inter(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF8B5CF6),
+            ),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.inter(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -112,9 +129,13 @@ class _HRPanelState extends State<HRPanel> {
     final sb = StringBuffer();
     sb.writeln('name,department,email,employeeId,role');
     for (final e in _employees) {
-      final row = [e['name'], e['department'], e['email'], e['employeeId'], e['role']]
-          .map((s) => '"${(s ?? '').replaceAll('"', '""')}"')
-          .join(',');
+      final row = [
+        e['name'],
+        e['department'],
+        e['email'],
+        e['employeeId'],
+        e['role'],
+      ].map((s) => '"${(s ?? '').replaceAll('"', '""')}"').join(',');
       sb.writeln(row);
     }
     return sb.toString();
@@ -126,19 +147,35 @@ class _HRPanelState extends State<HRPanel> {
       context: context,
       builder: (c) => AlertDialog(
         backgroundColor: const Color(0xFF1E1033),
-        title: Text('Export CSV', style: GoogleFonts.inter(color: Colors.white)),
+        title: Text(
+          'Export CSV',
+          style: GoogleFonts.inter(color: Colors.white),
+        ),
         content: SizedBox(
           width: 600,
-          child: SingleChildScrollView(child: SelectableText(csv, style: GoogleFonts.inter(color: Colors.white70))),
+          child: SingleChildScrollView(
+            child: SelectableText(
+              csv,
+              style: GoogleFonts.inter(color: Colors.white70),
+            ),
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(c).pop(), child: Text('Close', style: GoogleFonts.inter(color: Colors.white70))),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(),
+            child: Text(
+              'Close',
+              style: GoogleFonts.inter(color: Colors.white70),
+            ),
+          ),
           ElevatedButton(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: csv));
               Navigator.of(c).pop();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF8B5CF6),
+            ),
             child: Text('Copy', style: GoogleFonts.inter(color: Colors.white)),
           ),
         ],
@@ -152,26 +189,45 @@ class _HRPanelState extends State<HRPanel> {
       context: context,
       builder: (c) => AlertDialog(
         backgroundColor: const Color(0xFF1E1033),
-        title: Text('Import CSV', style: GoogleFonts.inter(color: Colors.white)),
+        title: Text(
+          'Import CSV',
+          style: GoogleFonts.inter(color: Colors.white),
+        ),
         content: SizedBox(
           width: 600,
           child: TextField(
             controller: _importCtl,
             maxLines: 10,
             style: GoogleFonts.inter(color: Colors.white),
-            decoration: InputDecoration(hintText: 'Paste CSV here', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10),
+            decoration: InputDecoration(
+              hintText: 'Paste CSV here',
+              hintStyle: TextStyle(color: Colors.white30),
+              filled: true,
+              fillColor: Colors.white10,
+            ),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(c).pop(), child: Text('Cancel', style: GoogleFonts.inter(color: Colors.white70))),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: Colors.white70),
+            ),
+          ),
           ElevatedButton(
             onPressed: () {
               final raw = _importCtl.text.trim();
               if (raw.isNotEmpty) {
-                final lines = raw.split(RegExp(r'\r?\n')).where((l) => l.trim().isNotEmpty).toList();
+                final lines = raw
+                    .split(RegExp(r'\r?\n'))
+                    .where((l) => l.trim().isNotEmpty)
+                    .toList();
                 if (lines.isNotEmpty) {
                   // assume header present
-                  final start = lines.first.toLowerCase().contains('name,') ? 1 : 0;
+                  final start = lines.first.toLowerCase().contains('name,')
+                      ? 1
+                      : 0;
                   for (int i = start; i < lines.length; i++) {
                     final cols = _parseCsvLine(lines[i]);
                     if (cols.length >= 5) {
@@ -190,8 +246,13 @@ class _HRPanelState extends State<HRPanel> {
               }
               Navigator.of(c).pop();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)),
-            child: Text('Import', style: GoogleFonts.inter(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF8B5CF6),
+            ),
+            child: Text(
+              'Import',
+              style: GoogleFonts.inter(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -228,22 +289,43 @@ class _HRPanelState extends State<HRPanel> {
       context: context,
       builder: (c) => AlertDialog(
         backgroundColor: const Color(0xFF1E1033),
-        title: Text(emp['name'] ?? '', style: GoogleFonts.inter(color: Colors.white)),
+        title: Text(
+          emp['name'] ?? '',
+          style: GoogleFonts.inter(color: Colors.white),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Department: ${emp['department'] ?? ''}', style: GoogleFonts.inter(color: Colors.white70)),
+            Text(
+              'Department: ${emp['department'] ?? ''}',
+              style: GoogleFonts.inter(color: Colors.white70),
+            ),
             const SizedBox(height: 8),
-            Text('Email: ${emp['email'] ?? ''}', style: GoogleFonts.inter(color: Colors.white70)),
+            Text(
+              'Email: ${emp['email'] ?? ''}',
+              style: GoogleFonts.inter(color: Colors.white70),
+            ),
             const SizedBox(height: 8),
-            Text('Employee ID: ${emp['employeeId'] ?? ''}', style: GoogleFonts.inter(color: Colors.white70)),
+            Text(
+              'Employee ID: ${emp['employeeId'] ?? ''}',
+              style: GoogleFonts.inter(color: Colors.white70),
+            ),
             const SizedBox(height: 8),
-            Text('Role: ${emp['role'] ?? ''}', style: GoogleFonts.inter(color: Colors.white70)),
+            Text(
+              'Role: ${emp['role'] ?? ''}',
+              style: GoogleFonts.inter(color: Colors.white70),
+            ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(c).pop(), child: Text('Close', style: GoogleFonts.inter(color: Colors.white70)))
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(),
+            child: Text(
+              'Close',
+              style: GoogleFonts.inter(color: Colors.white70),
+            ),
+          ),
         ],
       ),
     );
@@ -263,73 +345,73 @@ class _HRPanelState extends State<HRPanel> {
       children: [
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: borderColor)),
+          decoration: BoxDecoration(color: const Color(0xFF1E1033), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white10)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Create Employee Record', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700)),
+                  Text('Create Employee Record', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
                   Row(children: [
                     TextButton.icon(
                       onPressed: _showImportDialog,
-                      icon: Icon(Icons.file_upload, color: subTextColor),
-                      label: Text('Import', style: GoogleFonts.inter(color: subTextColor)),
+                      icon: const Icon(Icons.file_upload, color: Colors.white70),
+                      label: Text('Import', style: GoogleFonts.inter(color: Colors.white70)),
                     ),
                     const SizedBox(width: 8),
                     TextButton.icon(
                       onPressed: _showExportDialog,
-                      icon: Icon(Icons.file_download, color: subTextColor),
-                      label: Text('Export', style: GoogleFonts.inter(color: subTextColor)),
+                      icon: const Icon(Icons.file_download, color: Colors.white70),
+                      label: Text('Export', style: GoogleFonts.inter(color: Colors.white70)),
                     ),
                   ])
                 ],
               ),
               const SizedBox(height: 12),
-              TextField(controller: _nameCtl, style: TextStyle(color: textColor), decoration: InputDecoration(hintText: 'Name', hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)), filled: true, fillColor: fillColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)))),
+              TextField(controller: _nameCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Name', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)))),
               const SizedBox(height: 8),
-              TextField(controller: _deptCtl, style: TextStyle(color: textColor), decoration: InputDecoration(hintText: 'Department', hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)), filled: true, fillColor: fillColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)))),
+              TextField(controller: _deptCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Department', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)))),
               const SizedBox(height: 8),
-              TextField(controller: _emailCtl, style: TextStyle(color: textColor), decoration: InputDecoration(hintText: 'Personal Email', hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)), filled: true, fillColor: fillColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)))),
+              TextField(controller: _emailCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Personal Email', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)))),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: TextField(controller: _empIdCtl, style: TextStyle(color: textColor), decoration: InputDecoration(hintText: 'Employee ID', hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)), filled: true, fillColor: fillColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor))))),
+                Expanded(child: TextField(controller: _empIdCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Employee ID', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10))))),
                 const SizedBox(width: 8),
-                Expanded(child: TextField(controller: _roleCtl, style: TextStyle(color: textColor), decoration: InputDecoration(hintText: 'Role', hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)), filled: true, fillColor: fillColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor))))),
+                Expanded(child: TextField(controller: _roleCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Role', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10))))),
               ]),
               const SizedBox(height: 12),
               Row(children: [
-                ElevatedButton(onPressed: _addEmployee, style: ElevatedButton.styleFrom(backgroundColor: aViolet), child: Text(_editingIndex == null ? 'Create' : 'Save', style: GoogleFonts.inter(color: Colors.white))),
+                ElevatedButton(onPressed: _addEmployee, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)), child: Text(_editingIndex == null ? 'Create' : 'Save', style: GoogleFonts.inter(color: Colors.white))),
                 const SizedBox(width: 12),
-                OutlinedButton(onPressed: _clearForm, style: OutlinedButton.styleFrom(side: BorderSide(color: borderColor)), child: Text('Clear', style: GoogleFonts.inter(color: subTextColor)))
+                OutlinedButton(onPressed: _clearForm, style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)), child: Text('Clear', style: GoogleFonts.inter(color: Colors.white70)))
               ]),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        Text('Employee Directory', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold)),
+        Text('Employee Directory', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: borderColor)),
+          decoration: BoxDecoration(color: const Color(0xFF1E1033), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white10)),
           child: _employees.isEmpty
-              ? Text('No employees added.', style: GoogleFonts.inter(color: subTextColor))
+              ? Text('No employees added.', style: GoogleFonts.inter(color: Colors.white70))
               : ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: _employees.length,
-                  separatorBuilder: (_, __) => Divider(color: borderColor),
+                  separatorBuilder: (_, __) => const Divider(color: Colors.white10),
                   itemBuilder: (context, idx) {
                     final e = _employees[idx];
                     return ListTile(
                       onTap: () => _showEmployeeDetails(e),
-                      title: Text(e['name'] ?? '', style: GoogleFonts.inter(color: textColor)),
-                      subtitle: Text(e['department'] ?? '', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54)),
+                      title: Text(e['name'] ?? '', style: GoogleFonts.inter(color: Colors.white)),
+                      subtitle: Text(e['department'] ?? '', style: GoogleFonts.inter(color: Colors.white54)),
                       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Text(e['employeeId'] ?? '', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54)),
+                        Text(e['employeeId'] ?? '', style: GoogleFonts.inter(color: Colors.white54)),
                         const SizedBox(width: 8),
-                        IconButton(onPressed: () => _startEdit(idx), icon: Icon(Icons.edit, color: subTextColor)),
+                        IconButton(onPressed: () => _startEdit(idx), icon: const Icon(Icons.edit, color: Colors.white54)),
                         IconButton(onPressed: () => _deleteEmployee(idx), icon: const Icon(Icons.delete, color: Colors.redAccent)),
                       ]),
                     );
