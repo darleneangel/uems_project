@@ -567,10 +567,11 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
                   activeColor: aViolet,
                   onChanged: (val) {
                     setState(() {
-                      if (val!)
+                      if (val!) {
                         _selectedStudentIds.add(student['id']);
-                      else
+                      } else {
                         _selectedStudentIds.remove(student['id']);
+                      }
                     });
                   },
                 ),

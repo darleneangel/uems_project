@@ -409,7 +409,7 @@ class _AssessmentSummaryPanelState extends State<AssessmentSummaryPanel> {
                   text,
                 ),
               )
-              .toList(),
+              ,
           if (subjects.any((s) => s.containsKey('lab')))
             _itemRow(
               "LAB FEE",
@@ -439,7 +439,7 @@ class _AssessmentSummaryPanelState extends State<AssessmentSummaryPanel> {
                   isMisc: true,
                 ),
               )
-              .toList(),
+              ,
         ],
       ),
     );

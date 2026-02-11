@@ -27,6 +27,69 @@ class _HrDashboardViewState extends State<HrDashboardView> {
       setState(() => _isSidebarExpanded = !_isSidebarExpanded);
   void _toggleTheme() => setState(() => _isDarkMode = !_isDarkMode);
 
+  void _showLogoutConfirmation() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final isDark = _isDarkMode;
+        final dialogTextColor = isDark ? Colors.white : pViolet;
+        
+        return AlertDialog(
+          backgroundColor: isDark ? surfaceDark : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            "Confirm Logout",
+            style: GoogleFonts.inter(
+              color: dialogTextColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+          content: Text(
+            "Are you sure you want to logout from the HR Management System?",
+            style: GoogleFonts.inter(
+              color: dialogTextColor.withOpacity(0.8),
+              fontSize: 14,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                "Cancel",
+                style: GoogleFonts.inter(
+                  color: aViolet,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                widget.onLogout();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                "Logout",
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Dynamic theme colors
@@ -88,7 +151,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
           ),
           const SizedBox(width: 16),
           Text(
-            "heuheuhuehueh try",
+            "HR Management System",
             style: GoogleFonts.inter(
               color: textColor,
               fontSize: 16,
@@ -119,7 +182,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                "PROF_MANALASTAS",
+                "HR_ADMIN",
                 style: GoogleFonts.inter(
                   color: textColor,
                   fontWeight: FontWeight.bold,
@@ -127,7 +190,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
                 ),
               ),
               Text(
-                "Academic Faculty",
+                "Human Resources",
                 style: GoogleFonts.inter(
                   color: success,
                   fontSize: 10,
@@ -172,7 +235,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
               if (_isSidebarExpanded) ...[
                 const SizedBox(width: 12),
                 Text(
-                  "UEMS Teacher",
+                  "UEMS HR",
                   style: GoogleFonts.orbitron(
                     color: textColor,
                     fontWeight: FontWeight.bold,
@@ -187,22 +250,15 @@ class _HrDashboardViewState extends State<HrDashboardView> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
-                _menuItem(LucideIcons.layoutDashboard, "TESTING", 0),
-                _sidebarHeader("INSTRUCTION"),
-                _menuItem(LucideIcons.calendar, "Classes & Schedules", 1),
-                _menuItem(LucideIcons.uploadCloud, "Syllabi & Materials", 2),
-                _menuItem(LucideIcons.bookOpen, "Learning Resources", 3),
-                _sidebarHeader("ACADEMICS"),
-                _menuItem(
-                  LucideIcons.clipboardCheck,
-                  "Attendance & Participation",
-                  4,
-                ),
-                _menuItem(LucideIcons.star, "Grade Recording", 5),
-                _menuItem(LucideIcons.filePieChart, "Progress Reports", 6),
-                _sidebarHeader("FACULTY SERVICES"),
-                _menuItem(LucideIcons.messagesSquare, "Communications", 7),
-                _menuItem(LucideIcons.briefcase, "Teaching Load & Payroll", 8),
+                _menuItem(LucideIcons.layoutDashboard, "DASHBOARD", 0),
+                _sidebarHeader("RECORDS"),
+                _menuItem(LucideIcons.database, "VIEW RECORDS", 1),
+                _menuItem(LucideIcons.userPlus, "CREATE RECORD", 2),
+                _menuItem(LucideIcons.archive, "ARCHIVE", 3),
+                _sidebarHeader("MESSAGES & NOTIFICATION"),
+                _menuItem(LucideIcons.send, "CREATE MESSAGE", 4),
+                _menuItem(LucideIcons.inbox, "VIEW MESSAGES", 5),
+                _menuItem(LucideIcons.trash2, "MESSAGE ARCHIVE", 6),
               ],
             ),
           ),
@@ -212,7 +268,6 @@ class _HrDashboardViewState extends State<HrDashboardView> {
             "Logout System",
             9,
             isDestructive: true,
-            onTap: widget.onLogout,
           ),
           const SizedBox(height: 20),
         ],
@@ -232,22 +287,28 @@ class _HrDashboardViewState extends State<HrDashboardView> {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        color: isSelected ? aViolet.withOpacity(0.15) : Colors.transparent,
+        color: isSelected ? (isDestructive ? Colors.red.withOpacity(0.15) : aViolet.withOpacity(0.15)) : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
       ),
       child: ListTile(
-        onTap: onTap ?? () => setState(() => _selectedIndex = index),
+        onTap: onTap ?? () {
+          if (isDestructive) {
+            _showLogoutConfirmation();
+          } else {
+            setState(() => _selectedIndex = index);
+          }
+        },
         visualDensity: VisualDensity.compact,
         leading: Icon(
           icon,
-          color: isSelected ? activeColor : Colors.blueGrey,
+          color: isSelected ? activeColor : (isDestructive ? Colors.red : Colors.blueGrey),
           size: 20,
         ),
         title: _isSidebarExpanded
             ? Text(
                 title,
                 style: GoogleFonts.inter(
-                  color: isSelected ? Colors.white : Colors.blueGrey,
+                  color: isSelected ? Colors.white : (isDestructive ? Colors.red : Colors.blueGrey),
                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                   fontSize: 13,
                 ),
@@ -280,18 +341,24 @@ class _HrDashboardViewState extends State<HrDashboardView> {
   ) {
     switch (_selectedIndex) {
       case 1:
-        return _buildSchedulePanel(panelColor, textColor);
+        return _buildViewRecordsPanel(panelColor, textColor);
+      case 2:
+        return _buildCreateRecordPanel(panelColor, textColor);
+      case 3:
+        return _buildArchivePanel(panelColor, textColor);
+      case 4:
+        return _buildCreateMessagePanel(panelColor, textColor);
       case 5:
-        return _buildGradingPanel(panelColor, textColor);
-      case 8:
-        return _buildFacultyServicesPanel(panelColor, textColor);
+        return _buildViewMessagesPanel(panelColor, textColor);
+      case 6:
+        return _buildMessageArchivePanel(panelColor, textColor);
       case 0:
       default:
         return _buildOverviewPanel(panelColor, textColor);
     }
   }
 
-  // --- MODULE: OVERVIEW ---
+  // --- MODULE: HR DASHBOARD ---
   Widget _buildOverviewPanel(Color panelColor, Color textColor) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
@@ -299,7 +366,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Faculty Overview",
+            "HR Dashboard",
             style: GoogleFonts.inter(
               fontSize: 28,
               fontWeight: FontWeight.w900,
@@ -310,44 +377,44 @@ class _HrDashboardViewState extends State<HrDashboardView> {
           Row(
             children: [
               _statCard(
-                "Students Taught",
-                "185",
+                "Total Employees",
+                "247",
                 LucideIcons.users,
                 aViolet,
                 textColor,
               ),
               _statCard(
-                "Grading Progress",
-                "72%",
-                LucideIcons.trendingUp,
+                "Active Records",
+                "189",
+                LucideIcons.database,
                 success,
                 textColor,
               ),
               _statCard(
-                "Classes Today",
-                "4",
-                LucideIcons.calendar,
-                Colors.blueAccent,
+                "Pending Messages",
+                "12",
+                LucideIcons.messageSquare,
+                Colors.orange,
                 textColor,
               ),
             ],
           ),
           const SizedBox(height: 32),
-          _buildActionGrid(panelColor, textColor),
+          _buildHrActionGrid(panelColor, textColor),
         ],
       ),
     );
   }
 
-  // --- MODULE: SCHEDULES ---
-  Widget _buildSchedulePanel(Color panelColor, Color textColor) {
+  // --- MODULE: VIEW RECORDS ---
+  Widget _buildViewRecordsPanel(Color panelColor, Color textColor) {
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Assigned Courses & Schedules",
+            "Employee Records",
             style: GoogleFonts.inter(
               fontSize: 28,
               fontWeight: FontWeight.w900,
@@ -355,67 +422,30 @@ class _HrDashboardViewState extends State<HrDashboardView> {
             ),
           ),
           const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: panelColor,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Center(
-                child: Text(
-                  "Loading Timetable...",
-                  style: TextStyle(color: Colors.white24),
-                ),
-              ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: panelColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white10),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- MODULE: GRADING ---
-  Widget _buildGradingPanel(Color panelColor, Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Grade Recording Hub",
-            style: GoogleFonts.inter(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: textColor,
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: "Search employees...",
+                hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
+                prefixIcon: Icon(LucideIcons.search, color: aViolet),
+                border: InputBorder.none,
+              ),
+              style: TextStyle(color: textColor),
             ),
           ),
           const SizedBox(height: 24),
-          Text(
-            "Select class to encode grades for assignments and exams:",
-            style: TextStyle(color: textColor.withOpacity(0.5)),
-          ),
-          const SizedBox(height: 24),
           Expanded(
-            child: GridView.count(
-              crossAxisCount: 2,
-              childAspectRatio: 4,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
+            child: ListView(
               children: [
-                _classCard(
-                  "System Integration 101",
-                  "BSCS-4A",
-                  panelColor,
-                  textColor,
-                ),
-                _classCard(
-                  "Software Engineering",
-                  "BSCS-3B",
-                  panelColor,
-                  textColor,
-                ),
-                _classCard("Data Structures", "BSCS-2A", panelColor, textColor),
+                _employeeRecordCard("John Doe", "HR Manager", "EMP001", panelColor, textColor),
+                _employeeRecordCard("Jane Smith", "Software Engineer", "EMP002", panelColor, textColor),
+                _employeeRecordCard("Mike Johnson", "Accountant", "EMP003", panelColor, textColor),
               ],
             ),
           ),
@@ -424,15 +454,15 @@ class _HrDashboardViewState extends State<HrDashboardView> {
     );
   }
 
-  // --- MODULE: HR & PAYROLL ---
-  Widget _buildFacultyServicesPanel(Color panelColor, Color textColor) {
-    return Padding(
+  // --- MODULE: CREATE RECORD ---
+  Widget _buildCreateRecordPanel(Color panelColor, Color textColor) {
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Faculty Services & HR",
+            "Create Employee Record",
             style: GoogleFonts.inter(
               fontSize: 28,
               fontWeight: FontWeight.w900,
@@ -440,27 +470,266 @@ class _HrDashboardViewState extends State<HrDashboardView> {
             ),
           ),
           const SizedBox(height: 32),
-          Row(
-            children: [
-              _serviceCard(
-                "Payroll & Payslips",
-                LucideIcons.wallet,
-                panelColor,
-                textColor,
-              ),
-              _serviceCard(
-                "Teaching Load Report",
-                LucideIcons.fileText,
-                panelColor,
-                textColor,
-              ),
-              _serviceCard(
-                "HR Information",
-                LucideIcons.userCircle,
-                panelColor,
-                textColor,
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: panelColor,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Column(
+              children: [
+                _buildTextField("Full Name", "Enter employee name", textColor),
+                const SizedBox(height: 16),
+                _buildTextField("Position", "Enter job position", textColor),
+                const SizedBox(height: 16),
+                _buildTextField("Department", "Enter department", textColor),
+                const SizedBox(height: 16),
+                _buildTextField("Email", "Enter email address", textColor),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Employee record created successfully!"),
+                          backgroundColor: success,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: aViolet,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      "Create Record",
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- MODULE: ARCHIVE ---
+  Widget _buildArchivePanel(Color panelColor, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Archived Records",
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: panelColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Column(
+              children: [
+                _archiveItem("Former Employee Records", "23 records", LucideIcons.userX, panelColor, textColor),
+                const SizedBox(height: 12),
+                _archiveItem("Old Messages", "156 messages", LucideIcons.messageSquare, panelColor, textColor),
+                const SizedBox(height: 12),
+                _archiveItem("Previous Reports", "45 reports", LucideIcons.fileText, panelColor, textColor),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- MODULE: CREATE MESSAGE ---
+  Widget _buildCreateMessagePanel(Color panelColor, Color textColor) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Create New Message",
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: panelColor,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Column(
+              children: [
+                _buildTextField("Recipient", "Enter recipient name or email", textColor),
+                const SizedBox(height: 16),
+                _buildTextField("Subject", "Enter message subject", textColor),
+                const SizedBox(height: 16),
+                TextField(
+                  maxLines: 6,
+                  decoration: InputDecoration(
+                    hintText: "Enter your message here...",
+                    hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white10),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white10),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: aViolet),
+                    ),
+                  ),
+                  style: TextStyle(color: textColor),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Message sent successfully!"),
+                              backgroundColor: success,
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: aViolet,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          "Send Message",
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() => _selectedIndex = 0);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: aViolet),
+                        ),
+                      ),
+                      child: Text(
+                        "Cancel",
+                        style: GoogleFonts.inter(
+                          color: aViolet,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- MODULE: VIEW MESSAGES ---
+  Widget _buildViewMessagesPanel(Color panelColor, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Messages",
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: ListView(
+              children: [
+                _messageCard("System Update", "New HR policies have been updated.", "2 hours ago", panelColor, textColor),
+                _messageCard("Meeting Reminder", "Team meeting scheduled for tomorrow.", "5 hours ago", panelColor, textColor),
+                _messageCard("Employee Request", "Leave application from John Doe.", "1 day ago", panelColor, textColor),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  // --- MODULE: MESSAGE ARCHIVE ---
+  Widget _buildMessageArchivePanel(Color panelColor, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Message Archive",
+            style: GoogleFonts.inter(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: panelColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Column(
+              children: [
+                _archiveItem("Old Notifications", "89 items", LucideIcons.bell, panelColor, textColor),
+                const SizedBox(height: 12),
+                _archiveItem("Sent Messages", "234 messages", LucideIcons.send, panelColor, textColor),
+                const SizedBox(height: 12),
+                _archiveItem("Deleted Items", "45 items", LucideIcons.trash2, panelColor, textColor),
+              ],
+            ),
           ),
         ],
       ),
@@ -513,8 +782,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
       ),
     );
   }
-
-  Widget _buildActionGrid(Color panelColor, Color textColor) {
+  Widget _buildHrActionGrid(Color panelColor, Color textColor) {
     return GridView.count(
       shrinkWrap: true,
       crossAxisCount: 2,
@@ -522,15 +790,155 @@ class _HrDashboardViewState extends State<HrDashboardView> {
       crossAxisSpacing: 16,
       childAspectRatio: 3.5,
       children: [
-        _quickActionButton("Post Announcement", LucideIcons.megaphone, aViolet),
-        _quickActionButton("Upload Resources", LucideIcons.share2, Colors.blue),
+        _quickActionButton("View Records", LucideIcons.database, aViolet),
+        _quickActionButton("Create Message", LucideIcons.send, Colors.blue),
         _quickActionButton(
-          "Generate Progress Report",
+          "Generate Report",
           LucideIcons.filePieChart,
           success,
         ),
-        _quickActionButton("Exam Schedules", LucideIcons.clock, Colors.orange),
+        _quickActionButton("Archive", LucideIcons.archive, Colors.orange),
       ],
+    );
+  }
+
+  Widget _employeeRecordCard(
+    String name,
+    String position,
+    String employeeId,
+    Color panelColor,
+    Color textColor,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: panelColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: aViolet.withOpacity(0.2),
+            child: Icon(LucideIcons.user, color: aViolet, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: GoogleFonts.inter(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  position,
+                  style: TextStyle(
+                    color: textColor.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  employeeId,
+                  style: TextStyle(
+                    color: aViolet,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(LucideIcons.chevronRight, color: Colors.white24, size: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, String hint, Color textColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            color: textColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.white10),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.white10),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: aViolet),
+            ),
+          ),
+          style: TextStyle(color: textColor),
+        ),
+      ],
+    );
+  }
+
+  Widget _archiveItem(
+    String title,
+    String count,
+    IconData icon,
+    Color panelColor,
+    Color textColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: panelColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: aViolet, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  count,
+                  style: TextStyle(
+                    color: textColor.withOpacity(0.5),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(LucideIcons.arrowRight, color: Colors.white24, size: 16),
+        ],
+      ),
     );
   }
 
@@ -563,83 +971,56 @@ class _HrDashboardViewState extends State<HrDashboardView> {
     );
   }
 
-  Widget _classCard(
-    String name,
-    String section,
+  Widget _messageCard(
+    String subject,
+    String message,
+    String time,
     Color panelColor,
     Color textColor,
   ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: panelColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white10),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(LucideIcons.book, color: aViolet, size: 20),
-          const SizedBox(width: 15),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text(
-                name,
-                style: TextStyle(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+              Icon(LucideIcons.messageSquare, color: aViolet, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  subject,
+                  style: GoogleFonts.inter(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ),
               Text(
-                section,
-                style: const TextStyle(color: Colors.white24, fontSize: 12),
+                time,
+                style: TextStyle(
+                  color: textColor.withOpacity(0.5),
+                  fontSize: 11,
+                ),
               ),
             ],
           ),
-          const Spacer(),
-          const Icon(LucideIcons.arrowRight, color: Colors.white12, size: 16),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: TextStyle(
+              color: textColor.withOpacity(0.7),
+              fontSize: 12,
+            ),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _serviceCard(
-    String title,
-    IconData icon,
-    Color panelColor,
-    Color textColor,
-  ) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.all(8),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: panelColor,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white10),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: aViolet, size: 32),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: textColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Access Details",
-              style: TextStyle(color: aViolet, fontSize: 11),
-            ),
-          ],
-        ),
       ),
     );
   }

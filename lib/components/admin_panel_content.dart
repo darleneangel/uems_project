@@ -1102,7 +1102,7 @@ class _AdmissionsSearchDelegate extends SearchDelegate<Map<String, String>?> {
   static const Color tDark = Color(0xFF0F071D);
   
   // Use dark mode by default for search delegate
-  bool _isDarkMode = true;
+  final bool _isDarkMode = true;
 
   _AdmissionsSearchDelegate(this.students);
 

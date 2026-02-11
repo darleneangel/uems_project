@@ -319,7 +319,7 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
             children: [
               _buildTableHeader(),
               const Divider(height: 1, color: Colors.white10),
-              ..._roster.map((s) => _buildGradeRow(s, text)).toList(),
+              ..._roster.map((s) => _buildGradeRow(s, text)),
               const SizedBox(height: 32),
               Padding(
                 padding: const EdgeInsets.all(32),

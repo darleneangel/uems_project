@@ -322,11 +322,12 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
 
   Widget _buildReviewList() {
     final visible = _items.where((i) => i['archived'] == false).toList();
-    if (visible.isEmpty)
+    if (visible.isEmpty) {
       return const Text(
         'No program items found.',
         style: TextStyle(color: Colors.white70),
       );
+    }
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -389,11 +390,12 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
 
   Widget _buildArchiveList() {
     final archived = _items.where((i) => i['archived'] == true).toList();
-    if (archived.isEmpty)
+    if (archived.isEmpty) {
       return const Text(
         'No archived items.',
         style: TextStyle(color: Colors.white70),
       );
+    }
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),

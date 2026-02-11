@@ -13,7 +13,7 @@ class InterviewManagementPanel extends StatefulWidget {
 
 class _InterviewManagementPanelState extends State<InterviewManagementPanel> {
   // Mock data for students currently in the interview phase
-  List<Map<String, dynamic>> _interviewQueue = [
+  final List<Map<String, dynamic>> _interviewQueue = [
     {
       "id": "APL-2026-004",
       "name": "MICHAEL CHEN",

@@ -17,7 +17,7 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
   final TextEditingController _searchController = TextEditingController();
 
   // --- DATA STATE (The "Database") ---
-  List<Map<String, dynamic>> _applicants = [
+  final List<Map<String, dynamic>> _applicants = [
     {
       "id": "APL-2026-001",
       "name": "SARAH JENKINS",
@@ -764,8 +764,9 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
                                   onPressed: () {
                                     if (_selectedCategory == null ||
                                         _selectedProgram == null ||
-                                        surnameCtrl.text.isEmpty)
+                                        surnameCtrl.text.isEmpty) {
                                       return;
+                                    }
                                     final newApp = {
                                       "id":
                                           "APL-2026-${100 + Random().nextInt(900)}",
