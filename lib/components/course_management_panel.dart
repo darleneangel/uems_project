@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CourseManagementPanel extends StatefulWidget {
-  const CourseManagementPanel({super.key});
+  const CourseManagementPanel({super.key, this.isDarkMode = true});
+  final bool isDarkMode;
 
   @override
   State<CourseManagementPanel> createState() => _CourseManagementPanelState();
@@ -16,6 +17,15 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
   late TextEditingController _creditsCtl;
   late TextEditingController _descCtl;
   int? _editingIndex;
+  
+  // Theme colors
+  static const Color pViolet = Color(0xFF2E1065);
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color surfaceDark = Color(0xFF1E1033);
+  static const Color success = Color(0xFF69F0AE);
+  static const Color lCard = Color(0xFFFFFFFF);
+  
+  late bool _isDarkMode;
 
   final List<String> _departments = ['Computer Science', 'Business Administration', 'Mathematics', 'Engineering', 'Arts & Sciences'];
   final List<String> _statuses = ['Active', 'Inactive', 'Pending'];
@@ -28,6 +38,7 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
     _deptCtl = TextEditingController();
     _creditsCtl = TextEditingController();
     _descCtl = TextEditingController();
+    _isDarkMode = widget.isDarkMode;
     _seedDemoCourses();
   }
 
@@ -122,14 +133,19 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
   }
 
   void _deleteCourse(int idx) {
+    // Theme-aware colors for dialogs
+    final dialogBgColor = _isDarkMode ? surfaceDark : lCard;
+    final dialogTextColor = _isDarkMode ? Colors.white : pViolet;
+    final dialogSubTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
+    
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1033),
-        title: Text('Delete Course?', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
-        content: Text('This action cannot be undone.', style: GoogleFonts.inter(color: Colors.white70)),
+        backgroundColor: dialogBgColor,
+        title: Text('Delete Course?', style: GoogleFonts.inter(color: dialogTextColor, fontWeight: FontWeight.w700)),
+        content: Text('This action cannot be undone.', style: GoogleFonts.inter(color: dialogSubTextColor)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.inter(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.inter(color: dialogSubTextColor))),
           TextButton(
             onPressed: () {
               setState(() => _courses.removeAt(idx));
@@ -148,14 +164,14 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
   void _updateStatus(int idx, String newStatus) {
     setState(() => _courses[idx]['status'] = newStatus);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Course status updated to $newStatus', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: const Color(0xFF69F0AE)),
+      SnackBar(content: Text('Course status updated to $newStatus', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: success),
     );
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Active':
-        return const Color(0xFF69F0AE);
+        return success;
       case 'Inactive':
         return Colors.grey;
       case 'Pending':
@@ -168,7 +184,7 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
   Widget _buildCourseDetails(Map<String, String> course) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.black12, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -182,25 +198,25 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
               const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
-                child: Text('${course['credits']} Credits', style: GoogleFonts.inter(color: const Color(0xFF8B5CF6), fontWeight: FontWeight.w600)),
+                decoration: BoxDecoration(color: aViolet.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
+                child: Text('${course['credits']} Credits', style: GoogleFonts.inter(color: aViolet, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          Text('Course Name: ${course['name']}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+          Text('Course Name: ${course['name']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          Text('Course Code: ${course['code']}', style: GoogleFonts.inter(color: Colors.white70)),
+          Text('Course Code: ${course['code']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
           const SizedBox(height: 8),
-          Text('Department: ${course['department']}', style: GoogleFonts.inter(color: Colors.white70)),
+          Text('Department: ${course['department']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
           const SizedBox(height: 8),
-          Text('Course Type: ${course['type']}', style: GoogleFonts.inter(color: Colors.white70)),
+          Text('Course Type: ${course['type']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
           const SizedBox(height: 12),
-          Text('Description:', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+          Text('Description:', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          Text(course['description'] ?? '', style: GoogleFonts.inter(color: Colors.white70, height: 1.5)),
+          Text(course['description'] ?? '', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87, height: 1.5)),
           const SizedBox(height: 12),
-          Text('Created: ${course['timestamp']}', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
+          Text('Created: ${course['timestamp']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54, fontSize: 12)),
         ],
       ),
     );
@@ -208,6 +224,13 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
 
   @override
   Widget build(BuildContext context) {
+    // Theme-aware colors
+    final cardColor = _isDarkMode ? surfaceDark : lCard;
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
+    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
+    final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
+    
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -221,38 +244,38 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
                   flex: 1,
                   child: Container(
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(color: const Color(0xFF1E1033), borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Course Management', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)),
+                        Text('Course Management', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700, fontSize: 18)),
                         const SizedBox(height: 16),
                         TextField(
                           controller: _nameCtl,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'Course Name',
-                            labelStyle: TextStyle(color: Colors.white70),
+                            labelStyle: TextStyle(color: subTextColor),
                             hintText: 'e.g., Introduction to Programming',
-                            hintStyle: TextStyle(color: Colors.white30),
+                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _codeCtl,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'Course Code',
-                            labelStyle: TextStyle(color: Colors.white70),
+                            labelStyle: TextStyle(color: subTextColor),
                             hintText: 'e.g., CS101',
-                            hintStyle: TextStyle(color: Colors.white30),
+                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -262,58 +285,58 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
                           onChanged: (v) => setState(() => _deptCtl.text = v ?? ''),
                           decoration: InputDecoration(
                             labelText: 'Department',
-                            labelStyle: TextStyle(color: Colors.white70),
+                            labelStyle: TextStyle(color: subTextColor),
                             hintText: 'Select Department',
-                            hintStyle: TextStyle(color: Colors.white30),
+                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
-                          style: const TextStyle(color: Colors.white),
-                          dropdownColor: const Color(0xFF1E1033),
+                          style: TextStyle(color: textColor),
+                          dropdownColor: cardColor,
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _creditsCtl,
                           keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'Credits',
-                            labelStyle: TextStyle(color: Colors.white70),
+                            labelStyle: TextStyle(color: subTextColor),
                             hintText: 'e.g., 3',
-                            hintStyle: TextStyle(color: Colors.white30),
+                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _descCtl,
                           maxLines: 4,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'Description',
-                            labelStyle: TextStyle(color: Colors.white70),
+                            labelStyle: TextStyle(color: subTextColor),
                             hintText: 'Describe the course...',
-                            hintStyle: TextStyle(color: Colors.white30),
+                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
                         const SizedBox(height: 16),
                         Row(children: [
                           ElevatedButton(
                             onPressed: _addCourse,
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)),
+                            style: ElevatedButton.styleFrom(backgroundColor: aViolet),
                             child: Text(_editingIndex == null ? 'Add Course' : 'Update Course', style: GoogleFonts.inter(color: Colors.white)),
                           ),
                           const SizedBox(width: 12),
                           OutlinedButton(
                             onPressed: _clearForm,
-                            style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)),
-                            child: Text('Clear', style: GoogleFonts.inter(color: Colors.white70)),
+                            style: OutlinedButton.styleFrom(side: BorderSide(color: borderColor)),
+                            child: Text('Clear', style: GoogleFonts.inter(color: subTextColor)),
                           ),
                         ]),
                       ],
@@ -326,16 +349,16 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
                   flex: 1,
                   child: Container(
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(color: const Color(0xFF1E1033), borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Courses Directory (${_courses.length})', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)),
+                        Text('Courses Directory (${_courses.length})', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700, fontSize: 18)),
                         const SizedBox(height: 16),
                         ConstrainedBox(
                           constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.6),
                           child: _courses.isEmpty
-                              ? Center(child: Text('No courses yet', style: GoogleFonts.inter(color: Colors.white54)))
+                              ? Center(child: Text('No courses yet', style: GoogleFonts.inter(color: subTextColor)))
                               : ListView.builder(
                                   shrinkWrap: true,
                                   itemCount: _courses.length,
@@ -344,7 +367,7 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
                                     return Container(
                                       margin: const EdgeInsets.only(bottom: 12),
                                       padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(8)),
+                                      decoration: BoxDecoration(color: fillColor, borderRadius: BorderRadius.circular(8)),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -352,8 +375,8 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
                                               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                                Text(course['name'] ?? '', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-                                                Text('${course['code']} • ${course['department']}', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
+                                                Text(course['name'] ?? '', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600)),
+                                                Text('${course['code']} • ${course['department']}', style: GoogleFonts.inter(color: subTextColor, fontSize: 12)),
                                               ]),
                                               Row(children: [
                                                 Container(
@@ -364,40 +387,40 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
                                                 const SizedBox(width: 8),
                                                 Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                  decoration: BoxDecoration(color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-                                                  child: Text('${course['credits']} cr', style: GoogleFonts.inter(color: const Color(0xFF8B5CF6), fontSize: 11, fontWeight: FontWeight.w600)),
+                                                  decoration: BoxDecoration(color: aViolet.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
+                                                  child: Text('${course['credits']} cr', style: GoogleFonts.inter(color: aViolet, fontSize: 11, fontWeight: FontWeight.w600)),
                                                 ),
                                               ]),
                                             ],
                                           ),
                                           const SizedBox(height: 8),
-                                          Text(course['description'] ?? '', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                          Text(course['description'] ?? '', style: GoogleFonts.inter(color: subTextColor, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
                                           const SizedBox(height: 8),
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Text(course['timestamp'] ?? '', style: GoogleFonts.inter(color: Colors.white54, fontSize: 10)),
+                                              Text(course['timestamp'] ?? '', style: GoogleFonts.inter(color: subTextColor, fontSize: 10)),
                                               Row(
                                                 children: [
                                                   IconButton(
                                                     onPressed: () => showDialog(
                                                       context: context,
                                                       builder: (ctx) => AlertDialog(
-                                                        backgroundColor: const Color(0xFF1E1033),
-                                                        title: Text('Course Details', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+                                                        backgroundColor: cardColor,
+                                                        title: Text('Course Details', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700)),
                                                         content: SizedBox(width: 400, child: _buildCourseDetails(course)),
-                                                        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Close', style: GoogleFonts.inter(color: Colors.white54)))],
+                                                        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Close', style: GoogleFonts.inter(color: subTextColor)))],
                                                       ),
                                                     ),
-                                                    icon: const Icon(Icons.info, color: Colors.white54, size: 18),
+                                                    icon: Icon(Icons.info, color: subTextColor, size: 18),
                                                   ),
-                                                  IconButton(onPressed: () => _startEdit(idx), icon: const Icon(Icons.edit, color: Colors.white54, size: 18)),
+                                                  IconButton(onPressed: () => _startEdit(idx), icon: Icon(Icons.edit, color: subTextColor, size: 18),),
                                                   PopupMenuButton(
                                                     onSelected: (status) => _updateStatus(idx, status),
                                                     itemBuilder: (ctx) => _statuses.map((s) => PopupMenuItem(value: s, child: Text(s, style: GoogleFonts.inter()))).toList(),
-                                                    child: const Icon(Icons.more_vert, color: Colors.white54, size: 18),
+                                                    child: Icon(Icons.more_vert, color: subTextColor, size: 18),
                                                   ),
-                                                  IconButton(onPressed: () => _deleteCourse(idx), icon: const Icon(Icons.delete, color: Colors.redAccent, size: 18)),
+                                                  IconButton(onPressed: () => _deleteCourse(idx), icon: Icon(Icons.delete, color: Colors.redAccent, size: 18)),
                                                 ],
                                               ),
                                             ],

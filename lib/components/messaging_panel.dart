@@ -3,7 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class MessagingPanel extends StatefulWidget {
-  const MessagingPanel({super.key});
+  const MessagingPanel({super.key, this.isDarkMode = true});
+  final bool isDarkMode;
 
   @override
   State<MessagingPanel> createState() => _MessagingPanelState();
@@ -33,17 +34,38 @@ class _MessagingPanelState extends State<MessagingPanel> {
   ];
 
   int _selectedConv = 0;
+  
+  // Theme colors
+  static const Color pViolet = Color(0xFF2E1065);
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color surfaceDark = Color(0xFF1E1033);
+  static const Color lCard = Color(0xFFFFFFFF);
+  
+  late bool _isDarkMode;
+  
+  @override
+  void initState() {
+    super.initState();
+    _isDarkMode = widget.isDarkMode;
+  }
 
   @override
   Widget build(BuildContext context) {
     final conv = _conversations[_selectedConv];
+    
+    // Theme-aware colors
+    final cardColor = _isDarkMode ? surfaceDark : lCard;
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final subTextColor = _isDarkMode ? Colors.white54 : Colors.blueGrey;
+    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
+    final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
 
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1033),
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: borderColor),
       ),
       child: SizedBox(
         height: 520,
@@ -55,7 +77,7 @@ class _MessagingPanelState extends State<MessagingPanel> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Conversations', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text('Conversations', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   Expanded(
                     child: ListView.separated(
@@ -65,16 +87,16 @@ class _MessagingPanelState extends State<MessagingPanel> {
                         final c = _conversations[idx];
                         return ListTile(
                           onTap: () => setState(() => _selectedConv = idx),
-                          tileColor: idx == _selectedConv ? Colors.white12 : Colors.transparent,
+                          tileColor: idx == _selectedConv ? (_isDarkMode ? Colors.white12 : Colors.grey.shade100) : Colors.transparent,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          title: Text(c['title'], style: GoogleFonts.inter(color: Colors.white)),
+                          title: Text(c['title'], style: GoogleFonts.inter(color: textColor)),
                           subtitle: Text(
                             c['messages'].last['text'],
-                            style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
+                            style: GoogleFonts.inter(color: subTextColor, fontSize: 12),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          leading: Icon(LucideIcons.messageSquare, color: Colors.white54),
+                          leading: Icon(LucideIcons.messageSquare, color: subTextColor),
                         );
                       },
                     ),
@@ -92,11 +114,11 @@ class _MessagingPanelState extends State<MessagingPanel> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(conv['title'], style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(conv['title'], style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
                       Row(
                         children: [
-                          IconButton(onPressed: () {}, icon: Icon(LucideIcons.refreshCw, color: Colors.white54)),
-                          IconButton(onPressed: () {}, icon: Icon(LucideIcons.archive, color: Colors.white54)),
+                          IconButton(onPressed: () {}, icon: Icon(LucideIcons.refreshCw, color: subTextColor)),
+                          IconButton(onPressed: () {}, icon: Icon(LucideIcons.archive, color: subTextColor)),
                         ],
                       )
                     ],
@@ -105,7 +127,7 @@ class _MessagingPanelState extends State<MessagingPanel> {
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: fillColor, borderRadius: BorderRadius.circular(8)),
                       child: ListView.builder(
                         itemCount: conv['messages'].length,
                         itemBuilder: (context, i) {
@@ -118,17 +140,17 @@ class _MessagingPanelState extends State<MessagingPanel> {
                               padding: const EdgeInsets.all(12),
                               constraints: const BoxConstraints(maxWidth: 480),
                               decoration: BoxDecoration(
-                                color: isOwn ? Colors.white12 : Colors.transparent,
+                                color: isOwn ? (_isDarkMode ? Colors.white12 : Colors.grey.shade100) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(m['from'].toString().toUpperCase(), style: GoogleFonts.inter(color: Colors.white70, fontSize: 11)),
+                                  Text(m['from'].toString().toUpperCase(), style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.grey.shade600, fontSize: 11)),
                                   const SizedBox(height: 6),
-                                  Text(m['text'], style: GoogleFonts.inter(color: Colors.white)),
+                                  Text(m['text'], style: GoogleFonts.inter(color: textColor)),
                                   const SizedBox(height: 6),
-                                  Text(m['time'], style: GoogleFonts.inter(color: Colors.white54, fontSize: 11)),
+                                  Text(m['time'], style: GoogleFonts.inter(color: subTextColor, fontSize: 11)),
                                 ],
                               ),
                             ),
@@ -145,16 +167,16 @@ class _MessagingPanelState extends State<MessagingPanel> {
                         child: TextField(
                           decoration: InputDecoration(
                             hintText: 'Write a monitoring note (admin only)',
-                            hintStyle: GoogleFonts.inter(color: Colors.white30),
+                            hintStyle: GoogleFonts.inter(color: _isDarkMode ? Colors.white30 : Colors.grey.shade400),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
-                          style: GoogleFonts.inter(color: Colors.white),
+                          style: GoogleFonts.inter(color: textColor),
                         ),
                       ),
                       const SizedBox(width: 12),
-                      ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)), child: Text('Post', style: GoogleFonts.inter(color: Colors.white)))
+                      ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: aViolet), child: Text('Post', style: GoogleFonts.inter(color: Colors.white)))
                     ],
                   ),
                 ],

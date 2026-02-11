@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ReportPanel extends StatefulWidget {
-  const ReportPanel({super.key});
+  const ReportPanel({super.key, this.isDarkMode = true});
+  final bool isDarkMode;
 
   @override
   State<ReportPanel> createState() => _ReportPanelState();
@@ -17,6 +18,14 @@ class _ReportPanelState extends State<ReportPanel> {
   late TextEditingController _importCtl;
   int? _editingIndex;
 
+  // Theme colors
+  static const Color pViolet = Color(0xFF2E1065);
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color surfaceDark = Color(0xFF1E1033);
+  static const Color lCard = Color(0xFFFFFFFF);
+  
+  late bool _isDarkMode;
+
   final List<String> _offices = ['Admissions', 'Registrar', 'Accounting', 'Finance', 'HR', 'Academic Affairs'];
   final List<String> _categories = ['System Error', 'Data Issue', 'Performance', 'UI/UX', 'Integration', 'Other'];
   final List<String> _statuses = ['Open', 'In Progress', 'Resolved', 'Closed'];
@@ -24,6 +33,7 @@ class _ReportPanelState extends State<ReportPanel> {
   @override
   void initState() {
     super.initState();
+    _isDarkMode = widget.isDarkMode;
     _officeCtl = TextEditingController();
     _categoryCtl = TextEditingController();
     _descCtl = TextEditingController();
@@ -315,6 +325,13 @@ class _ReportPanelState extends State<ReportPanel> {
 
   @override
   Widget build(BuildContext context) {
+    // Theme-aware colors
+    final cardColor = _isDarkMode ? surfaceDark : lCard;
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
+    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
+    final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
+    
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -328,7 +345,7 @@ class _ReportPanelState extends State<ReportPanel> {
           flex: 1,
           child: Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(color: const Color(0xFF1E1033), borderRadius: BorderRadius.circular(16)),
+            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,18 +353,18 @@ class _ReportPanelState extends State<ReportPanel> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Submit Error Report', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+                    Text('Submit Error Report', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700)),
                     Row(children: [
                       TextButton.icon(
                         onPressed: _showImportDialog,
-                        icon: const Icon(Icons.file_upload, color: Colors.white70),
-                        label: Text('Import', style: GoogleFonts.inter(color: Colors.white70)),
+                        icon: Icon(Icons.file_upload, color: subTextColor),
+                        label: Text('Import', style: GoogleFonts.inter(color: subTextColor)),
                       ),
                       const SizedBox(width: 8),
                       TextButton.icon(
                         onPressed: _showExportDialog,
-                        icon: const Icon(Icons.file_download, color: Colors.white70),
-                        label: Text('Export', style: GoogleFonts.inter(color: Colors.white70)),
+                        icon: Icon(Icons.file_download, color: subTextColor),
+                        label: Text('Export', style: GoogleFonts.inter(color: subTextColor)),
                       ),
                     ])
                   ],
@@ -360,11 +377,11 @@ class _ReportPanelState extends State<ReportPanel> {
                   decoration: InputDecoration(
                     hintText: 'Select Office',
                     filled: true,
-                    fillColor: Colors.white10,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                    fillColor: fillColor,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                   ),
-                  style: const TextStyle(color: Colors.white),
-                  dropdownColor: const Color(0xFF1E1033),
+                  style: TextStyle(color: textColor),
+                  dropdownColor: cardColor,
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -374,37 +391,37 @@ class _ReportPanelState extends State<ReportPanel> {
                   decoration: InputDecoration(
                     hintText: 'Error Category',
                     filled: true,
-                    fillColor: Colors.white10,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                    fillColor: fillColor,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                   ),
-                  style: const TextStyle(color: Colors.white),
-                  dropdownColor: const Color(0xFF1E1033),
+                  style: TextStyle(color: textColor),
+                  dropdownColor: cardColor,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _descCtl,
                   maxLines: 6,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: textColor),
                   decoration: InputDecoration(
                     hintText: 'Describe the error/problem in detail...',
-                    hintStyle: TextStyle(color: Colors.white30),
+                    hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                     filled: true,
-                    fillColor: Colors.white10,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                    fillColor: fillColor,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Row(children: [
                   ElevatedButton(
                     onPressed: _addReport,
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)),
+                    style: ElevatedButton.styleFrom(backgroundColor: aViolet),
                     child: Text(_editingIndex == null ? 'Submit Report' : 'Update Report', style: GoogleFonts.inter(color: Colors.white)),
                   ),
                   const SizedBox(width: 12),
                   OutlinedButton(
                     onPressed: _clearForm,
-                    style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)),
-                    child: Text('Clear', style: GoogleFonts.inter(color: Colors.white70)),
+                    style: OutlinedButton.styleFrom(side: BorderSide(color: borderColor)),
+                    child: Text('Clear', style: GoogleFonts.inter(color: subTextColor)),
                   ),
                 ]),
               ],
@@ -417,16 +434,16 @@ class _ReportPanelState extends State<ReportPanel> {
           flex: 1,
           child: Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(color: const Color(0xFF1E1033), borderRadius: BorderRadius.circular(16)),
+            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Reports Directory (${_reports.length})', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+                Text('Reports Directory (${_reports.length})', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 16),
                 ConstrainedBox(
                   constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.6),
                   child: _reports.isEmpty
-                      ? Center(child: Text('No reports yet', style: GoogleFonts.inter(color: Colors.white54)))
+                      ? Center(child: Text('No reports yet', style: GoogleFonts.inter(color: subTextColor)))
                       : ListView.builder(
                           shrinkWrap: true,
                           itemCount: _reports.length,
@@ -435,7 +452,7 @@ class _ReportPanelState extends State<ReportPanel> {
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(8)),
+                              decoration: BoxDecoration(color: fillColor, borderRadius: BorderRadius.circular(8)),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -443,8 +460,8 @@ class _ReportPanelState extends State<ReportPanel> {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Text(r['office'] ?? '', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-                                        Text(r['category'] ?? '', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
+                                        Text(r['office'] ?? '', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600)),
+                                        Text(r['category'] ?? '', style: GoogleFonts.inter(color: subTextColor, fontSize: 12)),
                                       ]),
                                       Row(children: [
                                         Container(
@@ -466,27 +483,27 @@ class _ReportPanelState extends State<ReportPanel> {
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  Text(r['description'] ?? '', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  Text(r['description'] ?? '', style: GoogleFonts.inter(color: subTextColor, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
                                   const SizedBox(height: 8),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(r['timestamp'] ?? '', style: GoogleFonts.inter(color: Colors.white54, fontSize: 10)),
+                                      Text(r['timestamp'] ?? '', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54, fontSize: 10)),
                                       Row(
                                         children: [
                                           IconButton(
                                             onPressed: () => showDialog(
                                               context: context,
                                               builder: (ctx) => AlertDialog(
-                                                backgroundColor: const Color(0xFF1E1033),
-                                                title: Text('Report Details', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+                                                backgroundColor: cardColor,
+                                                title: Text('Report Details', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700)),
                                                 content: SizedBox(width: 400, child: _buildReportDetails(r)),
-                                                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Close', style: GoogleFonts.inter(color: Colors.white54)))],
+                                                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Close', style: GoogleFonts.inter(color: subTextColor)))],
                                               ),
                                             ),
-                                            icon: const Icon(Icons.info, color: Colors.white54, size: 18),
+                                            icon: Icon(Icons.info, color: subTextColor, size: 18),
                                           ),
-                                          IconButton(onPressed: () => _startEdit(idx), icon: const Icon(Icons.edit, color: Colors.white54, size: 18)),
+                                          IconButton(onPressed: () => _startEdit(idx), icon: Icon(Icons.edit, color: subTextColor, size: 18)),
                                           IconButton(onPressed: () => _deleteReport(idx), icon: const Icon(Icons.delete, color: Colors.redAccent, size: 18)),
                                         ],
                                       ),
@@ -510,6 +527,7 @@ class _ReportPanelState extends State<ReportPanel> {
     );
   }
 
+  
   @override
   void dispose() {
     _officeCtl.dispose();

@@ -4,7 +4,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../services/office_request_service.dart';
 
 class RequestReceiver extends StatefulWidget {
-  const RequestReceiver({super.key});
+  const RequestReceiver({super.key, this.isDarkMode = true});
+  final bool isDarkMode;
 
   @override
   State<RequestReceiver> createState() => _RequestReceiverState();
@@ -18,6 +19,10 @@ class _RequestReceiverState extends State<RequestReceiver> {
   static const Color surfaceDark = Color(0xFF1E1033);
   static const Color success = Color(0xFF69F0AE);
   static const Color warning = Color(0xFFFFB74D);
+  static const Color pViolet = Color(0xFF2E1065);
+  static const Color lCard = Color(0xFFFFFFFF);
+  
+  late bool _isDarkMode;
 
   static const Map<String, Map<String, dynamic>> officeInfo = {
     'admissions': {
@@ -36,6 +41,12 @@ class _RequestReceiverState extends State<RequestReceiver> {
       'color': Color(0xFFFFA726),
     },
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _isDarkMode = widget.isDarkMode;
+  }
 
   List<OfficeRequest> _getFilteredRequests(List<OfficeRequest> allRequests) {
     // Show only pending requests (not approved, rejected, or archived)
@@ -69,14 +80,19 @@ class _RequestReceiverState extends State<RequestReceiver> {
   }
 
   void _showRequestDetails(OfficeRequest request) {
+    // Theme-aware colors for dialogs
+    final dialogBgColor = _isDarkMode ? surfaceDark : lCard;
+    final dialogTextColor = _isDarkMode ? Colors.white : pViolet;
+    final dialogSubTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: surfaceDark,
+        backgroundColor: dialogBgColor,
         title: Text(
           '${officeInfo[request.office]?['name'] ?? request.office} - ${request.requestType}',
           style: GoogleFonts.inter(
-            color: Colors.white,
+            color: dialogTextColor,
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
@@ -114,13 +130,13 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 const SizedBox(height: 4),
                 Text(
                   request.department ?? 'N/A',
-                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+                  style: GoogleFonts.inter(color: dialogTextColor, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Priority:',
                   style: GoogleFonts.inter(
-                    color: Colors.white70,
+                    color: dialogSubTextColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -200,7 +216,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 Text(
                   'Request Type:',
                   style: GoogleFonts.inter(
-                    color: Colors.white70,
+                    color: dialogSubTextColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -208,13 +224,13 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 const SizedBox(height: 4),
                 Text(
                   request.requestType,
-                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+                  style: GoogleFonts.inter(color: dialogTextColor, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Details:',
                   style: GoogleFonts.inter(
-                    color: Colors.white70,
+                    color: dialogSubTextColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -224,14 +240,14 @@ class _RequestReceiverState extends State<RequestReceiver> {
                   request.details.isNotEmpty
                       ? request.details
                       : 'No additional details',
-                  style: GoogleFonts.inter(color: Colors.white70, fontSize: 14),
+                  style: GoogleFonts.inter(color: dialogSubTextColor, fontSize: 14),
                 ),
               ],
               const SizedBox(height: 16),
               Text(
                 'Submitted:',
                 style: GoogleFonts.inter(
-                  color: Colors.white70,
+                  color: dialogSubTextColor,
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                 ),
@@ -239,7 +255,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
               const SizedBox(height: 4),
               Text(
                 _formatDateTime(request.createdAt),
-                style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
+                style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54, fontSize: 12),
               ),
             ],
           ),
@@ -249,7 +265,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Close',
-              style: GoogleFonts.inter(color: Colors.white70),
+              style: GoogleFonts.inter(color: dialogSubTextColor),
             ),
           ),
           ElevatedButton(
@@ -310,6 +326,12 @@ class _RequestReceiverState extends State<RequestReceiver> {
 
   @override
   Widget build(BuildContext context) {
+    // Theme-aware colors
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
+    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
+    final fillColor = _isDarkMode ? aViolet.withOpacity(0.02) : Colors.grey.shade50;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -317,7 +339,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
         Text(
           'Filter by Office',
           style: GoogleFonts.inter(
-            color: Colors.white70,
+            color: subTextColor,
             fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
@@ -356,7 +378,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                             : FontWeight.w500,
                         color: _selectedOfficeFilter == 'all'
                             ? aViolet
-                            : Colors.white70,
+                            : subTextColor,
                       ),
                     ),
                   ),
@@ -392,7 +414,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                             size: 16,
                             color: isSelected
                                 ? info['color']
-                                : Colors.white54,
+                                : subTextColor,
                           ),
                           const SizedBox(width: 6),
                           Text(
@@ -404,7 +426,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                                   : FontWeight.w500,
                               color: isSelected
                                   ? info['color']
-                                  : Colors.white70,
+                                  : subTextColor,
                             ),
                           ),
                         ],
@@ -437,13 +459,13 @@ class _RequestReceiverState extends State<RequestReceiver> {
                       Icon(
                         LucideIcons.inbox,
                         size: 48,
-                        color: Colors.white30,
+                        color: _isDarkMode ? Colors.white30 : Colors.grey.shade400,
                       ),
                       const SizedBox(height: 16),
                       Text(
                         'No pending requests',
                         style: GoogleFonts.inter(
-                          color: Colors.white70,
+                          color: subTextColor,
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                         ),
@@ -452,7 +474,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                       Text(
                         'All requests have been reviewed',
                         style: GoogleFonts.inter(
-                          color: Colors.white54,
+                          color: _isDarkMode ? Colors.white54 : Colors.black54,
                           fontSize: 13,
                         ),
                       ),
@@ -475,9 +497,9 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 return Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: aViolet.withOpacity(0.02),
+                    color: fillColor,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: aViolet.withOpacity(0.08)),
+                    border: Border.all(color: _isDarkMode ? aViolet.withOpacity(0.08) : Colors.black12),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -513,7 +535,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                                 Text(
                                   request.requestType,
                                   style: GoogleFonts.inter(
-                                    color: Colors.white,
+                                    color: textColor,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 13,
                                   ),
@@ -546,13 +568,13 @@ class _RequestReceiverState extends State<RequestReceiver> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: aViolet.withOpacity(0.04),
+                            color: fillColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             request.details,
                             style: GoogleFonts.inter(
-                              color: Colors.white70,
+                              color: subTextColor,
                               fontSize: 12,
                             ),
                             maxLines: 2,
@@ -565,7 +587,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                           Text(
                             _formatDateTime(request.createdAt),
                             style: GoogleFonts.inter(
-                              color: Colors.white54,
+                              color: _isDarkMode ? Colors.white54 : Colors.black54,
                               fontSize: 11,
                             ),
                           ),

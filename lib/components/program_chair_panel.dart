@@ -3,7 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class ProgramChairPanel extends StatefulWidget {
-  const ProgramChairPanel({super.key});
+  const ProgramChairPanel({super.key, this.isDarkMode = true});
+  final bool isDarkMode;
 
   @override
   State<ProgramChairPanel> createState() => _ProgramChairPanelState();
@@ -14,6 +15,9 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
   static const Color pViolet = Color(0xFF2E1065);
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color surfaceDark = Color(0xFF1E1033);
+  static const Color lCard = Color(0xFFFFFFFF);
+  
+  late bool _isDarkMode;
 
   // Internal in-memory store for program items
   final List<Map<String, dynamic>> _items = [];
@@ -32,6 +36,12 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
   final TextEditingController _employeeIdController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   DateTime? _effectiveDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _isDarkMode = widget.isDarkMode;
+  }
 
   @override
   void dispose() {
@@ -166,24 +176,24 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         decoration: BoxDecoration(
           gradient: bg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? aViolet.withOpacity(0.6) : Colors.white10),
+          border: Border.all(color: selected ? aViolet.withOpacity(0.6) : (_isDarkMode ? Colors.white10 : Colors.black12)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: selected ? Colors.white24 : Colors.transparent,
+                color: selected ? (_isDarkMode ? Colors.white24 : Colors.black12) : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: selected ? Colors.white : Colors.white70, size: 20),
+              child: Icon(icon, color: selected ? Colors.white : (_isDarkMode ? Colors.white70 : Colors.black54), size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 label,
                 style: GoogleFonts.inter(
-                  color: selected ? Colors.white : Colors.white70,
+                  color: selected ? Colors.white : (_isDarkMode ? Colors.white70 : Colors.black54),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -199,66 +209,66 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Administrator Details', style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        Text('Administrator Details', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontSize: 14, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         TextField(
           controller: _nameController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: _isDarkMode ? Colors.white : pViolet),
           decoration: InputDecoration(
             hintText: 'Name',
-            hintStyle: TextStyle(color: Colors.white30),
+            hintStyle: TextStyle(color: _isDarkMode ? Colors.white30 : Colors.grey.shade400),
             filled: true,
-            fillColor: Colors.white10,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            fillColor: _isDarkMode ? Colors.white10 : Colors.grey.shade50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white10 : Colors.black12)),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _departmentController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: _isDarkMode ? Colors.white : pViolet),
           decoration: InputDecoration(
             hintText: 'Department',
-            hintStyle: TextStyle(color: Colors.white30),
+            hintStyle: TextStyle(color: _isDarkMode ? Colors.white30 : Colors.grey.shade400),
             filled: true,
-            fillColor: Colors.white10,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            fillColor: _isDarkMode ? Colors.white10 : Colors.grey.shade50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white10 : Colors.black12)),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _emailController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: _isDarkMode ? Colors.white : pViolet),
           decoration: InputDecoration(
             hintText: 'Personal Email',
-            hintStyle: TextStyle(color: Colors.white30),
+            hintStyle: TextStyle(color: _isDarkMode ? Colors.white30 : Colors.grey.shade400),
             filled: true,
-            fillColor: Colors.white10,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            fillColor: _isDarkMode ? Colors.white10 : Colors.grey.shade50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white10 : Colors.black12)),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _employeeIdController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: _isDarkMode ? Colors.white : pViolet),
           decoration: InputDecoration(
             hintText: 'Employee ID',
-            hintStyle: TextStyle(color: Colors.white30),
+            hintStyle: TextStyle(color: _isDarkMode ? Colors.white30 : Colors.grey.shade400),
             filled: true,
-            fillColor: Colors.white10,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            fillColor: _isDarkMode ? Colors.white10 : Colors.grey.shade50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white10 : Colors.black12)),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _passwordController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: _isDarkMode ? Colors.white : pViolet),
           obscureText: true,
           decoration: InputDecoration(
             hintText: 'Password (Temporary)',
-            hintStyle: TextStyle(color: Colors.white30),
+            hintStyle: TextStyle(color: _isDarkMode ? Colors.white30 : Colors.grey.shade400),
             filled: true,
-            fillColor: Colors.white10,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            fillColor: _isDarkMode ? Colors.white10 : Colors.grey.shade50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white10 : Colors.black12)),
           ),
         ),
         const SizedBox(height: 16),

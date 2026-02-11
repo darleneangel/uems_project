@@ -38,22 +38,24 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     'reports',
   ];
 
-  // Violet Theme Colors (Dark)
+  // Violet Theme Colors (matching student dashboard - lighter version)
   static const Color pViolet = Color(0xFF2E1065);
   static const Color tDark = Color(0xFF0F071D);
   static const Color aViolet = Color(0xFF8B5CF6);
-  static const Color surfaceDark = Color(0xFF1E1033);
+  static const Color surfaceDark = Color(0xFF1E1B4B); // Lighter surface
   static const Color success = Color(0xFF69F0AE);
-
-  // Light Mode Palette
+  
+  // Light mode colors - lighter and softer
   static const Color lBg = Color(0xFFF8FAFC);
+  static const Color lSurface = Color(0xFFF1F5F9);
+  static const Color lCard = Color(0xFFFFFFFF);
 
   void _toggleTheme() => setState(() => _isDarkMode = !_isDarkMode);
 
   @override
   Widget build(BuildContext context) {
     final bgColor = _isDarkMode ? tDark : lBg;
-    final sideColor = _isDarkMode ? surfaceDark : Colors.white;
+    final sideColor = _isDarkMode ? surfaceDark : lSurface;
     final textColor = _isDarkMode ? Colors.white : pViolet;
     final subTextColor = _isDarkMode ? Colors.white54 : Colors.blueGrey;
 
@@ -68,51 +70,51 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         break;
       case 1:
         panelTitle = 'Announcements Management';
-        panelContent = AdminPanelContent(panelType: _panelTypes[1]);
+        panelContent = AdminPanelContent(panelType: _panelTypes[1], isDarkMode: _isDarkMode);
         break;
       case 2:
         panelTitle = 'Office Admin - Service Requests';
-        panelContent = AdminPanelContent(panelType: _panelTypes[2]);
+        panelContent = AdminPanelContent(panelType: _panelTypes[2], isDarkMode: _isDarkMode);
         break;
       case 3:
         panelTitle = 'Program Chair Administration';
-        panelContent = const ProgramChairPanel();
+        panelContent = ProgramChairPanel(isDarkMode: _isDarkMode);
         break;
       case 4:
         panelTitle = 'Study Loads Management';
-        panelContent = AdminPanelContent(panelType: _panelTypes[4]);
+        panelContent = AdminPanelContent(panelType: _panelTypes[4], isDarkMode: _isDarkMode);
         break;
       case 5:
         panelTitle = 'Grade Recording System';
-        panelContent = AdminPanelContent(panelType: _panelTypes[5]);
+        panelContent = AdminPanelContent(panelType: _panelTypes[5], isDarkMode: _isDarkMode);
         break;
       case 6:
         panelTitle = 'Human Resources';
-        panelContent = const HRPanel();
+        panelContent = HRPanel(isDarkMode: _isDarkMode);
         break;
       case 7:
         panelTitle = 'Messaging';
-        panelContent = const MessagingPanel();
+        panelContent = MessagingPanel(isDarkMode: _isDarkMode);
         break;
       case 8:
         panelTitle = 'Error Reports & System Issues';
-        panelContent = const ReportPanel();
+        panelContent = ReportPanel(isDarkMode: _isDarkMode);
         break;
       case 10:
         panelTitle = 'Department Management';
-        panelContent = const DepartmentManagementPanel();
+        panelContent = DepartmentManagementPanel(isDarkMode: _isDarkMode);
         break;
       case 11:
         panelTitle = 'Course Management';
-        panelContent = const CourseManagementPanel();
+        panelContent = CourseManagementPanel(isDarkMode: _isDarkMode);
         break;
       case 12:
         panelTitle = 'Administrative Account Management';
-        panelContent = const AdministrativeAccountManagementPanel();
+        panelContent = AdministrativeAccountManagementPanel(isDarkMode: _isDarkMode);
         break;
       case 13:
         panelTitle = 'Academic Account Management';
-        panelContent = const AcademicAccountManagementPanel();
+        panelContent = AcademicAccountManagementPanel(isDarkMode: _isDarkMode);
         break;
       default:
         panelTitle = 'System Overview';
@@ -358,12 +360,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1033),
+        backgroundColor: _isDarkMode ? surfaceDark : Colors.white,
         title: Row(
           children: [
             Icon(Icons.logout, color: Colors.redAccent, size: 24),
             const SizedBox(width: 12),
-            Text('Confirm Logout', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+            Text('Confirm Logout', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w700)),
           ],
         ),
         content: Column(
@@ -372,12 +374,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           children: [
             Text(
               'Are you sure you want to log out of the system?',
-              style: GoogleFonts.inter(color: Colors.white70, fontSize: 16),
+              style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87, fontSize: 16),
             ),
             const SizedBox(height: 12),
             Text(
               'Any unsaved changes will be lost.',
-              style: GoogleFonts.inter(color: Colors.white54, fontSize: 14),
+              style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54, fontSize: 14),
             ),
           ],
         ),
@@ -386,9 +388,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             onPressed: () => Navigator.pop(ctx),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              backgroundColor: Colors.white10,
+              backgroundColor: _isDarkMode ? Colors.white10 : Colors.black12,
             ),
-            child: Text('Cancel', style: GoogleFonts.inter(color: Colors.white70)),
+            child: Text('Cancel', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black54)),
           ),
           ElevatedButton(
             onPressed: () {

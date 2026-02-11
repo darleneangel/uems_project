@@ -3,7 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 
 class HRPanel extends StatefulWidget {
-  const HRPanel({super.key});
+  const HRPanel({super.key, this.isDarkMode = true});
+  final bool isDarkMode;
 
   @override
   State<HRPanel> createState() => _HRPanelState();
@@ -18,6 +19,20 @@ class _HRPanelState extends State<HRPanel> {
   final _roleCtl = TextEditingController();
   int? _editingIndex;
   final TextEditingController _importCtl = TextEditingController();
+  
+  // Theme colors
+  static const Color pViolet = Color(0xFF2E1065);
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color surfaceDark = Color(0xFF1E1033);
+  static const Color lCard = Color(0xFFFFFFFF);
+  
+  late bool _isDarkMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _isDarkMode = widget.isDarkMode;
+  }
 
   @override
   void dispose() {
@@ -236,78 +251,85 @@ class _HRPanelState extends State<HRPanel> {
 
   @override
   Widget build(BuildContext context) {
+    // Theme-aware colors
+    final cardColor = _isDarkMode ? surfaceDark : lCard;
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
+    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
+    final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: const Color(0xFF1E1033), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white10)),
+          decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: borderColor)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Create Employee Record', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+                  Text('Create Employee Record', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700)),
                   Row(children: [
                     TextButton.icon(
                       onPressed: _showImportDialog,
-                      icon: const Icon(Icons.file_upload, color: Colors.white70),
-                      label: Text('Import', style: GoogleFonts.inter(color: Colors.white70)),
+                      icon: Icon(Icons.file_upload, color: subTextColor),
+                      label: Text('Import', style: GoogleFonts.inter(color: subTextColor)),
                     ),
                     const SizedBox(width: 8),
                     TextButton.icon(
                       onPressed: _showExportDialog,
-                      icon: const Icon(Icons.file_download, color: Colors.white70),
-                      label: Text('Export', style: GoogleFonts.inter(color: Colors.white70)),
+                      icon: Icon(Icons.file_download, color: subTextColor),
+                      label: Text('Export', style: GoogleFonts.inter(color: subTextColor)),
                     ),
                   ])
                 ],
               ),
               const SizedBox(height: 12),
-              TextField(controller: _nameCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Name', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)))),
+              TextField(controller: _nameCtl, style: TextStyle(color: textColor), decoration: InputDecoration(hintText: 'Name', hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)), filled: true, fillColor: fillColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)))),
               const SizedBox(height: 8),
-              TextField(controller: _deptCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Department', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)))),
+              TextField(controller: _deptCtl, style: TextStyle(color: textColor), decoration: InputDecoration(hintText: 'Department', hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)), filled: true, fillColor: fillColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)))),
               const SizedBox(height: 8),
-              TextField(controller: _emailCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Personal Email', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)))),
+              TextField(controller: _emailCtl, style: TextStyle(color: textColor), decoration: InputDecoration(hintText: 'Personal Email', hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)), filled: true, fillColor: fillColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)))),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: TextField(controller: _empIdCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Employee ID', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10))))),
+                Expanded(child: TextField(controller: _empIdCtl, style: TextStyle(color: textColor), decoration: InputDecoration(hintText: 'Employee ID', hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)), filled: true, fillColor: fillColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor))))),
                 const SizedBox(width: 8),
-                Expanded(child: TextField(controller: _roleCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Role', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10))))),
+                Expanded(child: TextField(controller: _roleCtl, style: TextStyle(color: textColor), decoration: InputDecoration(hintText: 'Role', hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)), filled: true, fillColor: fillColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor))))),
               ]),
               const SizedBox(height: 12),
               Row(children: [
-                ElevatedButton(onPressed: _addEmployee, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)), child: Text(_editingIndex == null ? 'Create' : 'Save', style: GoogleFonts.inter(color: Colors.white))),
+                ElevatedButton(onPressed: _addEmployee, style: ElevatedButton.styleFrom(backgroundColor: aViolet), child: Text(_editingIndex == null ? 'Create' : 'Save', style: GoogleFonts.inter(color: Colors.white))),
                 const SizedBox(width: 12),
-                OutlinedButton(onPressed: _clearForm, style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)), child: Text('Clear', style: GoogleFonts.inter(color: Colors.white70)))
+                OutlinedButton(onPressed: _clearForm, style: OutlinedButton.styleFrom(side: BorderSide(color: borderColor)), child: Text('Clear', style: GoogleFonts.inter(color: subTextColor)))
               ]),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        Text('Employee Directory', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+        Text('Employee Directory', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: const Color(0xFF1E1033), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white10)),
+          decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: borderColor)),
           child: _employees.isEmpty
-              ? Text('No employees added.', style: GoogleFonts.inter(color: Colors.white70))
+              ? Text('No employees added.', style: GoogleFonts.inter(color: subTextColor))
               : ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: _employees.length,
-                  separatorBuilder: (_, __) => const Divider(color: Colors.white10),
+                  separatorBuilder: (_, __) => Divider(color: borderColor),
                   itemBuilder: (context, idx) {
                     final e = _employees[idx];
                     return ListTile(
                       onTap: () => _showEmployeeDetails(e),
-                      title: Text(e['name'] ?? '', style: GoogleFonts.inter(color: Colors.white)),
-                      subtitle: Text(e['department'] ?? '', style: GoogleFonts.inter(color: Colors.white54)),
+                      title: Text(e['name'] ?? '', style: GoogleFonts.inter(color: textColor)),
+                      subtitle: Text(e['department'] ?? '', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54)),
                       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Text(e['employeeId'] ?? '', style: GoogleFonts.inter(color: Colors.white54)),
+                        Text(e['employeeId'] ?? '', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54)),
                         const SizedBox(width: 8),
-                        IconButton(onPressed: () => _startEdit(idx), icon: const Icon(Icons.edit, color: Colors.white54)),
+                        IconButton(onPressed: () => _startEdit(idx), icon: Icon(Icons.edit, color: subTextColor)),
                         IconButton(onPressed: () => _deleteEmployee(idx), icon: const Icon(Icons.delete, color: Colors.redAccent)),
                       ]),
                     );

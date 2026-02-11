@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AcademicAccountManagementPanel extends StatefulWidget {
-  const AcademicAccountManagementPanel({super.key});
+  const AcademicAccountManagementPanel({super.key, this.isDarkMode = true});
+  final bool isDarkMode;
 
   @override
   State<AcademicAccountManagementPanel> createState() => _AcademicAccountManagementPanelState();
@@ -19,6 +20,18 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
   late TextEditingController _specializationCtl;
   int? _editingIndex;
 
+  // Light mode colors
+  static const Color lCard = Color(0xFFFFFFFF);
+  
+  // Theme colors (matching student dashboard)
+  static const Color pViolet = Color(0xFF2E1065);
+  static const Color tDark = Color(0xFF0F071D);
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color surfaceDark = Color(0xFF1E1033);
+  static const Color success = Color(0xFF69F0AE);
+  
+  late bool _isDarkMode;
+
   final List<String> _departments = ['Computer Science', 'Business Administration', 'Mathematics', 'Engineering', 'Arts & Sciences'];
   final List<String> _roles = ['Program Chair', 'Teacher', 'Student'];
   final List<String> _statuses = ['Active', 'Inactive', 'Suspended', 'Graduated'];
@@ -26,6 +39,7 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
   @override
   void initState() {
     super.initState();
+    _isDarkMode = widget.isDarkMode;
     _nameCtl = TextEditingController();
     _emailCtl = TextEditingController();
     _studentIdCtl = TextEditingController();
@@ -139,7 +153,7 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
 
     _clearForm();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_editingIndex == null ? 'Account created' : 'Account updated', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: const Color(0xFF69F0AE)),
+      SnackBar(content: Text(_editingIndex == null ? 'Account created' : 'Account updated', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: success),
     );
   }
 
@@ -161,11 +175,11 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1033),
-        title: Text('Delete Account?', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
-        content: Text('This action cannot be undone. The account will be permanently deleted.', style: GoogleFonts.inter(color: Colors.white70)),
+        backgroundColor: _isDarkMode ? surfaceDark : Colors.white,
+        title: Text('Delete Account?', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w700)),
+        content: Text('This action cannot be undone. The account will be permanently deleted.', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.inter(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54))),
           TextButton(
             onPressed: () {
               setState(() => _accounts.removeAt(idx));
@@ -184,20 +198,20 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
   void _updateStatus(int idx, String newStatus) {
     setState(() => _accounts[idx]['status'] = newStatus);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Account status updated to $newStatus', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: const Color(0xFF69F0AE)),
+      SnackBar(content: Text('Account status updated to $newStatus', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: success),
     );
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Active':
-        return const Color(0xFF69F0AE);
+        return success;
       case 'Inactive':
         return Colors.grey;
       case 'Suspended':
         return Colors.orange;
       case 'Graduated':
-        return const Color(0xFF8B5CF6);
+        return aViolet;
       default:
         return Colors.grey;
     }
@@ -219,7 +233,7 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
   Widget _buildAccountDetails(Map<String, String> account) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.black12, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -239,19 +253,19 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
             ],
           ),
           const SizedBox(height: 16),
-          Text('Name: ${account['name']}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+          Text('Name: ${account['name']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          Text('Email: ${account['email']}', style: GoogleFonts.inter(color: Colors.white70)),
+          Text('Email: ${account['email']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
           const SizedBox(height: 8),
-          Text('ID: ${account['studentId']}', style: GoogleFonts.inter(color: Colors.white70)),
+          Text('ID: ${account['studentId']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
           const SizedBox(height: 8),
-          Text('Department: ${account['department']}', style: GoogleFonts.inter(color: Colors.white70)),
+          Text('Department: ${account['department']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
           const SizedBox(height: 8),
-          Text('Phone: ${account['phone']}', style: GoogleFonts.inter(color: Colors.white70)),
+          Text('Phone: ${account['phone']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
           const SizedBox(height: 8),
-          Text('Specialization: ${account['specialization']}', style: GoogleFonts.inter(color: Colors.white70)),
+          Text('Specialization: ${account['specialization']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
           const SizedBox(height: 12),
-          Text('Created: ${account['timestamp']}', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
+          Text('Created: ${account['timestamp']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54, fontSize: 12)),
         ],
       ),
     );
@@ -259,6 +273,13 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
 
   @override
   Widget build(BuildContext context) {
+    // Theme-aware colors
+    final cardColor = _isDarkMode ? surfaceDark : lCard;
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
+    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
+    final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
+    
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -272,52 +293,52 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
                   flex: 1,
                   child: Container(
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(color: const Color(0xFF1E1033), borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Academic Account Management', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)),
+                        Text('Academic Account Management', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700, fontSize: 18)),
                         const SizedBox(height: 16),
                         TextField(
                           controller: _nameCtl,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'Full Name',
-                            labelStyle: TextStyle(color: Colors.white70),
+                            labelStyle: TextStyle(color: subTextColor),
                             hintText: 'e.g., Dr. Robert Anderson',
-                            hintStyle: TextStyle(color: Colors.white30),
+                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _emailCtl,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'Email Address',
-                            labelStyle: TextStyle(color: Colors.white70),
+                            labelStyle: TextStyle(color: subTextColor),
                             hintText: 'e.g., robert.anderson@uems.edu',
-                            hintStyle: TextStyle(color: Colors.white30),
+                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _studentIdCtl,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'ID Number',
-                            labelStyle: TextStyle(color: Colors.white70),
+                            labelStyle: TextStyle(color: subTextColor),
                             hintText: 'e.g., STF001 or STD001',
-                            hintStyle: TextStyle(color: Colors.white30),
+                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -327,28 +348,28 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
                           onChanged: (v) => setState(() => _departmentCtl.text = v ?? ''),
                           decoration: InputDecoration(
                             labelText: 'Department',
-                            labelStyle: TextStyle(color: Colors.white70),
+                            labelStyle: TextStyle(color: subTextColor),
                             hintText: 'Select Department',
-                            hintStyle: TextStyle(color: Colors.white30),
+                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
-                          style: const TextStyle(color: Colors.white),
-                          dropdownColor: const Color(0xFF1E1033),
+                          style: TextStyle(color: textColor),
+                          dropdownColor: cardColor,
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _phoneCtl,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'Phone Number',
-                            labelStyle: TextStyle(color: Colors.white70),
+                            labelStyle: TextStyle(color: subTextColor),
                             hintText: 'e.g., +1-555-0201',
-                            hintStyle: TextStyle(color: Colors.white30),
+                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -358,42 +379,42 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
                           onChanged: (v) => setState(() => _roleCtl.text = v ?? ''),
                           decoration: InputDecoration(
                             labelText: 'Role',
-                            labelStyle: TextStyle(color: Colors.white70),
+                            labelStyle: TextStyle(color: subTextColor),
                             hintText: 'Select Role',
-                            hintStyle: TextStyle(color: Colors.white30),
+                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
-                          style: const TextStyle(color: Colors.white),
-                          dropdownColor: const Color(0xFF1E1033),
+                          style: TextStyle(color: textColor),
+                          dropdownColor: cardColor,
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _specializationCtl,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: textColor),
                           decoration: InputDecoration(
                             labelText: 'Specialization',
-                            labelStyle: TextStyle(color: Colors.white70),
+                            labelStyle: TextStyle(color: subTextColor),
                             hintText: 'e.g., Artificial Intelligence, Calculus',
-                            hintStyle: TextStyle(color: Colors.white30),
+                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)),
+                            fillColor: fillColor,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
                         const SizedBox(height: 16),
                         Row(children: [
                           ElevatedButton(
                             onPressed: _addAccount,
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)),
+                            style: ElevatedButton.styleFrom(backgroundColor: aViolet),
                             child: Text(_editingIndex == null ? 'Create Account' : 'Update Account', style: GoogleFonts.inter(color: Colors.white)),
                           ),
                           const SizedBox(width: 12),
                           OutlinedButton(
                             onPressed: _clearForm,
-                            style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)),
-                            child: Text('Clear', style: GoogleFonts.inter(color: Colors.white70)),
+                            style: OutlinedButton.styleFrom(side: BorderSide(color: borderColor)),
+                            child: Text('Clear', style: GoogleFonts.inter(color: subTextColor)),
                           ),
                         ]),
                       ],
@@ -406,16 +427,16 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
                   flex: 1,
                   child: Container(
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(color: const Color(0xFF1E1033), borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Academic Accounts (${_accounts.length})', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)),
+                        Text('Academic Accounts (${_accounts.length})', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700, fontSize: 18)),
                         const SizedBox(height: 16),
                         ConstrainedBox(
                           constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.6),
                           child: _accounts.isEmpty
-                              ? Center(child: Text('No accounts yet', style: GoogleFonts.inter(color: Colors.white54)))
+                              ? Center(child: Text('No accounts yet', style: GoogleFonts.inter(color: subTextColor)))
                               : ListView.builder(
                                   shrinkWrap: true,
                                   itemCount: _accounts.length,
@@ -424,7 +445,7 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
                                     return Container(
                                       margin: const EdgeInsets.only(bottom: 12),
                                       padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(8)),
+                                      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.black12, borderRadius: BorderRadius.circular(8)),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -432,8 +453,8 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
                                               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                                Text(account['name'] ?? '', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-                                                Text('${account['email']} • ${account['studentId']}', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
+                                                Text(account['name'] ?? '', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600)),
+                                                Text('${account['email']} • ${account['studentId']}', style: GoogleFonts.inter(color: subTextColor, fontSize: 12)),
                                               ]),
                                               Row(children: [
                                                 Container(
@@ -451,33 +472,33 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
                                             ],
                                           ),
                                           const SizedBox(height: 8),
-                                          Text('${account['department']} • ${account['specialization']}', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)),
+                                          Text('${account['department']} • ${account['specialization']}', style: GoogleFonts.inter(color: subTextColor, fontSize: 12)),
                                           const SizedBox(height: 8),
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Text(account['timestamp'] ?? '', style: GoogleFonts.inter(color: Colors.white54, fontSize: 10)),
+                                              Text(account['timestamp'] ?? '', style: GoogleFonts.inter(color: subTextColor, fontSize: 10)),
                                               Row(
                                                 children: [
                                                   IconButton(
                                                     onPressed: () => showDialog(
                                                       context: context,
                                                       builder: (ctx) => AlertDialog(
-                                                        backgroundColor: const Color(0xFF1E1033),
-                                                        title: Text('Account Details', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+                                                        backgroundColor: cardColor,
+                                                        title: Text('Account Details', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700)),
                                                         content: SizedBox(width: 400, child: _buildAccountDetails(account)),
-                                                        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Close', style: GoogleFonts.inter(color: Colors.white54)))],
+                                                        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Close', style: GoogleFonts.inter(color: subTextColor)))],
                                                       ),
                                                     ),
-                                                    icon: const Icon(Icons.info, color: Colors.white54, size: 18),
+                                                    icon: Icon(Icons.info, color: subTextColor, size: 18),
                                                   ),
-                                                  IconButton(onPressed: () => _startEdit(idx), icon: const Icon(Icons.edit, color: Colors.white54, size: 18)),
+                                                  IconButton(onPressed: () => _startEdit(idx), icon: Icon(Icons.edit, color: subTextColor, size: 18)),
                                                   PopupMenuButton(
                                                     onSelected: (status) => _updateStatus(idx, status),
                                                     itemBuilder: (ctx) => _statuses.map((s) => PopupMenuItem(value: s, child: Text(s, style: GoogleFonts.inter()))).toList(),
-                                                    child: const Icon(Icons.more_vert, color: Colors.white54, size: 18),
+                                                    child: Icon(Icons.more_vert, color: subTextColor, size: 18),
                                                   ),
-                                                  IconButton(onPressed: () => _deleteAccount(idx), icon: const Icon(Icons.delete, color: Colors.redAccent, size: 18)),
+                                                  IconButton(onPressed: () => _deleteAccount(idx), icon: Icon(Icons.delete, color: Colors.redAccent, size: 18)),
                                                 ],
                                               ),
                                             ],

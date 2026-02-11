@@ -14,19 +14,50 @@ import '../views/course_catalog_view.dart';
 import '../services/office_request_service.dart';
 import 'request_receiver.dart';
 
-class AdminPanelContent extends StatelessWidget {
+class AdminPanelContent extends StatefulWidget {
   final String panelType;
+  final bool isDarkMode;
 
-  const AdminPanelContent({super.key, required this.panelType});
+  const AdminPanelContent({super.key, required this.panelType, this.isDarkMode = true});
 
-  static const Color aViolet = Color(0xFF8B5CF6);
-  static const Color surfaceDark = Color(0xFF1E1033);
-  static const Color success = Color(0xFF69F0AE);
+  @override
+  State<AdminPanelContent> createState() => _AdminPanelContentState();
+}
+
+class _AdminPanelContentState extends State<AdminPanelContent> {
+  // Theme colors (matching student dashboard - lighter version)
   static const Color pViolet = Color(0xFF2E1065);
+  static const Color tDark = Color(0xFF0F071D);
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color surfaceDark = Color(0xFF1E1B4B); // Lighter surface
+  static const Color success = Color(0xFF69F0AE);
+  
+  // Light mode colors - lighter and softer
+  static const Color lBg = Color(0xFFF8FAFC);
+  static const Color lSurface = Color(0xFFF1F5F9);
+  static const Color lCard = Color(0xFFFFFFFF);
+  
+  // Color opacity variants for light mode
+  static const Color pViolet70 = Color(0x702E1065); // 44% opacity
+  static const Color pViolet54 = Color(0x8A2E1065); // 54% opacity  
+  static const Color pViolet38 = Color(0x602E1065); // 38% opacity
+  static const Color pViolet10 = Color(0x1A2E1065); // 10% opacity
+  static const Color pViolet12 = Color(0x1F2E1065); // 12% opacity
+  static const Color pViolet60 = Color(0x992E1065); // 60% opacity
+  
+  bool _isDarkMode = true;
 
   @override
   Widget build(BuildContext context) {
-    switch (panelType) {
+    // Use the passed theme state
+    _isDarkMode = widget.isDarkMode;
+    
+    // Theme-aware colors
+    final cardColor = _isDarkMode ? surfaceDark : lCard;
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
+    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
+    switch (widget.panelType) {
       case 'announcements':
         return _buildAnnouncementsPanel();
       case 'office_admin':
@@ -61,9 +92,9 @@ class AdminPanelContent extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: surfaceDark,
+        color: _isDarkMode ? surfaceDark : lCard,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: _isDarkMode ? Colors.white10 : Colors.black12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,7 +102,7 @@ class AdminPanelContent extends StatelessWidget {
           Text(
             'Create New Announcement',
             style: GoogleFonts.inter(
-              color: Colors.white,
+              color: _isDarkMode ? Colors.white : pViolet,
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
@@ -81,14 +112,14 @@ class AdminPanelContent extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'Announcement Title',
               filled: true,
-              fillColor: AdminPanelContent.aViolet.withOpacity(0.06),
+              fillColor: _isDarkMode ? aViolet.withValues(alpha:0.06) : Colors.grey.shade50,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                borderSide: BorderSide(color: _isDarkMode ? Colors.white : pViolet.withValues(alpha:0.1)),
               ),
-              hintStyle: GoogleFonts.inter(color: Colors.white54),
+              hintStyle: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet54),
             ),
-            style: GoogleFonts.inter(color: Colors.white),
+            style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -96,14 +127,14 @@ class AdminPanelContent extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'Announcement Content',
               filled: true,
-              fillColor: AdminPanelContent.aViolet.withOpacity(0.06),
+              fillColor: _isDarkMode ? aViolet.withValues(alpha:0.06) : Colors.grey.shade50,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                borderSide: BorderSide(color: _isDarkMode ? Colors.white : pViolet.withValues(alpha:0.1)),
               ),
-              hintStyle: GoogleFonts.inter(color: Colors.white54),
+              hintStyle: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet54),
             ),
-            style: GoogleFonts.inter(color: Colors.white),
+            style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -133,7 +164,7 @@ class AdminPanelContent extends StatelessWidget {
       decoration: BoxDecoration(
         color: surfaceDark,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: _isDarkMode ? Colors.white : pViolet10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,7 +172,7 @@ class AdminPanelContent extends StatelessWidget {
           Text(
             'Recent Announcements',
             style: GoogleFonts.inter(
-              color: Colors.white,
+              color: _isDarkMode ? Colors.white : pViolet,
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
@@ -157,9 +188,9 @@ class AdminPanelContent extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: aViolet.withOpacity(0.1),
+                  color: aViolet.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: aViolet.withOpacity(0.3)),
+                  border: Border.all(color: aViolet.withValues(alpha:0.3)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -171,14 +202,14 @@ class AdminPanelContent extends StatelessWidget {
                           Text(
                             announcement.$1,
                             style: GoogleFonts.inter(
-                              color: Colors.white,
+                              color: _isDarkMode ? Colors.white : pViolet,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           Text(
                             announcement.$2,
                             style: GoogleFonts.inter(
-                              color: Colors.white54,
+                              color: _isDarkMode ? Colors.white : pViolet54,
                               fontSize: 12,
                             ),
                           ),
@@ -277,7 +308,7 @@ class AdminPanelContent extends StatelessWidget {
           decoration: BoxDecoration(
             color: surfaceDark,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white10),
+            border: Border.all(color: _isDarkMode ? Colors.white : pViolet10),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,7 +316,7 @@ class AdminPanelContent extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(LucideIcons.barChart3, color: color, size: 20),
@@ -302,7 +333,7 @@ class AdminPanelContent extends StatelessWidget {
               Text(
                 label,
                 style: GoogleFonts.inter(
-                  color: Colors.white54,
+                  color: _isDarkMode ? Colors.white : pViolet54,
                   fontSize: 12,
                 ),
               ),
@@ -337,7 +368,7 @@ class AdminPanelContent extends StatelessWidget {
       decoration: BoxDecoration(
         color: surfaceDark,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: _isDarkMode ? Colors.white : pViolet10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,7 +376,7 @@ class AdminPanelContent extends StatelessWidget {
           Text(
             'Semester: 2nd Semester SY 2025-2026',
             style: GoogleFonts.inter(
-              color: Colors.white,
+              color: _isDarkMode ? Colors.white : pViolet,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -362,17 +393,17 @@ class AdminPanelContent extends StatelessWidget {
                 leading: Icon(LucideIcons.bookOpen, color: aViolet),
                 title: Text(
                   load.$1,
-                  style: GoogleFonts.inter(color: Colors.white),
+                  style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet),
                 ),
                 subtitle: Text(
                   load.$2,
-                  style: GoogleFonts.inter(color: Colors.white54),
+                  style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet54),
                 ),
                 trailing: Icon(
                   load.$3
                       ? LucideIcons.checkCircle2
                       : LucideIcons.circle,
-                  color: load.$3 ? success : Colors.white54,
+                  color: load.$3 ? success : _isDarkMode ? Colors.white : pViolet54,
                 ),
               ),
             );
@@ -388,9 +419,9 @@ class AdminPanelContent extends StatelessWidget {
       decoration: BoxDecoration(
         color: surfaceDark,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: _isDarkMode ? Colors.white : pViolet10),
       ),
-      child: const RequestReceiver(),
+      child: RequestReceiver(isDarkMode: _isDarkMode),
     );
   }
 
@@ -405,7 +436,7 @@ class AdminPanelContent extends StatelessWidget {
           Text(
             "Grade Recording",
             style: GoogleFonts.inter(
-              color: Colors.white,
+              color: _isDarkMode ? Colors.white : pViolet,
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
@@ -417,7 +448,7 @@ class AdminPanelContent extends StatelessWidget {
             decoration: BoxDecoration(
               color: surfaceDark,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white10),
+              border: Border.all(color: _isDarkMode ? Colors.white : pViolet10),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -428,14 +459,14 @@ class AdminPanelContent extends StatelessWidget {
                     Text(
                       'Grade Submissions Status',
                       style: GoogleFonts.inter(
-                        color: Colors.white,
+                        color: _isDarkMode ? Colors.white : pViolet,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: success.withOpacity(0.2),
+                        color: success.withValues(alpha:0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -455,7 +486,7 @@ class AdminPanelContent extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: 0.85,
                     minHeight: 12,
-                    backgroundColor: Colors.white.withOpacity(0.1),
+                    backgroundColor: _isDarkMode ? Colors.white : pViolet.withValues(alpha:0.1),
                     valueColor: const AlwaysStoppedAnimation(success),
                   ),
                 ),
@@ -482,7 +513,7 @@ class AdminPanelContent extends StatelessWidget {
                         const SizedBox(width: 12),
                         Text(
                           subject,
-                          style: GoogleFonts.inter(color: Colors.white70),
+                          style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet70),
                         ),
                       ],
                     ),
@@ -550,7 +581,7 @@ class AdminPanelContent extends StatelessWidget {
           decoration: BoxDecoration(
             color: surfaceDark,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white10),
+            border: Border.all(color: _isDarkMode ? Colors.white : pViolet10),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -558,7 +589,7 @@ class AdminPanelContent extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(LucideIcons.barChart3, color: color, size: 20),
@@ -575,7 +606,7 @@ class AdminPanelContent extends StatelessWidget {
               Text(
                 label,
                 style: GoogleFonts.inter(
-                  color: Colors.white54,
+                  color: _isDarkMode ? Colors.white : pViolet54,
                   fontSize: 12,
                 ),
               ),
@@ -607,7 +638,7 @@ class AdminPanelContent extends StatelessWidget {
       decoration: BoxDecoration(
         color: surfaceDark,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: _isDarkMode ? Colors.white : pViolet10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -618,13 +649,13 @@ class AdminPanelContent extends StatelessWidget {
                 child: Text(
                   'Applications',
                   style: GoogleFonts.inter(
-                    color: Colors.white,
+                    color: _isDarkMode ? Colors.white : pViolet,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
               IconButton(
-                icon: const Icon(LucideIcons.search, color: Colors.white60),
+                icon: Icon(LucideIcons.search, color: _isDarkMode ? Colors.white : pViolet60),
                 onPressed: () async {
                   await showSearch(
                     context: context,
@@ -653,7 +684,7 @@ class AdminPanelContent extends StatelessWidget {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white12,
+                      color: _isDarkMode ? Colors.white : pViolet12,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: ListTile(
@@ -661,18 +692,18 @@ class AdminPanelContent extends StatelessWidget {
                         backgroundColor: aViolet,
                         child: Text(
                           s['name']!.split(' ').first[0],
-                          style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      title: Text(s['name']!, style: GoogleFonts.inter(color: Colors.white)),
-                      subtitle: Text(s['program']!, style: GoogleFonts.inter(color: Colors.white54)),
+                      title: Text(s['name']!, style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet)),
+                      subtitle: Text(s['program']!, style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet54)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.15),
+                              color: statusColor.withValues(alpha:0.15),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Text(status.toUpperCase(), style: GoogleFonts.inter(color: statusColor, fontWeight: FontWeight.w700, fontSize: 12)),
@@ -705,7 +736,7 @@ class AdminPanelContent extends StatelessWidget {
       decoration: BoxDecoration(
         color: surfaceDark,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: _isDarkMode ? Colors.white : pViolet10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -713,7 +744,7 @@ class AdminPanelContent extends StatelessWidget {
           Text(
             'Monthly Financial Summary',
             style: GoogleFonts.inter(
-              color: Colors.white,
+              color: _isDarkMode ? Colors.white : pViolet,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -735,7 +766,7 @@ class AdminPanelContent extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [aViolet, aViolet.withOpacity(0.3)],
+                          colors: [aViolet, aViolet.withValues(alpha:0.3)],
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -745,7 +776,7 @@ class AdminPanelContent extends StatelessWidget {
                       ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: Colors.white54,
+                        color: _isDarkMode ? Colors.white : pViolet54,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -765,12 +796,12 @@ class AdminPanelContent extends StatelessWidget {
       decoration: BoxDecoration(
         color: surfaceDark,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: _isDarkMode ? Colors.white : pViolet10),
       ),
       child: Center(
         child: Text(
           'Panel not implemented yet',
-          style: GoogleFonts.inter(color: Colors.white70),
+          style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet70),
         ),
       ),
     );
@@ -778,7 +809,8 @@ class AdminPanelContent extends StatelessWidget {
 }
 
 class OfficeAdminPanel extends StatefulWidget {
-  const OfficeAdminPanel({super.key});
+  const OfficeAdminPanel({super.key, this.isDarkMode = true});
+  final bool isDarkMode;
 
   @override
   State<OfficeAdminPanel> createState() => _OfficeAdminPanelState();
@@ -786,6 +818,24 @@ class OfficeAdminPanel extends StatefulWidget {
 
 class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
   final OfficeRequestService _service = OfficeRequestService();
+  
+  // Theme colors for this panel class
+  static const Color pViolet = Color(0xFF2E1065);
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color surfaceDark = Color(0xFF1E1B4B);
+  static const Color success = Color(0xFF69F0AE);
+  static const Color pViolet70 = Color(0x702E1065);
+  static const Color pViolet38 = Color(0x602E1065);
+  static const Color pViolet10 = Color(0x1A2E1065);
+  static const Color lCard = Color(0xFFFFFFFF);
+  
+  bool _isDarkMode = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _isDarkMode = widget.isDarkMode;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -793,8 +843,8 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
     // (Details, Approve, Reject, Archive) are available on each request card.
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: AdminPanelContent.surfaceDark, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
-      child: const RequestReceiver(),
+      decoration: BoxDecoration(color: surfaceDark, borderRadius: BorderRadius.circular(20), border: Border.all(color: _isDarkMode ? Colors.white : pViolet10)),
+      child: RequestReceiver(isDarkMode: _isDarkMode),
     );
   }
 
@@ -806,7 +856,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
         valueListenable: _service.notifier,
         builder: (context, list, _) {
           final pending = list.where((r) => r.status == 'pending').toList();
-          if (pending.isEmpty) return const Text('No pending requests.', style: TextStyle(color: Colors.white70));
+          if (pending.isEmpty) return Text('No pending requests.', style: TextStyle(color: _isDarkMode ? Colors.white : pViolet70));
           return ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -816,18 +866,18 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
               final r = pending[i];
               return Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AdminPanelContent.aViolet.withOpacity(0.04), borderRadius: BorderRadius.circular(10), border: Border.all(color: AdminPanelContent.aViolet.withOpacity(0.08))),
+                decoration: BoxDecoration(color: aViolet.withValues(alpha:0.04), borderRadius: BorderRadius.circular(10), border: Border.all(color: aViolet.withValues(alpha:0.08))),
                 child: Row(
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${r.office.toUpperCase()} - ${r.requestType}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                          Text('${r.office.toUpperCase()} - ${r.requestType}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 6),
-                          Text(r.details, style: GoogleFonts.inter(color: Colors.white70)),
+                          Text(r.details, style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet70)),
                           const SizedBox(height: 6),
-                          Text('Submitted: ${r.createdAt}', style: GoogleFonts.inter(color: Colors.white38, fontSize: 11)),
+                          Text('Submitted: ${r.createdAt}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet38, fontSize: 11)),
                         ],
                       ),
                     ),
@@ -835,19 +885,19 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
                       children: [
                         ElevatedButton(
                           onPressed: () => _service.approve(r.id),
-                          style: ElevatedButton.styleFrom(backgroundColor: AdminPanelContent.success),
+                          style: ElevatedButton.styleFrom(backgroundColor: success),
                           child: const Text('Approve'),
                         ),
                         const SizedBox(height: 8),
                         OutlinedButton(
                           onPressed: () => _service.reject(r.id),
-                          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)),
+                          style: OutlinedButton.styleFrom(side: BorderSide(color: _isDarkMode ? Colors.white : pViolet10)),
                           child: const Text('Reject'),
                         ),
                         const SizedBox(height: 8),
                         OutlinedButton(
                           onPressed: () => _showDetailsDialog(context, r),
-                          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)),
+                          style: OutlinedButton.styleFrom(side: BorderSide(color: _isDarkMode ? Colors.white : pViolet10)),
                           child: const Text('View'),
                         ),
                       ],
@@ -863,13 +913,18 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
   }
 
   Widget _buildUpdateTab() {
+    // Theme-aware colors for this method
+    final cardColor = _isDarkMode ? surfaceDark : lCard;
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final subTextColor = _isDarkMode ? Colors.white70 : pViolet70;
+    
     return Container(
       key: const ValueKey('update'),
       child: ValueListenableBuilder<List<OfficeRequest>>(
         valueListenable: _service.notifier,
         builder: (context, list, _) {
           final items = list.where((r) => r.status != 'archived').toList();
-          if (items.isEmpty) return const Text('No records to update.', style: TextStyle(color: Colors.white70));
+          if (items.isEmpty) return Text('No records to update.', style: GoogleFonts.inter(color: subTextColor));
           return ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -879,16 +934,16 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
               final r = items[i];
               return Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AdminPanelContent.aViolet.withOpacity(0.04), borderRadius: BorderRadius.circular(10), border: Border.all(color: AdminPanelContent.aViolet.withOpacity(0.08))),
+                decoration: BoxDecoration(color: aViolet.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(10), border: Border.all(color: aViolet.withValues(alpha: 0.08))),
                 child: Row(
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${r.office.toUpperCase()} - ${r.requestType}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                          Text('${r.office.toUpperCase()} - ${r.requestType}', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 6),
-                          Text(r.details, style: GoogleFonts.inter(color: Colors.white70)),
+                          Text(r.details, style: GoogleFonts.inter(color: subTextColor)),
                         ],
                       ),
                     ),
@@ -896,13 +951,13 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
                       children: [
                         ElevatedButton(
                           onPressed: () => _showEditDialog(context, r),
-                          style: ElevatedButton.styleFrom(backgroundColor: AdminPanelContent.aViolet),
+                          style: ElevatedButton.styleFrom(backgroundColor: aViolet),
                           child: const Text('Edit'),
                         ),
                         const SizedBox(height: 8),
                         OutlinedButton(
                           onPressed: () => _service.archive(r.id),
-                          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)),
+                          style: OutlinedButton.styleFrom(side: BorderSide(color: _isDarkMode ? Colors.white : pViolet10)),
                           child: const Text('Archive'),
                         ),
                       ],
@@ -924,7 +979,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
         valueListenable: _service.notifier,
         builder: (context, list, _) {
           final items = list.where((r) => r.status == 'archived').toList();
-          if (items.isEmpty) return const Text('No archived items.', style: TextStyle(color: Colors.white70));
+          if (items.isEmpty) return Text('No archived items.', style: TextStyle(color: _isDarkMode ? Colors.white : pViolet70));
           return ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -934,16 +989,16 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
               final r = items[i];
               return Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AdminPanelContent.aViolet.withOpacity(0.04), borderRadius: BorderRadius.circular(10), border: Border.all(color: AdminPanelContent.aViolet.withOpacity(0.08))),
+                decoration: BoxDecoration(color: aViolet.withValues(alpha:0.04), borderRadius: BorderRadius.circular(10), border: Border.all(color: aViolet.withValues(alpha:0.08))),
                 child: Row(
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${r.office.toUpperCase()} - ${r.requestType}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                          Text('${r.office.toUpperCase()} - ${r.requestType}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 6),
-                          Text(r.details, style: GoogleFonts.inter(color: Colors.white70)),
+                          Text(r.details, style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet70)),
                         ],
                       ),
                     ),
@@ -951,7 +1006,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
                       children: [
                         ElevatedButton(
                           onPressed: () => _service.restore(r.id),
-                          style: ElevatedButton.styleFrom(backgroundColor: AdminPanelContent.success),
+                          style: ElevatedButton.styleFrom(backgroundColor: success),
                           child: const Text('Restore'),
                         ),
                       ],
@@ -970,9 +1025,9 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
     showDialog(
       context: ctx,
       builder: (c) => AlertDialog(
-        backgroundColor: AdminPanelContent.surfaceDark,
-        title: Text('${r.office.toUpperCase()} - ${r.requestType}', style: GoogleFonts.inter(color: Colors.white)),
-        content: SingleChildScrollView(child: Text(r.details, style: GoogleFonts.inter(color: Colors.white70))),
+        backgroundColor: surfaceDark,
+        title: Text('${r.office.toUpperCase()} - ${r.requestType}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet)),
+        content: SingleChildScrollView(child: Text(r.details, style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet70))),
         actions: [
           TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('Close')),
         ],
@@ -986,50 +1041,50 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
     showDialog(
       context: ctx,
       builder: (c) => AlertDialog(
-        backgroundColor: AdminPanelContent.surfaceDark,
-        title: Text('Edit Request', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: surfaceDark,
+        title: Text('Edit Request', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: typeCtl,
-              style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+              style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontSize: 14),
               decoration: InputDecoration(
                 labelText: 'Request Type',
-                labelStyle: GoogleFonts.inter(color: Colors.white70, fontSize: 13),
+                labelStyle: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet70, fontSize: 13),
                 filled: true,
-                  fillColor: AdminPanelContent.aViolet.withOpacity(0.08),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AdminPanelContent.aViolet, width: 2)),
+                  fillColor: aViolet.withValues(alpha:0.08),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white : pViolet.withValues(alpha:0.3))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white : pViolet.withValues(alpha:0.3))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: aViolet, width: 2)),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: detailsCtl,
               maxLines: 4,
-              style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+              style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontSize: 14),
               decoration: InputDecoration(
                 labelText: 'Details',
-                labelStyle: GoogleFonts.inter(color: Colors.white70, fontSize: 13),
+                labelStyle: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet70, fontSize: 13),
                 filled: true,
-                fillColor: AdminPanelContent.aViolet.withOpacity(0.08),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AdminPanelContent.aViolet, width: 2)),
+                fillColor: aViolet.withValues(alpha:0.08),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white : pViolet.withValues(alpha:0.3))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: _isDarkMode ? Colors.white : pViolet.withValues(alpha:0.3))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: aViolet, width: 2)),
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(c).pop(), child: Text('Cancel', style: GoogleFonts.inter(color: Colors.white70, fontWeight: FontWeight.w600))),
+          TextButton(onPressed: () => Navigator.of(c).pop(), child: Text('Cancel', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet70, fontWeight: FontWeight.w600))),
           ElevatedButton(
             onPressed: () {
               _service.updateRequest(r.id, requestType: typeCtl.text.trim(), details: detailsCtl.text.trim());
               Navigator.of(c).pop();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AdminPanelContent.aViolet),
-            child: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(backgroundColor: aViolet),
+            child: Text('Save', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -1039,6 +1094,15 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
 
 class _AdmissionsSearchDelegate extends SearchDelegate<Map<String, String>?> {
   final List<Map<String, String>> students;
+  
+  // Theme colors for this delegate class
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color pViolet = Color(0xFF2E1065);
+  static const Color pViolet54 = Color(0x8A2E1065);
+  static const Color tDark = Color(0xFF0F071D);
+  
+  // Use dark mode by default for search delegate
+  bool _isDarkMode = true;
 
   _AdmissionsSearchDelegate(this.students);
 
@@ -1076,7 +1140,7 @@ class _AdmissionsSearchDelegate extends SearchDelegate<Map<String, String>?> {
     if (results.isEmpty) {
       return Container(
         color: const Color(0xFF0F071D),
-        child: Center(child: Text('No results', style: GoogleFonts.inter(color: Colors.white54))),
+        child: Center(child: Text('No results', style: GoogleFonts.inter(color: Colors.white))),
       );
     }
 
@@ -1085,13 +1149,13 @@ class _AdmissionsSearchDelegate extends SearchDelegate<Map<String, String>?> {
       child: ListView.separated(
       padding: const EdgeInsets.all(12),
       itemCount: results.length,
-        separatorBuilder: (_, __) => const Divider(color: Colors.white10),
+        separatorBuilder: (_, __) => const Divider(color: Color(0x1A2E1065)), // pViolet with 10% opacity
         itemBuilder: (context, index) {
           final s = results[index];
           return ListTile(
-            leading: CircleAvatar(backgroundColor: AdminPanelContent.aViolet, child: Text(s['name']!.split(' ').first[0], style: GoogleFonts.inter(color: Colors.white))),
+            leading: CircleAvatar(backgroundColor: aViolet, child: Text(s['name']!.split(' ').first[0], style: GoogleFonts.inter(color: Colors.white))),
             title: Text(s['name']!, style: GoogleFonts.inter(color: Colors.white)),
-            subtitle: Text('${s['program']} • ${s['status']}', style: GoogleFonts.inter(color: Colors.white54)),
+            subtitle: Text('${s['program']} • ${s['status']}', style: GoogleFonts.inter(color: Colors.white70)),
             onTap: () => close(context, s),
           );
         },
@@ -1118,9 +1182,9 @@ class _AdmissionsSearchDelegate extends SearchDelegate<Map<String, String>?> {
         itemBuilder: (context, index) {
           final s = suggestions[index];
           return ListTile(
-            leading: CircleAvatar(backgroundColor: AdminPanelContent.aViolet, child: Text(s['name']!.split(' ').first[0], style: GoogleFonts.inter(color: Colors.white))),
-            title: Text(s['name']!, style: GoogleFonts.inter(color: Colors.white)),
-            subtitle: Text('${s['program']} • ${s['status']}', style: GoogleFonts.inter(color: Colors.white54)),
+            leading: CircleAvatar(backgroundColor: aViolet, child: Text(s['name']!.split(' ').first[0], style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet))),
+            title: Text(s['name']!, style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet)),
+            subtitle: Text('${s['program']} • ${s['status']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet54)),
             onTap: () => query = s['name']!,
           );
         },
