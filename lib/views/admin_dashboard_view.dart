@@ -329,7 +329,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             9,
             textColor,
             isDestructive: true,
-            onTap: () => widget.onLogout(),
+            onTap: () => _showLogoutConfirmation(),
           ),
           const SizedBox(height: 20),
         ],
@@ -349,6 +349,60 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           color: subTextColor.withOpacity(0.5),
           letterSpacing: 1.5,
         ),
+      ),
+    );
+  }
+
+  void _showLogoutConfirmation() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1033),
+        title: Row(
+          children: [
+            Icon(Icons.logout, color: Colors.redAccent, size: 24),
+            const SizedBox(width: 12),
+            Text('Confirm Logout', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to log out of the system?',
+              style: GoogleFonts.inter(color: Colors.white70, fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Any unsaved changes will be lost.',
+              style: GoogleFonts.inter(color: Colors.white54, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              backgroundColor: Colors.white10,
+            ),
+            child: Text('Cancel', style: GoogleFonts.inter(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx); // Close dialog
+              widget.onLogout(); // Perform logout
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: Text('Logout', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+        ],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
