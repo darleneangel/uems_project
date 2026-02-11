@@ -92,13 +92,13 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
       // create
       final newItem = {
         'id': _nextId++,
-        'title': name,
-        'description': '',
-        'name': name,
-        'department': department,
-        'email': email,
-        'employeeId': employeeId,
-        'password': password,
+        'title': title,
+        'description': desc,
+        'name': _nameController.text,
+        'department': _departmentController.text,
+        'email': _emailController.text,
+        'employeeId': _employeeIdController.text,
+        'password': _passwordController.text,
         'effectiveDate': _effectiveDate,
         'archived': false,
       };
@@ -109,12 +109,13 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
     } else {
       // update
       setState(() {
-        _editingItem!['name'] = name;
-        _editingItem!['title'] = name;
-        _editingItem!['department'] = department;
-        _editingItem!['email'] = email;
-        _editingItem!['employeeId'] = employeeId;
-        _editingItem!['password'] = password;
+        _editingItem!['name'] = _nameController.text;
+        _editingItem!['title'] = title;
+        _editingItem!['description'] = desc;
+        _editingItem!['department'] = _departmentController.text;
+        _editingItem!['email'] = _emailController.text;
+        _editingItem!['employeeId'] = _employeeIdController.text;
+        _editingItem!['password'] = _passwordController.text;
         _editingItem!['effectiveDate'] = _effectiveDate;
       });
       ScaffoldMessenger.of(

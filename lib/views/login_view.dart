@@ -10,6 +10,7 @@ import 'admission_dashboard_view.dart';
 import 'registrar_dashboard_view.dart';
 import '../components/program_chair_dashboard_view.dart';
 import '../components/teacher_dashboard_view.dart';
+import 'hr_dashboard_view.dart';
 
 class UEMSLoginPage extends StatefulWidget {
   const UEMSLoginPage({super.key});
@@ -127,6 +128,8 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       setState(() => _currentView = 'program_chair_dashboard');
     } else if (id == '333' && pass == '333') {
       setState(() => _currentView = 'teacher_dashboard');
+    } else if (id == '444' && pass == '444') {
+      setState(() => _currentView = 'hr_dashboard');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -187,6 +190,10 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         );
       case 'teacher_dashboard':
         return TeacherDashboardView(
+          onLogout: () => setState(() => _currentView = 'login'),
+        );
+      case 'hr_dashboard':
+        return HrDashboardView(
           onLogout: () => setState(() => _currentView = 'login'),
         );
       case 'login':
