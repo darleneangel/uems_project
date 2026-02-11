@@ -32,15 +32,16 @@ class OfficeRequest {
 
 class OfficeRequestService {
   OfficeRequestService._internal();
+  
+  static final ValueNotifier<List<OfficeRequest>> notifier = ValueNotifier([]);
+  static int _nextId = 1;
+
   static final OfficeRequestService _instance = OfficeRequestService._internal();
   factory OfficeRequestService() {
     // ensure demo data seeded on first access
     _instance._seedDemoData();
     return _instance;
   }
-
-  final ValueNotifier<List<OfficeRequest>> notifier = ValueNotifier([]);
-  int _nextId = 1;
 
   // Seed some demo data once for testing/development.
   // This helper is invoked from the singleton constructor area when first loaded.
@@ -87,7 +88,7 @@ class OfficeRequestService {
         requestType: 'Application Status Update',
         details: 'Congratulations to all Fall 2026 applicants! Your preliminary application review is now complete. Please log into your Student Portal by Friday, February 20th, to check for any missing \'Action Items.\'\n\nCommon missing documents include:\n• Final High School Transcripts\n• Letters of Recommendation\n• Proof of Residency\n\nFailure to submit these by the deadline may result in a delay in your admission decision.',
         createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-        status: 'pending',
+        status: 'archived',
         department: 'Undergraduate Admissions',
         priority: 'High',
         targetAudience: 'Prospective Students / Applicants',

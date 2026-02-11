@@ -76,6 +76,8 @@ class _ReportPanelState extends State<ReportPanel> {
 
     _importCtl = TextEditingController();
 
+    _isDarkMode = widget.isDarkMode;
+
     _seedDemoReports();
 
   }
@@ -246,15 +248,15 @@ class _ReportPanelState extends State<ReportPanel> {
 
       builder: (ctx) => AlertDialog(
 
-        backgroundColor: const Color(0xFF1E1033),
+        backgroundColor: _isDarkMode ? surfaceDark : lCard,
 
-        title: Text('Delete Report?', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+        title: Text('Delete Report?', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w700)),
 
-        content: Text('This action cannot be undone.', style: GoogleFonts.inter(color: Colors.white70)),
+        content: Text('This action cannot be undone.', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
 
         actions: [
 
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.inter(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54))),
 
           TextButton(
 
@@ -400,9 +402,9 @@ class _ReportPanelState extends State<ReportPanel> {
 
       builder: (ctx) => AlertDialog(
 
-        backgroundColor: const Color(0xFF1E1033),
+        backgroundColor: _isDarkMode ? surfaceDark : lCard,
 
-        title: Text('Export Reports as CSV', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+        title: Text('Export Reports as CSV', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w700)),
 
         content: SizedBox(
 
@@ -412,7 +414,7 @@ class _ReportPanelState extends State<ReportPanel> {
 
           child: SingleChildScrollView(
 
-            child: SelectableText(csv, style: GoogleFonts.inter(color: Colors.white70, fontSize: 11)),
+            child: SelectableText(csv, style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87, fontSize: 11)),
 
           ),
 
@@ -462,9 +464,9 @@ class _ReportPanelState extends State<ReportPanel> {
 
       builder: (ctx) => AlertDialog(
 
-        backgroundColor: const Color(0xFF1E1033),
+        backgroundColor: _isDarkMode ? surfaceDark : lCard,
 
-        title: Text('Import Reports from CSV', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
+        title: Text('Import Reports from CSV', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w700)),
 
         content: SizedBox(
 
@@ -480,13 +482,13 @@ class _ReportPanelState extends State<ReportPanel> {
 
             expands: true,
 
-            style: GoogleFonts.inter(color: Colors.white),
+            style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet),
 
             decoration: InputDecoration(
 
               hintText: 'Paste CSV data here',
 
-              hintStyle: GoogleFonts.inter(color: Colors.white30),
+              hintStyle: GoogleFonts.inter(color: _isDarkMode ? Colors.white30 : Colors.grey.shade500),
 
               filled: true,
 
@@ -524,7 +526,7 @@ class _ReportPanelState extends State<ReportPanel> {
 
           ),
 
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.inter(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54))),
 
         ],
 
@@ -578,7 +580,7 @@ class _ReportPanelState extends State<ReportPanel> {
 
       padding: const EdgeInsets.all(20),
 
-      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
 
       child: Column(
 
@@ -618,23 +620,23 @@ class _ReportPanelState extends State<ReportPanel> {
 
           const SizedBox(height: 16),
 
-          Text('Office: ${report['office']}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+          Text('Office: ${report['office']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w600)),
 
           const SizedBox(height: 8),
 
-          Text('Category: ${report['category']}', style: GoogleFonts.inter(color: Colors.white70)),
+          Text('Category: ${report['category']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
 
           const SizedBox(height: 12),
 
-          Text('Description:', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+          Text('Description:', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w600)),
 
           const SizedBox(height: 8),
 
-          Text(report['description'] ?? '', style: GoogleFonts.inter(color: Colors.white70, height: 1.5)),
+          Text(report['description'] ?? '', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87, height: 1.5)),
 
           const SizedBox(height: 12),
 
-          Text('Submitted: ${report['timestamp']}', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
+          Text('Submitted: ${report['timestamp']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54, fontSize: 12)),
 
         ],
 
@@ -690,7 +692,7 @@ class _ReportPanelState extends State<ReportPanel> {
 
             padding: const EdgeInsets.all(24),
 
-            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
+            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
 
             child: Column(
 
@@ -868,7 +870,7 @@ class _ReportPanelState extends State<ReportPanel> {
 
             padding: const EdgeInsets.all(24),
 
-            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
+            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
 
             child: Column(
 

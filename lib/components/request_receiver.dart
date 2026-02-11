@@ -46,6 +46,12 @@ class _RequestReceiverState extends State<RequestReceiver> {
   void initState() {
     super.initState();
     _isDarkMode = widget.isDarkMode;
+    _seedDemoRequests();
+  }
+
+  void _seedDemoRequests() {
+    // Demo data is automatically seeded when OfficeRequestService is instantiated
+    // No need to call _seedDemoData() here as it's private
   }
 
   List<OfficeRequest> _getFilteredRequests(List<OfficeRequest> allRequests) {
@@ -108,7 +114,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 Text(
                   'Office:',
                   style: GoogleFonts.inter(
-                    color: Colors.white70,
+                    color: dialogSubTextColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -116,13 +122,13 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 const SizedBox(height: 4),
                 Text(
                   officeInfo[request.office]?['name'] ?? request.office,
-                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+                  style: GoogleFonts.inter(color: dialogTextColor, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Department:',
                   style: GoogleFonts.inter(
-                    color: Colors.white70,
+                    color: dialogSubTextColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -161,7 +167,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 Text(
                   'Target Audience:',
                   style: GoogleFonts.inter(
-                    color: Colors.white70,
+                    color: dialogSubTextColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -169,13 +175,13 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 const SizedBox(height: 4),
                 Text(
                   request.targetAudience ?? 'N/A',
-                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+                  style: GoogleFonts.inter(color: dialogTextColor, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Proposed Announcement:',
                   style: GoogleFonts.inter(
-                    color: Colors.white70,
+                    color: dialogSubTextColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -184,9 +190,9 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: aViolet.withOpacity(0.08),
+                    color: _isDarkMode ? aViolet.withOpacity(0.08) : pViolet.withValues(alpha:0.05),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: aViolet.withOpacity(0.2)),
+                    border: Border.all(color: _isDarkMode ? aViolet.withOpacity(0.2) : pViolet.withValues(alpha:0.15)),
                   ),
                   child: Text(
                     request.proposedAnnouncement?.isNotEmpty == true
@@ -194,7 +200,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                         : (request.details.isNotEmpty
                             ? request.details
                             : 'No announcement content'),
-                    style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, height: 1.5),
+                    style: GoogleFonts.inter(color: dialogSubTextColor, fontSize: 13, height: 1.5),
                   ),
                 ),
               ] else ...[
@@ -202,7 +208,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 Text(
                   'Office:',
                   style: GoogleFonts.inter(
-                    color: Colors.white70,
+                    color: dialogSubTextColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -210,7 +216,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 const SizedBox(height: 4),
                 Text(
                   officeInfo[request.office]?['name'] ?? request.office,
-                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+                  style: GoogleFonts.inter(color: dialogTextColor, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -330,7 +336,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
     final textColor = _isDarkMode ? Colors.white : pViolet;
     final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
     final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
-    final fillColor = _isDarkMode ? aViolet.withOpacity(0.02) : Colors.grey.shade50;
+    final fillColor = Colors.white;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,12 +366,13 @@ class _RequestReceiverState extends State<RequestReceiver> {
                     ),
                     decoration: BoxDecoration(
                       color: _selectedOfficeFilter == 'all'
-                          ? aViolet.withOpacity(0.3)
-                          : aViolet.withOpacity(0.04),
+                          ? (_isDarkMode ? aViolet.withOpacity(0.3) : pViolet.withValues(alpha:0.15))
+                          : (_isDarkMode ? aViolet.withOpacity(0.04) : Colors.grey.shade100),
                       border: Border.all(
                         color: _selectedOfficeFilter == 'all'
-                            ? aViolet
-                            : aViolet.withOpacity(0.12),
+                            ? (_isDarkMode ? aViolet : pViolet)
+                            : (_isDarkMode ? aViolet.withOpacity(0.12) : Colors.grey.shade300),
+                        width: _selectedOfficeFilter == 'all' ? 1.5 : 1.0,
                       ),
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -377,7 +384,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                             ? FontWeight.bold
                             : FontWeight.w500,
                         color: _selectedOfficeFilter == 'all'
-                            ? aViolet
+                            ? (_isDarkMode ? Colors.white : pViolet)
                             : subTextColor,
                       ),
                     ),
@@ -400,9 +407,12 @@ class _RequestReceiverState extends State<RequestReceiver> {
                       decoration: BoxDecoration(
                         color: isSelected
                             ? info['color'].withOpacity(0.2)
-                            : aViolet.withOpacity(0.04),
+                            : (_isDarkMode ? aViolet.withOpacity(0.04) : Colors.grey.shade100),
                         border: Border.all(
-                          color: isSelected ? info['color'] : aViolet.withOpacity(0.12),
+                          color: isSelected 
+                              ? info['color'] 
+                              : (_isDarkMode ? aViolet.withOpacity(0.12) : Colors.grey.shade300),
+                          width: isSelected ? 1.5 : 1.0,
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -441,7 +451,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
         const SizedBox(height: 24),
         // Requests List
         ValueListenableBuilder<List<OfficeRequest>>(
-          valueListenable: _service.notifier,
+          valueListenable: OfficeRequestService.notifier,
           builder: (context, allRequests, _) {
             final filtered = _getFilteredRequests(allRequests);
 
@@ -449,9 +459,12 @@ class _RequestReceiverState extends State<RequestReceiver> {
               return Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: aViolet.withOpacity(0.02),
+                  color: _isDarkMode ? aViolet.withOpacity(0.02) : Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: aViolet.withOpacity(0.08)),
+                  border: Border.all(
+                    color: _isDarkMode ? aViolet.withOpacity(0.08) : Colors.grey.shade200,
+                    width: 1.0,
+                  ),
                 ),
                 child: Center(
                   child: Column(
@@ -629,7 +642,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                             ),
                             label: const Text('Details'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: aViolet,
+                              backgroundColor: _isDarkMode ? aViolet : pViolet,
                               foregroundColor: Colors.white,
                             ),
                           ),

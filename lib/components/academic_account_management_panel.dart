@@ -233,7 +233,7 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
   Widget _buildAccountDetails(Map<String, String> account) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.black12, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -445,7 +445,7 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
                                     return Container(
                                       margin: const EdgeInsets.only(bottom: 12),
                                       padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.black12, borderRadius: BorderRadius.circular(8)),
+                                      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.grey.shade50, borderRadius: BorderRadius.circular(8)),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [

@@ -210,7 +210,7 @@ class _AdministrativeAccountManagementPanelState extends State<AdministrativeAcc
   Widget _buildAccountDetails(Map<String, String> account) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.black12, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -283,7 +283,7 @@ class _AdministrativeAccountManagementPanelState extends State<AdministrativeAcc
                             hintText: 'e.g., John Smith',
                             hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: _isDarkMode ? Colors.white10 : Colors.black12,
+                            fillColor: Colors.white,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
@@ -297,7 +297,7 @@ class _AdministrativeAccountManagementPanelState extends State<AdministrativeAcc
                             hintText: 'e.g., john.smith@uems.edu',
                             hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: _isDarkMode ? Colors.white10 : Colors.black12,
+                            fillColor: Colors.white,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
@@ -311,7 +311,7 @@ class _AdministrativeAccountManagementPanelState extends State<AdministrativeAcc
                             hintText: 'e.g., EMP001',
                             hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: _isDarkMode ? Colors.white10 : Colors.black12,
+                            fillColor: Colors.white,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
@@ -326,7 +326,7 @@ class _AdministrativeAccountManagementPanelState extends State<AdministrativeAcc
                             hintText: 'Select Department',
                             hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: _isDarkMode ? Colors.white10 : Colors.black12,
+                            fillColor: Colors.white,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                           style: TextStyle(color: textColor),
@@ -342,7 +342,7 @@ class _AdministrativeAccountManagementPanelState extends State<AdministrativeAcc
                             hintText: 'e.g., +1-555-0101',
                             hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: _isDarkMode ? Colors.white10 : Colors.black12,
+                            fillColor: Colors.white,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                         ),
@@ -357,7 +357,7 @@ class _AdministrativeAccountManagementPanelState extends State<AdministrativeAcc
                             hintText: 'Select Role',
                             hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
-                            fillColor: _isDarkMode ? Colors.white10 : Colors.black12,
+                            fillColor: Colors.white,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
                           ),
                           style: TextStyle(color: textColor),
@@ -405,7 +405,7 @@ class _AdministrativeAccountManagementPanelState extends State<AdministrativeAcc
                                     return Container(
                                       margin: const EdgeInsets.only(bottom: 12),
                                       padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.black12, borderRadius: BorderRadius.circular(8)),
+                                      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.grey.shade50, borderRadius: BorderRadius.circular(8)),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [

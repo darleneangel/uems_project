@@ -42,7 +42,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
   bool _isLoading = false;
   bool _isPasswordVisible = false;
 
@@ -242,7 +241,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            accentViolet.withOpacity(0.15),
+                            accentViolet.withOpacity(0.1),
                             Colors.transparent,
                           ],
                         ),
@@ -259,10 +258,15 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            secondaryViolet.withOpacity(0.1),
+                            accentViolet.withOpacity(0.15),
                             Colors.transparent,
                           ],
                         ),
+                      ),
+                      child: const Icon(
+                        LucideIcons.graduationCap,
+                        color: Colors.white,
+                        size: 28,
                       ),
                     ),
                   ),
