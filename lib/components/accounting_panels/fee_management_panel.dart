@@ -32,6 +32,38 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
   double _customAmount = 0.0;
   String _paymentMethod = "Cash";
 
+  // Scholarship State
+  final TextEditingController _scholarshipSearchController =
+      TextEditingController();
+  String _scholarshipFilter = "All";
+  final List<Map<String, dynamic>> _availableScholarships = [
+    {
+      "name": "Academic Scholar",
+      "discount": 0.20,
+      "type": "Merit",
+    },
+    {
+      "name": "Dean's Lister",
+      "discount": 0.30,
+      "type": "Merit",
+    },
+    {
+      "name": "Athletic Grant",
+      "discount": 0.25,
+      "type": "Athletics",
+    },
+    {
+      "name": "Financial Aid",
+      "discount": 0.35,
+      "type": "Needs-Based",
+    },
+    {
+      "name": "Staff Dependent",
+      "discount": 0.15,
+      "type": "Special",
+    },
+  ];
+
   // Cart State for "Checkout" style payment
   final List<Map<String, dynamic>> _cartItems = [];
   double get _cartTotal => _cartItems.fold(
@@ -543,38 +575,38 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
             ],
           ),
           const SizedBox(height: 20),
-          Expanded(
-            child: ListView(
-              children: _studentDb.entries
-                  .where((entry) {
-                    final s = entry.value;
-                    final q = _searchController.text.toLowerCase();
-                    return s['name'].toLowerCase().contains(q) ||
-                        s['id'].contains(q);
-                  })
-                  .map((entry) {
-                    final s = entry.value;
-                    Color statusColor = s['status'] == 'Overdue'
-                        ? Colors.redAccent
-                        : (s['status'] == 'Cleared'
-                              ? const Color(0xFF69F0AE)
-                              : Colors.orangeAccent);
-                    return InkWell(
-                      onTap: () =>
-                          setState(() => _selectedStudentId = entry.key),
-                      child: _studentRow(
-                        s['name'],
-                        s['section'],
-                        "₱${s['balance'].toStringAsFixed(2)}",
-                        s['status'],
-                        statusColor,
-                        textColor,
-                        subTextColor,
-                      ),
-                    );
-                  })
-                  .toList(),
-            ),
+          ListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: _studentDb.entries
+                .where((entry) {
+                  final s = entry.value;
+                  final q = _searchController.text.toLowerCase();
+                  return s['name'].toLowerCase().contains(q) ||
+                      s['id'].contains(q);
+                })
+                .map((entry) {
+                  final s = entry.value;
+                  Color statusColor = s['status'] == 'Overdue'
+                      ? Colors.redAccent
+                      : (s['status'] == 'Cleared'
+                            ? const Color(0xFF69F0AE)
+                            : Colors.orangeAccent);
+                  return InkWell(
+                    onTap: () =>
+                        setState(() => _selectedStudentId = entry.key),
+                    child: _studentRow(
+                      s['name'],
+                      s['section'],
+                      "₱${s['balance'].toStringAsFixed(2)}",
+                      s['status'],
+                      statusColor,
+                      textColor,
+                      subTextColor,
+                    ),
+                  );
+                })
+                .toList(),
           ),
         ],
       ),
@@ -674,14 +706,12 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
             ],
           ),
           const SizedBox(height: 16),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Table(
-                border: TableBorder(
-                  horizontalInside: BorderSide(
-                    color: subTextColor.withOpacity(0.1),
-                  ),
-                ),
+          Table(
+            border: TableBorder(
+              horizontalInside: BorderSide(
+                color: subTextColor.withOpacity(0.1),
+              ),
+            ),
                 columnWidths: const {
                   0: FlexColumnWidth(1),
                   1: FlexColumnWidth(3),
@@ -772,8 +802,6 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                   ),
                 ],
               ),
-            ),
-          ),
           const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -875,31 +903,29 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
         const SizedBox(height: 20),
         
         // Main Content Row
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // LEFT: Payment Selection Panel
-              Expanded(
-                flex: 3,
-                child: _buildEnhancedPaymentEntryForm(
-                  cardColor,
-                  textColor,
-                  subTextColor,
-                ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // LEFT: Payment Selection Panel
+            Expanded(
+              flex: 3,
+              child: _buildEnhancedPaymentEntryForm(
+                cardColor,
+                textColor,
+                subTextColor,
               ),
-              const SizedBox(width: 20),
-              // RIGHT: Transaction Summary Panel
-              Expanded(
-                flex: 2,
-                child: _buildEnhancedTransactionSummary(
-                  cardColor,
-                  textColor,
-                  subTextColor,
-                ),
+            ),
+            const SizedBox(width: 20),
+            // RIGHT: Transaction Summary Panel
+            Expanded(
+              flex: 2,
+              child: _buildEnhancedTransactionSummary(
+                cardColor,
+                textColor,
+                subTextColor,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );
@@ -1234,7 +1260,48 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
             ),
           ],
 
-          const Spacer(),
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 16),
+
+          // Payment Method Selection
+          _buildEnhancedSectionHeader("Payment Method", LucideIcons.creditCard),
+          const SizedBox(height: 8),
+          _buildEnhancedDropdown(
+            value: _paymentMethod,
+            items: ["Cash", "GCash", "Online Banking", "Bank Transfer", "Credit Card"],
+            onChanged: (val) => setState(() => _paymentMethod = val!),
+            textColor: textColor,
+            cardColor: cardColor,
+          ),
+          if (_paymentMethod != "Cash") ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blueAccent.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.qrCode, color: Colors.blueAccent, size: 14),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      "QR Code will be generated for payment verification",
+                      style: GoogleFonts.inter(
+                        color: Colors.blueAccent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 24),
           
           // Add to Cart Button
           SizedBox(
@@ -1577,18 +1644,34 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _cartItems.isNotEmpty ? () {
-                if (_paymentMethod == "QR Code") {
+                if (_paymentMethod == "GCash" || 
+                    _paymentMethod == "Online Banking" || 
+                    _paymentMethod == "Bank Transfer") {
                   _showQRPaymentDialog(context, cardColor, textColor);
                 } else {
                   _processCheckout();
                 }
               } : null,
               icon: Icon(
-                _paymentMethod == "QR Code" ? LucideIcons.qrCode : LucideIcons.creditCard,
+                (_paymentMethod == "GCash" || 
+                 _paymentMethod == "Online Banking" || 
+                 _paymentMethod == "Bank Transfer") 
+                    ? LucideIcons.qrCode 
+                    : LucideIcons.creditCard,
               ),
-              label: Text(_paymentMethod == "QR Code" ? "GENERATE QR CODE" : "MARK AS PAID"),
+              label: Text(
+                (_paymentMethod == "GCash" || 
+                 _paymentMethod == "Online Banking" || 
+                 _paymentMethod == "Bank Transfer")
+                    ? "GENERATE QR CODE" 
+                    : "PROCESS PAYMENT"
+              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _paymentMethod == "QR Code" ? Colors.blueAccent : Colors.greenAccent,
+                backgroundColor: (_paymentMethod == "GCash" || 
+                                  _paymentMethod == "Online Banking" || 
+                                  _paymentMethod == "Bank Transfer")
+                    ? Colors.blueAccent 
+                    : Colors.greenAccent,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -1711,15 +1794,654 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
       },
     );
   }
-    Widget _buildScholarshipsList(
+
+  String _normalizeScholarshipName(String value) {
+    return value.replaceAll(RegExp(r"\s*\(.*\)$"), "").trim();
+  }
+
+  bool _hasScholarship(Map<String, dynamic> student) {
+    final scholarship = (student['scholarship'] ?? '').toString().trim();
+    if (scholarship.isEmpty) return false;
+    return _normalizeScholarshipName(scholarship).toLowerCase() != 'none';
+  }
+
+  Color _getScholarshipTypeColor(String type) {
+    switch (type) {
+      case "Merit":
+        return const Color(0xFF8B5CF6);
+      case "Athletics":
+        return Colors.orangeAccent;
+      case "Needs-Based":
+        return Colors.greenAccent;
+      case "Special":
+        return Colors.blueAccent;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  List<MapEntry<String, dynamic>> _filteredScholarshipStudents() {
+    final query = _scholarshipSearchController.text.toLowerCase();
+    return _studentDb.entries.where((entry) {
+      final student = entry.value as Map<String, dynamic>;
+      final matchesQuery =
+          student['name'].toLowerCase().contains(query) ||
+          student['id'].toLowerCase().contains(query) ||
+          student['course'].toLowerCase().contains(query);
+      if (!matchesQuery) return false;
+
+      if (_scholarshipFilter == "All") return true;
+      if (_scholarshipFilter == "None") return !_hasScholarship(student);
+
+      final scholarshipName =
+          _normalizeScholarshipName((student['scholarship'] ?? '').toString())
+              .toLowerCase();
+      final scholarship = _availableScholarships.firstWhere(
+        (s) => s['name'].toString().toLowerCase() == scholarshipName,
+        orElse: () => {},
+      );
+      return scholarship.isNotEmpty && scholarship['type'] == _scholarshipFilter;
+    }).toList();
+  }
+
+  void _applyScholarshipToStudent(
+    String studentId,
+    Map<String, dynamic> scholarship,
+  ) {
+    final student = _studentDb[studentId];
+    if (student == null) return;
+
+    final discountRate = (scholarship['discount'] as num).toDouble();
+    final currentBalance = (student['balance'] as num).toDouble();
+    final discountAmount = currentBalance * discountRate;
+    final newBalance = currentBalance - discountAmount;
+
+    setState(() {
+      student['scholarship'] = scholarship['name'];
+      if (discountAmount > 0) {
+        student['balance'] = newBalance > 0 ? newBalance : 0.0;
+        student['ledger'].add({
+          "date": DateTime.now().toString().split(' ')[0],
+          "desc":
+              "Scholarship Discount - ${scholarship['name']} (${(discountRate * 100).round()}%)",
+          "debit": 0.0,
+          "credit": discountAmount,
+        });
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          "Scholarship applied to ${student['name']}.",
+        ),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _removeScholarshipFromStudent(String studentId) {
+    final student = _studentDb[studentId];
+    if (student == null) return;
+
+    setState(() {
+      student['scholarship'] = "None";
+      student['ledger'].add({
+        "date": DateTime.now().toString().split(' ')[0],
+        "desc": "Scholarship Removed",
+        "debit": 0.0,
+        "credit": 0.0,
+      });
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Scholarship removed from ${student['name']}.") ,
+        backgroundColor: Colors.orangeAccent,
+      ),
+    );
+  }
+
+  void _showAssignScholarshipDialog({String? studentId}) {
+    String selectedStudentId =
+        studentId ?? _studentDb.keys.first.toString();
+    Map<String, dynamic> selectedScholarship = _availableScholarships.first;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final student = _studentDb[selectedStudentId];
+          return AlertDialog(
+            backgroundColor: widget.isDarkMode
+                ? const Color(0xFF1E1B4B)
+                : Colors.white,
+            title: Text(
+              "Assign Scholarship",
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: widget.isDarkMode ? Colors.white : const Color(0xFF2E1065),
+              ),
+            ),
+            content: SizedBox(
+              width: 360,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Select Student",
+                    style: TextStyle(
+                      color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: selectedStudentId,
+                    items: _studentDb.entries
+                        .map(
+                          (entry) => DropdownMenuItem<String>(
+                            value: entry.key,
+                            child: Text("${entry.value['name']} • ${entry.key}"),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) {
+                      if (val == null) return;
+                      setDialogState(() => selectedStudentId = val);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Select Scholarship",
+                    style: TextStyle(
+                      color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: selectedScholarship['name'] as String,
+                    items: _availableScholarships
+                        .map(
+                          (scholarship) => DropdownMenuItem<String>(
+                            value: scholarship['name'] as String,
+                            child: Text(
+                              "${scholarship['name']} • ${((scholarship['discount'] as num) * 100).round()}%",
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) {
+                      if (val == null) return;
+                      setDialogState(() {
+                        selectedScholarship = _availableScholarships
+                            .firstWhere((s) => s['name'] == val);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  if (student != null)
+                    Text(
+                      "Current Balance: ₱${(student['balance'] as num).toStringAsFixed(2)}",
+                      style: TextStyle(
+                        color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _applyScholarshipToStudent(
+                    selectedStudentId,
+                    selectedScholarship,
+                  );
+                },
+                child: const Text("Assign"),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showCreateScholarshipDialog() {
+    final nameController = TextEditingController();
+    final discountController = TextEditingController();
+    String selectedType = "Merit";
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: widget.isDarkMode
+                ? const Color(0xFF1E1B4B)
+                : Colors.white,
+            title: Text(
+              "Create Scholarship",
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: widget.isDarkMode ? Colors.white : const Color(0xFF2E1065),
+              ),
+            ),
+            content: SizedBox(
+              width: 360,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: "Scholarship Name",
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: discountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "Discount Percentage",
+                      suffixText: "%",
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedType,
+                    items: const [
+                      DropdownMenuItem(value: "Merit", child: Text("Merit")),
+                      DropdownMenuItem(
+                        value: "Athletics",
+                        child: Text("Athletics"),
+                      ),
+                      DropdownMenuItem(
+                        value: "Needs-Based",
+                        child: Text("Needs-Based"),
+                      ),
+                      DropdownMenuItem(value: "Special", child: Text("Special")),
+                    ],
+                    onChanged: (val) {
+                      if (val == null) return;
+                      setDialogState(() => selectedType = val);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final name = nameController.text.trim();
+                  final discount =
+                      double.tryParse(discountController.text.trim()) ?? 0;
+                  if (name.isEmpty || discount <= 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Enter a valid name and discount."),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                    return;
+                  }
+                  setState(() {
+                    _availableScholarships.add({
+                      "name": name,
+                      "discount": discount / 100,
+                      "type": selectedType,
+                    });
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text("Create"),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildScholarshipsList(
     Color cardColor,
     Color textColor,
     Color subTextColor,
   ) {
-    return Center(
-      child: Text(
-        "Scholarship Management Module",
-        style: TextStyle(color: subTextColor),
+    final students = _filteredScholarshipStudents();
+    final totalWithScholarship = _studentDb.values
+        .where((s) => _hasScholarship(s as Map<String, dynamic>))
+        .length;
+    final averageDiscount = _availableScholarships.isEmpty
+        ? 0
+        : _availableScholarships
+                .map((s) => (s['discount'] as num).toDouble())
+                .reduce((a, b) => a + b) /
+            _availableScholarships.length;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Scholarship Management",
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: _showCreateScholarshipDialog,
+                    icon: const Icon(LucideIcons.plus),
+                    label: const Text("Add Scholarship"),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAssignScholarshipDialog(),
+                    icon: const Icon(LucideIcons.userPlus),
+                    label: const Text("Assign"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8B5CF6),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _buildScholarshipStatCard(
+                "Active Scholarships",
+                totalWithScholarship.toString(),
+                LucideIcons.badgeCheck,
+                Colors.greenAccent,
+              ),
+              const SizedBox(width: 12),
+              _buildScholarshipStatCard(
+                "Programs",
+                _availableScholarships.length.toString(),
+                LucideIcons.layers,
+                Colors.blueAccent,
+              ),
+              const SizedBox(width: 12),
+              _buildScholarshipStatCard(
+                "Avg Discount",
+                "${(averageDiscount * 100).round()}%",
+                LucideIcons.percent,
+                Colors.orangeAccent,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _scholarshipSearchController,
+                  style: TextStyle(color: textColor),
+                  decoration: InputDecoration(
+                    hintText: "Search student name, ID, or course...",
+                    hintStyle: TextStyle(color: subTextColor),
+                    prefixIcon: Icon(LucideIcons.search, color: subTextColor),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 180,
+                child: DropdownButtonFormField<String>(
+                  value: _scholarshipFilter,
+                  items: const [
+                    DropdownMenuItem(value: "All", child: Text("All")),
+                    DropdownMenuItem(value: "None", child: Text("No Scholarship")),
+                    DropdownMenuItem(value: "Merit", child: Text("Merit")),
+                    DropdownMenuItem(
+                      value: "Athletics",
+                      child: Text("Athletics"),
+                    ),
+                    DropdownMenuItem(
+                      value: "Needs-Based",
+                      child: Text("Needs-Based"),
+                    ),
+                    DropdownMenuItem(value: "Special", child: Text("Special")),
+                  ],
+                  onChanged: (val) {
+                    if (val == null) return;
+                    setState(() => _scholarshipFilter = val);
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (students.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Text(
+                  "No students match your filters.",
+                  style: TextStyle(color: subTextColor),
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: students.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final entry = students[index];
+                final student = entry.value as Map<String, dynamic>;
+                final hasScholarship = _hasScholarship(student);
+                final scholarshipName = _normalizeScholarshipName(
+                  (student['scholarship'] ?? "None").toString(),
+                );
+                final scholarship = _availableScholarships.firstWhere(
+                  (s) => s['name'] == scholarshipName,
+                  orElse: () => {},
+                );
+                final scholarshipType = scholarship['type']?.toString() ??
+                    (hasScholarship ? "Assigned" : "None");
+                final typeColor = _getScholarshipTypeColor(scholarshipType);
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: widget.isDarkMode
+                        ? Colors.white.withOpacity(0.04)
+                        : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: widget.isDarkMode
+                          ? Colors.white10
+                          : Colors.black12,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: const Color(0xFF8B5CF6).withOpacity(0.2),
+                        child: Icon(
+                          LucideIcons.user,
+                          color: const Color(0xFF8B5CF6),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              student['name'],
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "${student['id']} • ${student['course']} • ${student['year']}",
+                              style: TextStyle(color: subTextColor, fontSize: 12),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: typeColor.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    scholarshipType,
+                                    style: TextStyle(
+                                      color: typeColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  hasScholarship
+                                      ? scholarshipName
+                                      : "No scholarship assigned",
+                                  style: TextStyle(color: subTextColor),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            "₱${(student['balance'] as num).toStringAsFixed(2)}",
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              TextButton(
+                                onPressed: () {
+                                  _selectedStudentId = entry.key;
+                                  _showAssignScholarshipDialog(
+                                    studentId: entry.key,
+                                  );
+                                },
+                                child: Text(
+                                  hasScholarship ? "Change" : "Assign",
+                                ),
+                              ),
+                              if (hasScholarship)
+                                TextButton(
+                                  onPressed: () =>
+                                      _removeScholarshipFromStudent(entry.key),
+                                  child: const Text("Remove"),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScholarshipStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 16),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(color: color, fontSize: 11),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1771,16 +2493,15 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
             },
           ),
           const SizedBox(height: 24),
-          Expanded(
-            child: _selectedStudentId == null
-                ? Center(
-                    child: Text(
-                      "Enter a valid Student ID to view history",
-                      style: TextStyle(color: subTextColor),
-                    ),
-                  )
-                : _buildStudentLedgerView(cardColor, textColor, subTextColor),
-          ),
+          if (_selectedStudentId == null)
+            Center(
+              child: Text(
+                "Enter a valid Student ID to view history",
+                style: TextStyle(color: subTextColor),
+              ),
+            )
+          else
+            _buildStudentLedgerView(cardColor, textColor, subTextColor),
         ],
       ),
     );
@@ -2231,15 +2952,42 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: cardColor,
-        title: Text(
-          "QR Code Generated",
-          style: TextStyle(color: textColor),
+        title: Row(
+          children: [
+            Icon(LucideIcons.qrCode, color: const Color(0xFF8B5CF6), size: 24),
+            const SizedBox(width: 12),
+            Text(
+              "Scan QR Code for Payment",
+              style: GoogleFonts.inter(
+                color: textColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
-        content: _buildQRCodePaymentSection(cardColor, textColor, textColor.withOpacity(0.7)),
+        content: SizedBox(
+          width: 350,
+          child: _buildQRCodePaymentSection(cardColor, textColor, textColor.withOpacity(0.7)),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
+            child: Text(
+              "Cancel",
+              style: TextStyle(color: textColor.withOpacity(0.7)),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _processCheckout();
+            },
+            icon: const Icon(LucideIcons.checkCircle),
+            label: const Text("Confirm Payment"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.greenAccent,
+              foregroundColor: Colors.white,
+            ),
           ),
         ],
       ),
@@ -2250,13 +2998,18 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     if (_selectedStudentId != null && _cartItems.isNotEmpty) {
       final student = _studentDb[_selectedStudentId!];
       if (student != null) {
+        // Save cart items before clearing
+        final itemsForReceipt = List<Map<String, dynamic>>.from(_cartItems);
+        final totalAmount = _cartTotal;
+        final paymentMethod = _paymentMethod;
+        
         setState(() {
-          student['balance'] -= _cartTotal;
+          student['balance'] -= totalAmount;
           student['ledger'].add({
             "date": DateTime.now().toString().split(' ')[0],
-            "desc": "Payment - ${_paymentMethod}",
+            "desc": "Payment - $paymentMethod",
             "debit": 0.0,
-            "credit": _cartTotal,
+            "credit": totalAmount,
           });
 
           if (student['balance'] <= 0) {
@@ -2268,11 +3021,14 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
           _cartItems.clear();
         });
 
-        _generateReceipt(_selectedStudentId!, _cartTotal, _paymentMethod, _cartItems);
+        // Generate receipt with saved cart items
+        _generateReceipt(_selectedStudentId!, totalAmount, paymentMethod, itemsForReceipt);
         
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Payment Successful! Receipt Generated."),
+          SnackBar(
+            content: Text("Payment Successful via $paymentMethod! Receipt Generated."),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
           ),
         );
       }

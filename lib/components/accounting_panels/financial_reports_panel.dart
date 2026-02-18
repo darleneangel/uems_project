@@ -1,6 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 class FinancialReportsPanel extends StatelessWidget {
   final bool isDarkMode;
@@ -29,6 +35,16 @@ class FinancialReportsPanel extends StatelessWidget {
               Colors.blueAccent,
               cardColor,
               textColor,
+              () => _showReportPanel(
+                context,
+                title: "Income Statement",
+                accentColor: Colors.blueAccent,
+                items: const [
+                  "Total Revenue: ₱1,250,000.00",
+                  "Total Expenses: ₱845,000.00",
+                  "Net Income: ₱405,000.00",
+                ],
+              ),
             ),
             _reportCard(
               "Balance Sheet",
@@ -37,6 +53,16 @@ class FinancialReportsPanel extends StatelessWidget {
               Colors.purpleAccent,
               cardColor,
               textColor,
+              () => _showReportPanel(
+                context,
+                title: "Balance Sheet",
+                accentColor: Colors.purpleAccent,
+                items: const [
+                  "Assets: ₱2,100,000.00",
+                  "Liabilities: ₱780,000.00",
+                  "Equity: ₱1,320,000.00",
+                ],
+              ),
             ),
             _reportCard(
               "Cash Flow",
@@ -45,6 +71,16 @@ class FinancialReportsPanel extends StatelessWidget {
               const Color(0xFF69F0AE),
               cardColor,
               textColor,
+              () => _showReportPanel(
+                context,
+                title: "Cash Flow",
+                accentColor: const Color(0xFF69F0AE),
+                items: const [
+                  "Operating Inflow: ₱620,000.00",
+                  "Operating Outflow: ₱410,000.00",
+                  "Net Cash: ₱210,000.00",
+                ],
+              ),
             ),
             _reportCard(
               "Tax Compliance",
@@ -53,6 +89,16 @@ class FinancialReportsPanel extends StatelessWidget {
               Colors.orangeAccent,
               cardColor,
               textColor,
+              () => _showReportPanel(
+                context,
+                title: "Tax Compliance",
+                accentColor: Colors.orangeAccent,
+                items: const [
+                  "Form 1601C: Filed",
+                  "Form 2550M: Pending",
+                  "Audit Status: Cleared",
+                ],
+              ),
             ),
           ],
         ),
@@ -123,6 +169,7 @@ class FinancialReportsPanel extends StatelessWidget {
     Color color,
     Color cardColor,
     Color textColor,
+    VoidCallback onExport,
   ) {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -153,7 +200,7 @@ class FinancialReportsPanel extends StatelessWidget {
           Align(
             alignment: Alignment.bottomRight,
             child: TextButton.icon(
-              onPressed: () {},
+              onPressed: onExport,
               icon: const Icon(LucideIcons.download, size: 16),
               label: const Text("EXPORT PDF"),
               style: TextButton.styleFrom(foregroundColor: color),
@@ -161,6 +208,214 @@ class FinancialReportsPanel extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  String _safeFileName(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp(r"\s+"), "_")
+        .replaceAll(RegExp(r"[^a-z0-9_]+"), "");
+  }
+
+  Future<void> _exportReportPdf(
+    BuildContext context, {
+    required String title,
+    required List<String> items,
+  }) async {
+    try {
+      final pdf = pw.Document();
+      final now = DateTime.now();
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  title,
+                  style: pw.TextStyle(
+                    fontSize: 22,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 6),
+                pw.Text(
+                  "Generated: ${now.toString().split('.')[0]}",
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+                pw.Divider(),
+                pw.SizedBox(height: 12),
+                pw.Text(
+                  "Summary",
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                pw.SizedBox(height: 8),
+                pw.Column(
+                  children: items
+                      .map(
+                        (item) => pw.Padding(
+                          padding: const pw.EdgeInsets.only(bottom: 6),
+                          child: pw.Row(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              pw.Text("• "),
+                              pw.Expanded(child: pw.Text(item)),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      final dir = await getTemporaryDirectory();
+      final fileName =
+          "${_safeFileName(title)}_${now.millisecondsSinceEpoch}.pdf";
+      final file = File("${dir.path}/$fileName");
+      await file.writeAsBytes(await pdf.save());
+
+      final result = await OpenFile.open(file.path);
+      if (result.type != ResultType.done) {
+        debugPrint("Error opening file: ${result.message}");
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("PDF exported: ${file.path}"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Export failed: $e"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  void _showReportPanel(
+    BuildContext context, {
+    required String title,
+    required Color accentColor,
+    required List<String> items,
+  }) {
+    final parentContext = context;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDarkMode ? const Color(0xFF1E1B4B) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final sheetTextColor =
+            isDarkMode ? Colors.white : const Color(0xFF2E1065);
+        final sheetSubText =
+            isDarkMode ? Colors.white70 : Colors.black54;
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(LucideIcons.fileText, color: accentColor),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: sheetTextColor,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(LucideIcons.x, color: sheetSubText),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Latest Snapshot",
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: sheetSubText,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...items.map(
+                (item) => Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? Colors.white.withOpacity(0.05)
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(LucideIcons.dot, color: accentColor, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          item,
+                          style: GoogleFonts.inter(color: sheetTextColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _exportReportPdf(
+                      parentContext,
+                      title: title,
+                      items: items,
+                    );
+                  },
+                  icon: const Icon(LucideIcons.download),
+                  label: const Text("EXPORT PDF"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
