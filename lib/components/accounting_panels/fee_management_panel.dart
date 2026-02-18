@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class FeeManagementPanel extends StatefulWidget {
   final bool isDarkMode;
@@ -436,15 +437,15 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
 
     return Column(
       children: [
-        Container(
-          height: 50,
-          decoration: BoxDecoration(
-            color: widget.isDarkMode
-                ? Colors.white.withOpacity(0.05)
-                : Colors.black.withOpacity(0.03),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: TabBar(
+          Container(
+            height: 50,
+            decoration: BoxDecoration(
+              color: widget.isDarkMode
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.black.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TabBar(
             controller: _tabController,
             indicatorSize: TabBarIndicatorSize.tab,
             indicator: BoxDecoration(
@@ -466,15 +467,22 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
           ),
         ),
         const SizedBox(height: 24),
-        SizedBox(
-          height: 500,
+        Expanded(
           child: TabBarView(
             controller: _tabController,
             children: [
-              _buildBillingList(cardColor, textColor, subTextColor),
-              _buildPaymentProcessing(cardColor, textColor, subTextColor),
-              _buildScholarshipsList(cardColor, textColor, subTextColor),
-              _buildTransactionHistory(cardColor, textColor, subTextColor),
+              SingleChildScrollView(
+                child: _buildBillingList(cardColor, textColor, subTextColor),
+              ),
+              SingleChildScrollView(
+                child: _buildPaymentProcessing(cardColor, textColor, subTextColor),
+              ),
+              SingleChildScrollView(
+                child: _buildScholarshipsList(cardColor, textColor, subTextColor),
+              ),
+              SingleChildScrollView(
+                child: _buildTransactionHistory(cardColor, textColor, subTextColor),
+              ),
             ],
           ),
         ),
@@ -860,20 +868,31 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     final student = _studentDb[_selectedStudentId];
     if (student == null) return const SizedBox();
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
       children: [
-        // LEFT: Payment Selection Panel
+        // Enhanced Student Header
+        _buildEnhancedStudentHeader(student, cardColor, textColor, subTextColor),
+        const SizedBox(height: 20),
+        
+        // Main Content Row
         Expanded(
-          flex: 3,
-          child: Column(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Section: Student Info
-              _buildStudentHeader(student, cardColor, textColor, subTextColor),
-              const SizedBox(height: 16),
-              // Payment Entry Form
+              // LEFT: Payment Selection Panel
               Expanded(
-                child: _buildPaymentEntryForm(
+                flex: 3,
+                child: _buildEnhancedPaymentEntryForm(
+                  cardColor,
+                  textColor,
+                  subTextColor,
+                ),
+              ),
+              const SizedBox(width: 20),
+              // RIGHT: Transaction Summary Panel
+              Expanded(
+                flex: 2,
+                child: _buildEnhancedTransactionSummary(
                   cardColor,
                   textColor,
                   subTextColor,
@@ -882,192 +901,140 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
             ],
           ),
         ),
-        const SizedBox(width: 16),
-        // RIGHT: Transaction Summary Panel
-        Expanded(
-          flex: 2,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: widget.isDarkMode ? Colors.white10 : Colors.black12,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Transaction Summary",
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
-                ),
-                const Divider(),
-                Expanded(
-                  child: _cartItems.isEmpty
-                      ? Center(
-                          child: Text(
-                            "No items selected",
-                            style: TextStyle(color: subTextColor),
-                            textAlign: TextAlign.center,
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          child: Table(
-                            columnWidths: const {
-                              0: FlexColumnWidth(3),
-                              1: FlexColumnWidth(1),
-                              2: FlexColumnWidth(1.5),
-                              3: FlexColumnWidth(0.5),
-                            },
-                            defaultVerticalAlignment:
-                                TableCellVerticalAlignment.middle,
-                            children: [
-                              TableRow(
-                                children: [
-                                  Text(
-                                    "Item",
-                                    style: TextStyle(
-                                      color: subTextColor,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    "Qty",
-                                    style: TextStyle(
-                                      color: subTextColor,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    "Total",
-                                    style: TextStyle(
-                                      color: subTextColor,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(),
-                                ],
-                              ),
-                              ..._cartItems.asMap().entries.map((entry) {
-                                final index = entry.key;
-                                final item = entry.value;
-                                return TableRow(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 8,
-                                      ),
-                                      child: Text(
-                                        item['item'],
-                                        style: TextStyle(
-                                          color: textColor,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      "${item['qty']}",
-                                      style: TextStyle(
-                                        color: textColor,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                      "₱${(item['amount'] * item['qty']).toStringAsFixed(2)}",
-                                      style: TextStyle(
-                                        color: textColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      icon: const Icon(
-                                        LucideIcons.trash2,
-                                        size: 16,
-                                        color: Colors.redAccent,
-                                      ),
-                                      onPressed: () => setState(
-                                        () => _cartItems.removeAt(index),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }),
-                            ],
-                          ),
-                        ),
-                ),
-                const Divider(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "TOTAL",
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                    ),
-                    Text(
-                      "₱${_cartTotal.toStringAsFixed(2)}",
-                      style: GoogleFonts.inter(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF69F0AE),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Payment Method Selector
-                _buildLabel("Payment Method", textColor),
-                const SizedBox(height: 8),
-                _buildDropdown(
-                  value: _paymentMethod,
-                  items: [
-                    "Cash",
-                    "Credit Card",
-                    "GCash",
-                    "PayMaya",
-                    "Bank Transfer",
-                  ],
-                  onChanged: (val) => setState(() => _paymentMethod = val!),
-                  textColor: textColor,
-                  cardColor: cardColor,
-                ),
-                const SizedBox(height: 24),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _cartItems.isEmpty ? null : _processTransaction,
-                    icon: const Icon(LucideIcons.checkCircle),
-                    label: const Text("MARK AS PAID"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF8B5CF6),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
   }
 
-  Widget _buildStudentHeader(
+  Widget _buildEnhancedStudentHeader(
     Map<String, dynamic> student,
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF8B5CF6).withOpacity(0.1),
+            const Color(0xFF8B5CF6).withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF8B5CF6).withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Student Avatar
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B5CF6).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              LucideIcons.user,
+              size: 32,
+              color: const Color(0xFF8B5CF6),
+            ),
+          ),
+          const SizedBox(width: 20),
+          
+          // Student Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  student['name'],
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF8B5CF6).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        student['id'],
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF8B5CF6),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      "${student['course']} • ${student['year']}",
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: subTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // Balance Section
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                "Current Balance",
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: subTextColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: student['balance'] > 0 
+                      ? Colors.redAccent.withOpacity(0.1)
+                      : const Color(0xFF69F0AE).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: student['balance'] > 0 
+                        ? Colors.redAccent.withOpacity(0.3)
+                        : const Color(0xFF69F0AE).withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  "₱${student['balance'].toStringAsFixed(2)}",
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: student['balance'] > 0 
+                        ? Colors.redAccent
+                        : const Color(0xFF69F0AE),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEnhancedPaymentEntryForm(
     Color cardColor,
     Color textColor,
     Color subTextColor,
@@ -1080,236 +1047,671 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
         border: Border.all(
           color: widget.isDarkMode ? Colors.white10 : Colors.black12,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconButton(
-            icon: Icon(LucideIcons.arrowLeft, color: textColor),
-            onPressed: () => setState(() => _selectedStudentId = null),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  student['name'],
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  "${student['course']} • ${student['year']} Year",
-                  style: TextStyle(color: subTextColor, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          // Header
+          Row(
             children: [
-              Text(
-                "Current Balance",
-                style: TextStyle(color: subTextColor, fontSize: 10),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orangeAccent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  LucideIcons.shoppingCart,
+                  color: Colors.orangeAccent,
+                  size: 20,
+                ),
               ),
-              Text(
-                "₱${student['balance'].toStringAsFixed(2)}",
-                style: TextStyle(
-                  color: Colors.redAccent,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Payment Selection",
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    Text(
+                      "Add items to cart for payment processing",
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: subTextColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+
+          // Payment Type Selection
+          _buildEnhancedSectionHeader("Payment Type", LucideIcons.creditCard),
+          const SizedBox(height: 8),
+          _buildEnhancedDropdown(
+            value: _selectedCategory,
+            items: ["Tuition", "Books", "Printing", "Miscellaneous"],
+            onChanged: (val) => setState(() {
+              _selectedCategory = val!;
+              _quantity = 1;
+              _printPages = 1;
+              _customAmount = 0.0;
+            }),
+            textColor: textColor,
+            cardColor: cardColor,
+          ),
+          const SizedBox(height: 16),
+
+          // Dynamic Form Fields
+          if (_selectedCategory == "Tuition") ...[
+            _buildEnhancedSectionHeader("Term / Block", LucideIcons.calendar),
+            const SizedBox(height: 8),
+            _buildEnhancedDropdown(
+              value: _selectedTerm,
+              items: ["Midterm Block A", "Finals Block B", "Summer"],
+              onChanged: (val) => setState(() {
+                _selectedTerm = val!;
+                // Auto-load fee if available
+                if (_selectedStudentId != null &&
+                    _studentDb[_selectedStudentId]['tuition_breakdown'] !=
+                        null) {
+                  _customAmount =
+                      _studentDb[_selectedStudentId]['tuition_breakdown'][val] ??
+                      0.0;
+                }
+              }),
+              textColor: textColor,
+              cardColor: cardColor,
+            ),
+            const SizedBox(height: 12),
+            _buildEnhancedAmountField(
+              "Fee Amount (Auto-loaded)",
+              textColor,
+              (val) => _customAmount = double.tryParse(val) ?? 0.0,
+              initialValue: _customAmount > 0 ? _customAmount.toString() : null,
+            ),
+          ] else if (_selectedCategory == "Books") ...[
+            _buildEnhancedSectionHeader("Book Selection", LucideIcons.book),
+            const SizedBox(height: 8),
+            _buildEnhancedDropdown(
+              value: _selectedBook ?? _bookPrices.keys.first,
+              items: _bookPrices.keys.toList(),
+              onChanged: (val) => setState(() => _selectedBook = val),
+              textColor: textColor,
+              cardColor: cardColor,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildEnhancedNumberField(
+                    "Quantity",
+                    textColor,
+                    _quantity,
+                    (val) => setState(
+                      () => _quantity = int.tryParse(val) ?? 1,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildEnhancedPriceDisplay(
+                    "Unit Price",
+                    "₱${_bookPrices[_selectedBook ?? _bookPrices.keys.first]}",
+                    textColor,
+                  ),
+                ),
+              ],
+            ),
+          ] else if (_selectedCategory == "Printing") ...[
+            _buildEnhancedSectionHeader("Printing Services", LucideIcons.printer),
+            const SizedBox(height: 8),
+            _buildEnhancedNumberField(
+              "Number of Pages",
+              textColor,
+              _printPages,
+              (val) => setState(() => _printPages = int.tryParse(val) ?? 1),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blueAccent.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.info, color: Colors.blueAccent, size: 14),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      "Rate: ₱5.00 / page",
+                      style: GoogleFonts.inter(
+                        color: Colors.blueAccent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (_selectedCategory == "Miscellaneous") ...[
+            _buildEnhancedSectionHeader("Miscellaneous Fee", LucideIcons.fileText),
+            const SizedBox(height: 8),
+            _buildEnhancedDropdown(
+              value: _miscType,
+              items: [
+                "Graduation Fee",
+                "Lab Fee",
+                "Library Fine",
+                "ID Replacement",
+              ],
+              onChanged: (val) => setState(() => _miscType = val!),
+              textColor: textColor,
+              cardColor: cardColor,
+            ),
+            const SizedBox(height: 12),
+            _buildEnhancedAmountField(
+              "Amount",
+              textColor,
+              (val) => _customAmount = double.tryParse(val) ?? 0.0,
+            ),
+          ],
+
+          const Spacer(),
+          
+          // Add to Cart Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _addItemToCart,
+              icon: const Icon(LucideIcons.plus),
+              label: const Text("ADD TO CART"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orangeAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPaymentEntryForm(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
+  Widget _buildEnhancedSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF8B5CF6).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 16,
+            color: const Color(0xFF8B5CF6),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: widget.isDarkMode ? Colors.white : const Color(0xFF2E1065),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEnhancedDropdown({
+    required String value,
+    required List<String> items,
+    required Function(String?) onChanged,
+    required Color textColor,
+    required Color cardColor,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(24),
+        color: widget.isDarkMode
+            ? Colors.white.withOpacity(0.08)
+            : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: widget.isDarkMode ? Colors.white10 : Colors.black12,
         ),
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Payment Selection",
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            _buildLabel("Payment Type", textColor),
-            const SizedBox(height: 8),
-            _buildDropdown(
-              value: _selectedCategory,
-              items: ["Tuition", "Books", "Printing", "Miscellaneous"],
-              onChanged: (val) => setState(() {
-                _selectedCategory = val!;
-                _quantity = 1;
-                _printPages = 1;
-                _customAmount = 0.0;
-              }),
-              textColor: textColor,
-              cardColor: cardColor,
-            ),
-            const SizedBox(height: 20),
-
-            if (_selectedCategory == "Tuition") ...[
-              _buildLabel("Term / Block", textColor),
-              const SizedBox(height: 8),
-              _buildDropdown(
-                value: _selectedTerm,
-                items: ["Midterm Block A", "Finals Block B", "Summer"],
-                onChanged: (val) => setState(() {
-                  _selectedTerm = val!;
-                  // Auto-load fee if available
-                  if (_selectedStudentId != null &&
-                      _studentDb[_selectedStudentId]['tuition_breakdown'] !=
-                          null) {
-                    _customAmount =
-                        _studentDb[_selectedStudentId]['tuition_breakdown'][val] ??
-                        0.0;
-                  }
-                }),
-                textColor: textColor,
-                cardColor: cardColor,
-              ),
-              const SizedBox(height: 16),
-              _buildLabel("Fee Amount (Auto-loaded)", textColor),
-              const SizedBox(height: 8),
-              _buildAmountField(
-                textColor,
-                (val) => _customAmount = double.tryParse(val) ?? 0.0,
-                initialValue: _customAmount > 0
-                    ? _customAmount.toString()
-                    : null,
-              ),
-            ] else if (_selectedCategory == "Books") ...[
-              _buildLabel("Select Book", textColor),
-              const SizedBox(height: 8),
-              _buildDropdown(
-                value: _selectedBook ?? _bookPrices.keys.first,
-                items: _bookPrices.keys.toList(),
-                onChanged: (val) => setState(() => _selectedBook = val),
-                textColor: textColor,
-                cardColor: cardColor,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLabel("Quantity", textColor),
-                        const SizedBox(height: 8),
-                        _buildNumberField(
-                          textColor,
-                          _quantity,
-                          (val) => setState(
-                            () => _quantity = int.tryParse(val) ?? 1,
-                          ),
-                        ),
-                      ],
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          dropdownColor: cardColor,
+          style: GoogleFonts.inter(
+            color: textColor,
+            fontSize: 14,
+          ),
+          icon: Icon(
+            LucideIcons.chevronDown,
+            color: textColor.withOpacity(0.6),
+            size: 20,
+          ),
+          items: items
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(
+                    e,
+                    style: GoogleFonts.inter(
+                      color: textColor,
+                      fontSize: 14,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLabel("Unit Price", textColor),
-                        const SizedBox(height: 8),
-                        Text(
-                          "₱${_bookPrices[_selectedBook ?? _bookPrices.keys.first]}",
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ] else if (_selectedCategory == "Printing") ...[
-              _buildLabel("Number of Pages", textColor),
-              const SizedBox(height: 8),
-              _buildNumberField(
-                textColor,
-                _printPages,
-                (val) => setState(() => _printPages = int.tryParse(val) ?? 1),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Rate: ₱5.00 / page",
-                style: TextStyle(color: subTextColor, fontSize: 12),
-              ),
-            ] else if (_selectedCategory == "Miscellaneous") ...[
-              _buildLabel("Fee Type", textColor),
-              const SizedBox(height: 8),
-              _buildDropdown(
-                value: _miscType,
-                items: [
-                  "Graduation Fee",
-                  "Lab Fee",
-                  "Library Fine",
-                  "ID Replacement",
-                ],
-                onChanged: (val) => setState(() => _miscType = val!),
-                textColor: textColor,
-                cardColor: cardColor,
-              ),
-              const SizedBox(height: 16),
-              _buildLabel("Amount", textColor),
-              const SizedBox(height: 8),
-              _buildAmountField(
-                textColor,
-                (val) => _customAmount = double.tryParse(val) ?? 0.0,
-              ),
-            ],
-
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _addItemToCart,
-                icon: const Icon(LucideIcons.plus),
-                label: const Text("ADD TO CART"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orangeAccent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-              ),
-            ),
-          ],
+              )
+              .toList(),
+          onChanged: onChanged,
         ),
       ),
     );
   }
 
-  Widget _buildScholarshipsList(
+  Widget _buildEnhancedAmountField(
+    String label,
+    Color textColor,
+    Function(String) onChanged, {
+    String? initialValue,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: textColor.withOpacity(0.7),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          keyboardType: TextInputType.number,
+          style: GoogleFonts.inter(
+            color: textColor,
+            fontSize: 14,
+          ),
+          decoration: InputDecoration(
+            prefixText: "₱ ",
+            prefixStyle: GoogleFonts.inter(
+              color: textColor,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+            filled: true,
+            fillColor: widget.isDarkMode
+                ? Colors.white.withOpacity(0.08)
+                : Colors.grey.shade50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+          ),
+          controller: initialValue != null
+              ? TextEditingController(text: initialValue)
+              : null,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEnhancedNumberField(
+    String label,
+    Color textColor,
+    int value,
+    Function(String) onChanged, {
+    String? initialValue,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: textColor.withOpacity(0.7),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          keyboardType: TextInputType.number,
+          style: GoogleFonts.inter(
+            color: textColor,
+            fontSize: 14,
+          ),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: widget.isDarkMode
+                ? Colors.white.withOpacity(0.08)
+                : Colors.grey.shade50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+          ),
+          controller: initialValue != null
+              ? TextEditingController(text: initialValue)
+              : TextEditingController(text: ''),
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEnhancedPriceDisplay(
+    String label,
+    String price,
+    Color textColor,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: textColor.withOpacity(0.7),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+          decoration: BoxDecoration(
+            color: const Color(0xFF69F0AE).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFF69F0AE).withOpacity(0.3),
+            ),
+          ),
+          child: Text(
+            price,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF69F0AE),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEnhancedTransactionSummary(
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.greenAccent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  LucideIcons.receipt,
+                  color: Colors.greenAccent,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "Transaction Summary",
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Cart Items
+          if (_cartItems.isEmpty)
+            _buildEmptyCartState(subTextColor)
+          else
+            _buildCartItemsList(textColor, subTextColor),
+
+          const SizedBox(height: 12),
+
+          // Total Section
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.greenAccent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.greenAccent.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Total Amount",
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
+                ),
+                Text(
+                  "₱${_cartTotal.toStringAsFixed(2)}",
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.greenAccent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Payment Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _cartItems.isNotEmpty ? () {
+                if (_paymentMethod == "QR Code") {
+                  _showQRPaymentDialog(context, cardColor, textColor);
+                } else {
+                  _processCheckout();
+                }
+              } : null,
+              icon: Icon(
+                _paymentMethod == "QR Code" ? LucideIcons.qrCode : LucideIcons.creditCard,
+              ),
+              label: Text(_paymentMethod == "QR Code" ? "GENERATE QR CODE" : "MARK AS PAID"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _paymentMethod == "QR Code" ? Colors.blueAccent : Colors.greenAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyCartState(Color subTextColor) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: (widget.isDarkMode ? Colors.white10 : Colors.black12).withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            LucideIcons.shoppingCart,
+            size: 48,
+            color: subTextColor,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "No items in cart",
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              color: subTextColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Add items from the left panel to get started",
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: subTextColor,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCartItemsList(Color textColor, Color subTextColor) {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _cartItems.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final item = _cartItems[index];
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: widget.isDarkMode
+                ? Colors.white.withOpacity(0.05)
+                : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item['item'],
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "${item['category']} • Qty: ${item['qty']}",
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: subTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    "₱${(item['amount'] * item['qty']).toStringAsFixed(2)}",
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF69F0AE),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: const Icon(
+                      LucideIcons.trash2,
+                      size: 16,
+                      color: Colors.redAccent,
+                    ),
+                    onPressed: () => setState(() => _cartItems.removeAt(index)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+    Widget _buildScholarshipsList(
     Color cardColor,
     Color textColor,
     Color subTextColor,
@@ -1701,6 +2103,180 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     _generateReceipt(id, amount, method, [
       {"item": "Payment", "amount": amount, "qty": 1},
     ]);
+  }
+
+  Widget _buildQRCodePaymentSection(
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: widget.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  LucideIcons.qrCode,
+                  color: Colors.blueAccent,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "QR Code Payment",
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: QrImageView(
+                    data: 'PAY_${_selectedStudentId}_${_cartTotal.toStringAsFixed(2)}_${DateTime.now().millisecondsSinceEpoch}',
+                    version: QrVersions.auto,
+                    size: 160,
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Scan QR Code to Pay",
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Amount: ₱${_cartTotal.toStringAsFixed(2)}",
+                  style: GoogleFonts.inter(
+                    color: Colors.black54,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blueAccent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(LucideIcons.info, color: Colors.blueAccent, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "QR code is valid for 15 minutes. Please ensure payment is completed within this time.",
+                    style: GoogleFonts.inter(
+                      color: Colors.blueAccent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showQRPaymentDialog(BuildContext context, Color cardColor, Color textColor) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: cardColor,
+        title: Text(
+          "QR Code Generated",
+          style: TextStyle(color: textColor),
+        ),
+        content: _buildQRCodePaymentSection(cardColor, textColor, textColor.withOpacity(0.7)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _processCheckout() {
+    if (_selectedStudentId != null && _cartItems.isNotEmpty) {
+      final student = _studentDb[_selectedStudentId!];
+      if (student != null) {
+        setState(() {
+          student['balance'] -= _cartTotal;
+          student['ledger'].add({
+            "date": DateTime.now().toString().split(' ')[0],
+            "desc": "Payment - ${_paymentMethod}",
+            "debit": 0.0,
+            "credit": _cartTotal,
+          });
+
+          if (student['balance'] <= 0) {
+            student['balance'] = 0.0;
+            student['status'] = "Cleared";
+            student['cleared'] = true;
+          }
+
+          _cartItems.clear();
+        });
+
+        _generateReceipt(_selectedStudentId!, _cartTotal, _paymentMethod, _cartItems);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Payment Successful! Receipt Generated."),
+          ),
+        );
+      }
+    }
   }
 
   void _showAddFeeDialog(

@@ -277,48 +277,42 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
           // Main Content
           Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: FadeTransition(
-                opacity: _formOpacity,
-                child: SlideTransition(
-                  position: _formSlide,
-                  child: Container(
-                    width: isDesktop ? 1000 : 450,
-                    constraints: const BoxConstraints(minHeight: 600),
-                    decoration: BoxDecoration(
-                      color: _isDarkMode ? surfaceDark : Colors.white,
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.1),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: accentViolet.withOpacity(0.15),
-                          blurRadius: 80,
-                          offset: const Offset(0, 20),
-                        ),
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 30,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
+            child: FadeTransition(
+              opacity: _formOpacity,
+              child: SlideTransition(
+                position: _formSlide,
+                child: Container(
+                  width: isDesktop ? 900 : 400,
+                  margin: const EdgeInsets.symmetric(vertical: 40),
+                  decoration: BoxDecoration(
+                    color: _isDarkMode ? surfaceDark : Colors.white,
+                    borderRadius: BorderRadius.circular(32),
+                     border: Border.all(
+                      color: Colors.white.withOpacity(0.1),
+                      width: 1,
                     ),
-                    clipBehavior: Clip.antiAlias,
-                    child: isDesktop
-                        ? IntrinsicHeight(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(child: _buildLeftBanner()),
-                                Expanded(child: _buildRightForm(isDesktop)),
-                              ],
-                            ),
-                          )
-                        : _buildRightForm(isDesktop),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentViolet.withOpacity(0.15),
+                        blurRadius: 80,
+                        offset: const Offset(0, 20),
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
+                  clipBehavior: Clip.antiAlias,
+                  child: isDesktop
+                      ? Row(
+                          children: [
+                            Expanded(child: _buildLeftBanner()),
+                            Expanded(child: _buildRightForm(isDesktop)),
+                          ],
+                        )
+                      : _buildRightForm(isDesktop),
                 ),
               ),
             ),
@@ -330,7 +324,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   Widget _buildLeftBanner() {
     return Container(
-      padding: const EdgeInsets.all(60),
+      padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -469,7 +463,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   Widget _buildRightForm(bool isDesktop) {
     return Container(
-      padding: const EdgeInsets.all(60),
+      padding: const EdgeInsets.all(30),
       color: _isDarkMode ? surfaceDark : Colors.white,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -482,7 +476,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                 Text(
                   "Sign in",
                   style: GoogleFonts.inter(
-                    fontSize: 32,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: _isDarkMode ? Colors.white : const Color(0xFF1E293B),
                   ),

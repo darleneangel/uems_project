@@ -11,9 +11,10 @@ class FinancialReportsPanel extends StatelessWidget {
     final cardColor = isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
     final textColor = isDarkMode ? Colors.white : const Color(0xFF2E1065);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
         GridView.count(
           shrinkWrap: true,
           crossAxisCount: 2,
@@ -110,7 +111,8 @@ class FinancialReportsPanel extends StatelessWidget {
             ],
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 
