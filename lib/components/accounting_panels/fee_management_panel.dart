@@ -1937,7 +1937,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: selectedStudentId,
+                    initialValue: selectedStudentId,
                     items: _studentDb.entries
                         .map(
                           (entry) => DropdownMenuItem<String>(
@@ -1960,7 +1960,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: selectedScholarship['name'] as String,
+                    initialValue: selectedScholarship['name'] as String,
                     items: _availableScholarships
                         .map(
                           (scholarship) => DropdownMenuItem<String>(
@@ -2054,7 +2054,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: selectedType,
+                    initialValue: selectedType,
                     items: const [
                       DropdownMenuItem(value: "Merit", child: Text("Merit")),
                       DropdownMenuItem(
@@ -2220,7 +2220,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
               SizedBox(
                 width: 180,
                 child: DropdownButtonFormField<String>(
-                  value: _scholarshipFilter,
+                  initialValue: _scholarshipFilter,
                   items: const [
                     DropdownMenuItem(value: "All", child: Text("All")),
                     DropdownMenuItem(value: "None", child: Text("No Scholarship")),
