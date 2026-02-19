@@ -232,12 +232,35 @@ class _PaymentPlansPanelState extends State<PaymentPlansPanel> {
             
             TextFormField(
               controller: _studentIdController,
+              style: TextStyle(color: textColor),
               decoration: InputDecoration(
                 labelText: "Student ID",
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
                 hintText: "Enter student ID",
-                prefixIcon: const Icon(LucideIcons.user),
+                hintStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                ),
+                prefixIcon: Icon(
+                  LucideIcons.user,
+                  color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
                 ),
               ),
               validator: (value) {
@@ -249,12 +272,35 @@ class _PaymentPlansPanelState extends State<PaymentPlansPanel> {
             
             TextFormField(
               controller: _totalAmountController,
+              style: TextStyle(color: textColor),
               decoration: InputDecoration(
                 labelText: "Total Amount (₱)",
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
                 hintText: "0.00",
-                prefixIcon: const Icon(LucideIcons.dollarSign),
+                hintStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                ),
+                prefixIcon: Icon(
+                  LucideIcons.dollarSign,
+                  color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
                 ),
               ),
               keyboardType: TextInputType.number,
@@ -267,11 +313,34 @@ class _PaymentPlansPanelState extends State<PaymentPlansPanel> {
             
             DropdownButtonFormField<String>(
               initialValue: _selectedPlan,
+              style: TextStyle(
+                color: widget.isDarkMode ? Colors.white : Colors.black87,
+              ),
+              dropdownColor: widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white,
               decoration: InputDecoration(
                 labelText: "Payment Plan",
-                prefixIcon: const Icon(LucideIcons.calendar),
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
+                prefixIcon: Icon(
+                  LucideIcons.calendar,
+                  color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
                 ),
               ),
               items: [
@@ -284,7 +353,12 @@ class _PaymentPlansPanelState extends State<PaymentPlansPanel> {
               ].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
-                  child: Text(value),
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      color: widget.isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
                 );
               }).toList(),
               onChanged: (String? value) {
@@ -296,12 +370,35 @@ class _PaymentPlansPanelState extends State<PaymentPlansPanel> {
             if (_selectedPlan.contains('Installments'))
               TextFormField(
                 controller: _installmentMonthsController,
+                style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   labelText: "Number of Months",
+                  labelStyle: TextStyle(
+                    color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                  ),
                   hintText: "Enter number of months",
-                  prefixIcon: const Icon(LucideIcons.calendar),
+                  hintStyle: TextStyle(
+                    color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                  ),
+                  prefixIcon: Icon(
+                    LucideIcons.calendar,
+                    color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF8B5CF6),
+                      width: 2,
+                    ),
                   ),
                 ),
                 keyboardType: TextInputType.number,
@@ -318,11 +415,34 @@ class _PaymentPlansPanelState extends State<PaymentPlansPanel> {
             if (_selectedPlan.contains('Installments'))
               DropdownButtonFormField<String>(
                 initialValue: _selectedPromissoryType,
+                style: TextStyle(
+                  color: widget.isDarkMode ? Colors.white : Colors.black87,
+                ),
+                dropdownColor: widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white,
                 decoration: InputDecoration(
                   labelText: "Promissory Note Type",
-                  prefixIcon: const Icon(LucideIcons.fileText),
+                  labelStyle: TextStyle(
+                    color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                  ),
+                  prefixIcon: Icon(
+                    LucideIcons.fileText,
+                    color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF8B5CF6),
+                      width: 2,
+                    ),
                   ),
                 ),
                 items: [
@@ -333,7 +453,12 @@ class _PaymentPlansPanelState extends State<PaymentPlansPanel> {
                 ].map((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
-                    child: Text(value),
+                    child: Text(
+                      value,
+                      style: TextStyle(
+                        color: widget.isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
                   );
                 }).toList(),
                 onChanged: (String? value) {
@@ -346,12 +471,35 @@ class _PaymentPlansPanelState extends State<PaymentPlansPanel> {
             if (_selectedPlan.contains('Installments'))
               TextFormField(
                 controller: _reasonController,
+                style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   labelText: "Reason for Installments",
+                  labelStyle: TextStyle(
+                    color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                  ),
                   hintText: "Explain why installment plan is needed",
-                  prefixIcon: const Icon(LucideIcons.messageSquare),
+                  hintStyle: TextStyle(
+                    color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                  ),
+                  prefixIcon: Icon(
+                    LucideIcons.messageSquare,
+                    color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF8B5CF6),
+                      width: 2,
+                    ),
                   ),
                 ),
                 maxLines: 3,

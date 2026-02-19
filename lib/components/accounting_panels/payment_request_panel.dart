@@ -164,12 +164,32 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
             
             TextFormField(
               controller: _studentIdController,
+              style: TextStyle(color: textColor),
               decoration: InputDecoration(
                 labelText: "Student ID",
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
                 hintText: "Enter student ID (e.g., 2024-001)",
-                prefixIcon: const Icon(LucideIcons.user),
+                hintStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                ),
+                prefixIcon: Icon(LucideIcons.user, color: widget.isDarkMode ? Colors.white54 : Colors.grey),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: const Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
                 ),
               ),
               validator: (value) {
@@ -181,12 +201,32 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
             
             TextFormField(
               controller: _emailController,
+              style: TextStyle(color: textColor),
               decoration: InputDecoration(
                 labelText: "Email Address",
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
                 hintText: "student@university.edu",
-                prefixIcon: const Icon(LucideIcons.mail),
+                hintStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                ),
+                prefixIcon: Icon(LucideIcons.mail, color: widget.isDarkMode ? Colors.white54 : Colors.grey),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: const Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
                 ),
               ),
               validator: (value) {
@@ -199,11 +239,28 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
             
             DropdownButtonFormField<String>(
               initialValue: _selectedPaymentType,
+              style: TextStyle(color: textColor),
               decoration: InputDecoration(
                 labelText: "Payment Type",
-                prefixIcon: const Icon(LucideIcons.tag),
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
+                prefixIcon: Icon(LucideIcons.tag, color: widget.isDarkMode ? Colors.white54 : Colors.grey),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: const Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
                 ),
               ),
               items: [
@@ -216,7 +273,7 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
               ].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
-                  child: Text(value),
+                  child: Text(value, style: TextStyle(color: textColor)),
                 );
               }).toList(),
               onChanged: (String? value) {
@@ -227,12 +284,32 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
             
             TextFormField(
               controller: _amountController,
+              style: TextStyle(color: textColor),
               decoration: InputDecoration(
                 labelText: "Amount (₱)",
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
                 hintText: "0.00",
-                prefixIcon: const Icon(LucideIcons.dollarSign),
+                hintStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                ),
+                prefixIcon: Icon(LucideIcons.dollarSign, color: widget.isDarkMode ? Colors.white54 : Colors.grey),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: const Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
                 ),
               ),
               keyboardType: TextInputType.number,
@@ -246,11 +323,28 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
             
             DropdownButtonFormField<String>(
               initialValue: _selectedUrgency,
+              style: TextStyle(color: textColor),
               decoration: InputDecoration(
                 labelText: "Urgency Level",
-                prefixIcon: const Icon(LucideIcons.alertCircle),
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
+                prefixIcon: Icon(LucideIcons.alertCircle, color: widget.isDarkMode ? Colors.white54 : Colors.grey),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: const Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
                 ),
               ),
               items: [
@@ -260,7 +354,7 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
               ].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
-                  child: Text(value),
+                  child: Text(value, style: TextStyle(color: textColor)),
                 );
               }).toList(),
               onChanged: (String? value) {
@@ -271,12 +365,32 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
             
             TextFormField(
               controller: _descriptionController,
+              style: TextStyle(color: textColor),
               decoration: InputDecoration(
                 labelText: "Description",
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
                 hintText: "Additional details about the payment request",
-                prefixIcon: const Icon(LucideIcons.fileText),
+                hintStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                ),
+                prefixIcon: Icon(LucideIcons.fileText, color: widget.isDarkMode ? Colors.white54 : Colors.grey),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: const Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
                 ),
               ),
               maxLines: 3,

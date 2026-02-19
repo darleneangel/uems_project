@@ -32,9 +32,9 @@ class IncomeStatementPdfService {
                 accent: FinancialReportService.successGreen,
                 child: pw.Table(
                   columnWidths: {
-                    0: const pw.FlexColumnWidth(3),
-                    1: const pw.FlexColumnWidth(1),
-                    2: const pw.FlexColumnWidth(1),
+                    0: const pw.FlexColumnWidth(2.5),
+                    1: const pw.FlexColumnWidth(1.2),
+                    2: const pw.FlexColumnWidth(0.8),
                   },
                   children: [
                     FinancialReportService.buildTableHeaderRow(['Type', 'Amount', '%']),
@@ -52,7 +52,7 @@ class IncomeStatementPdfService {
                         FinancialReportService.formatCurrency(
                           incomeItems.fold(0.0, (sum, item) => sum + item.amount),
                         ),
-                        '100.00',
+                        '100.00%',
                       ],
                       isTotal: true,
                       isPositive: true,
@@ -69,9 +69,9 @@ class IncomeStatementPdfService {
                 accent: FinancialReportService.errorRed,
                 child: pw.Table(
                   columnWidths: {
-                    0: const pw.FlexColumnWidth(3),
-                    1: const pw.FlexColumnWidth(1),
-                    2: const pw.FlexColumnWidth(1),
+                    0: const pw.FlexColumnWidth(2.5),
+                    1: const pw.FlexColumnWidth(1.2),
+                    2: const pw.FlexColumnWidth(0.8),
                   },
                   children: [
                     FinancialReportService.buildTableHeaderRow(['Type', 'Amount', '%']),
@@ -89,7 +89,7 @@ class IncomeStatementPdfService {
                         FinancialReportService.formatCurrency(
                           expenseItems.fold(0.0, (sum, item) => sum + item.amount),
                         ),
-                        '100.00',
+                        '100.00%',
                       ],
                       isTotal: true,
                       isNegative: true,

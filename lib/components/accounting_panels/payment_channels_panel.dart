@@ -202,12 +202,35 @@ class _PaymentChannelsPanelState extends State<PaymentChannelsPanel> {
           
           TextFormField(
             controller: _amountController,
+            style: TextStyle(color: textColor),
             decoration: InputDecoration(
               labelText: "Amount (₱)",
+              labelStyle: TextStyle(
+                color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+              ),
               hintText: "0.00",
-              prefixIcon: const Icon(LucideIcons.dollarSign),
+              hintStyle: TextStyle(
+                color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+              ),
+              prefixIcon: Icon(
+                LucideIcons.dollarSign,
+                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF8B5CF6),
+                  width: 2,
+                ),
               ),
             ),
             keyboardType: TextInputType.number,
@@ -216,12 +239,35 @@ class _PaymentChannelsPanelState extends State<PaymentChannelsPanel> {
           
           TextFormField(
             controller: _referenceController,
+            style: TextStyle(color: textColor),
             decoration: InputDecoration(
               labelText: "Reference Number (Optional)",
+              labelStyle: TextStyle(
+                color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+              ),
               hintText: "Leave blank for auto-generation",
-              prefixIcon: const Icon(LucideIcons.hash),
+              hintStyle: TextStyle(
+                color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+              ),
+              prefixIcon: Icon(
+                LucideIcons.hash,
+                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF8B5CF6),
+                  width: 2,
+                ),
               ),
             ),
           ),
@@ -229,11 +275,34 @@ class _PaymentChannelsPanelState extends State<PaymentChannelsPanel> {
           
           DropdownButtonFormField<String>(
             initialValue: _selectedChannel,
+            style: TextStyle(
+              color: widget.isDarkMode ? Colors.white : Colors.black87,
+            ),
+            dropdownColor: widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white,
             decoration: InputDecoration(
               labelText: "Payment Channel",
-              prefixIcon: const Icon(LucideIcons.banknote),
+              labelStyle: TextStyle(
+                color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+              ),
+              prefixIcon: Icon(
+                LucideIcons.banknote,
+                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF8B5CF6),
+                  width: 2,
+                ),
               ),
             ),
             items: [
@@ -245,7 +314,12 @@ class _PaymentChannelsPanelState extends State<PaymentChannelsPanel> {
             ].map((String value) {
               return DropdownMenuItem<String>(
                 value: value,
-                child: Text(value),
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    color: widget.isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
               );
             }).toList(),
             onChanged: (String? value) {

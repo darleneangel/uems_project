@@ -84,7 +84,7 @@ class BalanceSheetPdfService {
                   pw.Expanded(
                     child: FinancialReportService.buildSectionCard(
                       title: 'Liabilities & Equity',
-                      accent: FinancialReportService.warningOrange,
+                    accent: FinancialReportService.borderLight,
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
@@ -262,22 +262,30 @@ class BalanceSheetPdfService {
         ),
         pw.SizedBox(height: 6),
         ...items.entries.map((e) => pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(vertical: 3),
+              padding: const pw.EdgeInsets.symmetric(vertical: 4),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(
-                    e.key,
-                    style: pw.TextStyle(
-                      fontSize: 8,
-                      color: FinancialReportService.textMuted,
+                  pw.Expanded(
+                    flex: 2,
+                    child: pw.Text(
+                      e.key,
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        color: FinancialReportService.textMuted,
+                      ),
                     ),
                   ),
-                  pw.Text(
-                    FinancialReportService.formatCurrency(e.value),
-                    style: pw.TextStyle(
-                      fontSize: 8,
-                      color: FinancialReportService.textDark,
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Text(
+                      FinancialReportService.formatCurrency(e.value),
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        color: FinancialReportService.textDark,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                      textAlign: pw.TextAlign.right,
                     ),
                   ),
                 ],
@@ -304,22 +312,30 @@ class BalanceSheetPdfService {
         ),
         pw.SizedBox(height: 6),
         ...items.entries.map((e) => pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(vertical: 3),
+              padding: const pw.EdgeInsets.symmetric(vertical: 4),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(
-                    e.key,
-                    style: pw.TextStyle(
-                      fontSize: 8,
-                      color: FinancialReportService.textMuted,
+                  pw.Expanded(
+                    flex: 2,
+                    child: pw.Text(
+                      e.key,
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        color: FinancialReportService.textMuted,
+                      ),
                     ),
                   ),
-                  pw.Text(
-                    FinancialReportService.formatCurrency(e.value),
-                    style: pw.TextStyle(
-                      fontSize: 8,
-                      color: FinancialReportService.textDark,
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Text(
+                      FinancialReportService.formatCurrency(e.value),
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        color: FinancialReportService.textDark,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                      textAlign: pw.TextAlign.right,
                     ),
                   ),
                 ],

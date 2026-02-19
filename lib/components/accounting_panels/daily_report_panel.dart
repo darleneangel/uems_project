@@ -446,12 +446,37 @@ class _DailyReportPanelState extends State<DailyReportPanel> {
             
             TextFormField(
               controller: _dateController,
+              style: TextStyle(
+                color: widget.isDarkMode ? Colors.white : Colors.black87,
+              ),
               decoration: InputDecoration(
                 labelText: "Report Date",
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
                 hintText: "Select date",
-                prefixIcon: const Icon(LucideIcons.calendar),
+                hintStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                ),
+                prefixIcon: Icon(
+                  LucideIcons.calendar,
+                  color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
                 ),
               ),
               readOnly: true,
@@ -471,11 +496,34 @@ class _DailyReportPanelState extends State<DailyReportPanel> {
             
             DropdownButtonFormField<String>(
               initialValue: _selectedReportType,
+              style: TextStyle(
+                color: widget.isDarkMode ? Colors.white : Colors.black87,
+              ),
+              dropdownColor: widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white,
               decoration: InputDecoration(
                 labelText: "Report Type",
-                prefixIcon: const Icon(LucideIcons.fileText),
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
+                prefixIcon: Icon(
+                  LucideIcons.fileText,
+                  color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
                 ),
               ),
               items: [
@@ -486,7 +534,12 @@ class _DailyReportPanelState extends State<DailyReportPanel> {
               ].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
-                  child: Text(value),
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      color: widget.isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
                 );
               }).toList(),
               onChanged: (String? value) {
@@ -500,12 +553,37 @@ class _DailyReportPanelState extends State<DailyReportPanel> {
                 Expanded(
                   child: TextFormField(
                     controller: _totalRevenueController,
+                    style: TextStyle(
+                      color: widget.isDarkMode ? Colors.white : Colors.black87,
+                    ),
                     decoration: InputDecoration(
                       labelText: "Total Revenue (₱)",
+                      labelStyle: TextStyle(
+                        color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                      ),
                       hintText: "0.00",
-                      prefixIcon: const Icon(LucideIcons.trendingUp),
+                      hintStyle: TextStyle(
+                        color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                      ),
+                      prefixIcon: Icon(
+                        LucideIcons.trendingUp,
+                        color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF8B5CF6),
+                          width: 2,
+                        ),
                       ),
                     ),
                     keyboardType: TextInputType.number,
@@ -519,12 +597,37 @@ class _DailyReportPanelState extends State<DailyReportPanel> {
                 Expanded(
                   child: TextFormField(
                     controller: _totalExpensesController,
+                    style: TextStyle(
+                      color: widget.isDarkMode ? Colors.white : Colors.black87,
+                    ),
                     decoration: InputDecoration(
                       labelText: "Total Expenses (₱)",
+                      labelStyle: TextStyle(
+                        color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                      ),
                       hintText: "0.00",
-                      prefixIcon: const Icon(LucideIcons.trendingDown),
+                      hintStyle: TextStyle(
+                        color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                      ),
+                      prefixIcon: Icon(
+                        LucideIcons.trendingDown,
+                        color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF8B5CF6),
+                          width: 2,
+                        ),
                       ),
                     ),
                     keyboardType: TextInputType.number,
@@ -540,30 +643,77 @@ class _DailyReportPanelState extends State<DailyReportPanel> {
             
             TextFormField(
               controller: _netIncomeController,
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: widget.isDarkMode ? Colors.white : Colors.black87,
+              ),
               decoration: InputDecoration(
                 labelText: "Net Income (₱)",
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
                 hintText: "Auto-calculated",
-                prefixIcon: const Icon(LucideIcons.dollarSign),
+                hintStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                ),
+                prefixIcon: Icon(
+                  LucideIcons.dollarSign,
+                  color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
+                ),
               ),
               readOnly: true,
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF8B5CF6),
-              ),
             ),
             const SizedBox(height: 16),
             
             TextFormField(
               controller: _transactionsController,
+              style: TextStyle(
+                color: widget.isDarkMode ? Colors.white : Colors.black87,
+              ),
               decoration: InputDecoration(
                 labelText: "Total Transactions",
+                labelStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                ),
                 hintText: "0",
-                prefixIcon: const Icon(LucideIcons.activity),
+                hintStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+                ),
+                prefixIcon: Icon(
+                  LucideIcons.activity,
+                  color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
+                    width: 2,
+                  ),
                 ),
               ),
               keyboardType: TextInputType.number,

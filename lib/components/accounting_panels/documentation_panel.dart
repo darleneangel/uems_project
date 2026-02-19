@@ -16,6 +16,7 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
   final _searchController = TextEditingController();
   String _selectedDocumentType = 'E-Receipt';
   bool _isSending = false;
+  String _activeQuickAction = 'all';
 
   @override
   void dispose() {
@@ -55,6 +56,25 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
   void _clearForm() {
     _emailController.clear();
     _receiptIdController.clear();
+  }
+
+  void _toggleQuickAction(String key) {
+    setState(() {
+      _activeQuickAction = _activeQuickAction == key ? 'all' : key;
+    });
+  }
+
+  List<Map<String, String>> _filterDocuments(List<Map<String, String>> documents) {
+    switch (_activeQuickAction) {
+      case 'pending':
+        return documents.where((doc) => doc['status'] == 'Pending').toList();
+      case 'approved':
+        return documents.where((doc) => doc['status'] == 'Approved').toList();
+      case 'rejected':
+        return documents.where((doc) => doc['status'] == 'Rejected').toList();
+      default:
+        return documents;
+    }
   }
 
   void _showApprovalBasis(String requestId) {
@@ -270,12 +290,37 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
           
           TextFormField(
             controller: _receiptIdController,
+            style: TextStyle(
+              color: widget.isDarkMode ? Colors.white : Colors.black87,
+            ),
             decoration: InputDecoration(
               labelText: "Receipt ID",
+              labelStyle: TextStyle(
+                color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+              ),
               hintText: "Enter receipt ID",
-              prefixIcon: const Icon(LucideIcons.hash),
+              hintStyle: TextStyle(
+                color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+              ),
+              prefixIcon: Icon(
+                LucideIcons.hash,
+                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF8B5CF6),
+                  width: 2,
+                ),
               ),
             ),
           ),
@@ -283,12 +328,37 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
           
           TextFormField(
             controller: _emailController,
+            style: TextStyle(
+              color: widget.isDarkMode ? Colors.white : Colors.black87,
+            ),
             decoration: InputDecoration(
               labelText: "Email Address",
+              labelStyle: TextStyle(
+                color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+              ),
               hintText: "student@university.edu",
-              prefixIcon: const Icon(LucideIcons.mail),
+              hintStyle: TextStyle(
+                color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+              ),
+              prefixIcon: Icon(
+                LucideIcons.mail,
+                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF8B5CF6),
+                  width: 2,
+                ),
               ),
             ),
             keyboardType: TextInputType.emailAddress,
@@ -297,11 +367,34 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
           
           DropdownButtonFormField<String>(
             initialValue: _selectedDocumentType,
+            style: TextStyle(
+              color: widget.isDarkMode ? Colors.white : Colors.black87,
+            ),
+            dropdownColor: widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white,
             decoration: InputDecoration(
               labelText: "Document Type",
-              prefixIcon: const Icon(LucideIcons.file),
+              labelStyle: TextStyle(
+                color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+              ),
+              prefixIcon: Icon(
+                LucideIcons.file,
+                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF8B5CF6),
+                  width: 2,
+                ),
               ),
             ),
             items: [
@@ -312,7 +405,12 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
             ].map((String value) {
               return DropdownMenuItem<String>(
                 value: value,
-                child: Text(value),
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    color: widget.isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
               );
             }).toList(),
             onChanged: (String? value) {
@@ -380,12 +478,37 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
           
           TextFormField(
             controller: _searchController,
+            style: TextStyle(
+              color: widget.isDarkMode ? Colors.white : Colors.black87,
+            ),
             decoration: InputDecoration(
               labelText: "Search by ID, Name, or Email",
+              labelStyle: TextStyle(
+                color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+              ),
               hintText: "Enter search term...",
-              prefixIcon: const Icon(LucideIcons.search),
+              hintStyle: TextStyle(
+                color: widget.isDarkMode ? Colors.white38 : Colors.grey,
+              ),
+              prefixIcon: Icon(
+                LucideIcons.search,
+                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF8B5CF6),
+                  width: 2,
+                ),
               ),
               suffixIcon: IconButton(
                 onPressed: () {
@@ -398,7 +521,10 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
                     );
                   }
                 },
-                icon: const Icon(LucideIcons.search),
+                icon: Icon(
+                  LucideIcons.search,
+                  color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                ),
               ),
             ),
           ),
@@ -420,6 +546,8 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
             Colors.orangeAccent,
             textColor,
             subTextColor,
+            isActive: _activeQuickAction == 'pending',
+            onTap: () => _toggleQuickAction('pending'),
           ),
           const SizedBox(height: 8),
           
@@ -430,6 +558,8 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
             const Color(0xFF69F0AE),
             textColor,
             subTextColor,
+            isActive: _activeQuickAction == 'approved',
+            onTap: () => _toggleQuickAction('approved'),
           ),
           const SizedBox(height: 8),
           
@@ -440,6 +570,8 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
             Colors.redAccent,
             textColor,
             subTextColor,
+            isActive: _activeQuickAction == 'rejected',
+            onTap: () => _toggleQuickAction('rejected'),
           ),
         ],
       ),
@@ -453,48 +585,70 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
     Color color,
     Color textColor,
     Color subTextColor,
+    {
+      required bool isActive,
+      required VoidCallback onTap,
+    }
   ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: widget.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: widget.isDarkMode ? Colors.white10 : Colors.black12),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
+    final baseColor = widget.isDarkMode
+        ? Colors.white.withOpacity(0.05)
+        : Colors.grey.withOpacity(0.05);
+    final activeColor = widget.isDarkMode
+        ? Colors.white.withOpacity(0.12)
+        : Colors.grey.withOpacity(0.12);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isActive ? activeColor : baseColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isActive
+                ? (widget.isDarkMode ? Colors.white24 : Colors.black26)
+                : (widget.isDarkMode ? Colors.white10 : Colors.black12),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.inter(
-                    color: subTextColor,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 20),
             ),
-          ),
-          const Icon(LucideIcons.chevronRight, color: Colors.grey),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      color: subTextColor,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              LucideIcons.chevronRight,
+              color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -527,6 +681,8 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
       },
     ];
 
+    final filteredDocuments = _filterDocuments(documents);
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -546,7 +702,19 @@ class _DocumentationPanelState extends State<DocumentationPanel> {
             ),
           ),
           const SizedBox(height: 16),
-          ...documents.map((doc) => _documentCard(doc, textColor, subTextColor)),
+          if (filteredDocuments.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                "No documents found for this filter.",
+                style: GoogleFonts.inter(
+                  color: subTextColor,
+                  fontSize: 12,
+                ),
+              ),
+            )
+          else
+            ...filteredDocuments.map((doc) => _documentCard(doc, textColor, subTextColor)),
         ],
       ),
     );

@@ -74,7 +74,7 @@ class CashFlowPdfService {
                           style: pw.TextStyle(
                             fontSize: 9,
                             fontWeight: pw.FontWeight.bold,
-                            color: FinancialReportService.successGreen,
+                            color: FinancialReportService.textDark,
                           ),
                         ),
                       ],
@@ -100,7 +100,7 @@ class CashFlowPdfService {
                           style: pw.TextStyle(
                             fontSize: 9,
                             fontWeight: pw.FontWeight.bold,
-                            color: FinancialReportService.errorRed,
+                            color: FinancialReportService.textDark,
                           ),
                         ),
                       ],
@@ -256,13 +256,11 @@ class CashFlowPdfService {
   }) {
     return FinancialReportService.buildSectionCard(
       title: title,
-      accent: isInflow
-          ? FinancialReportService.successGreen
-          : FinancialReportService.errorRed,
+      accent: FinancialReportService.borderLight,
       child: pw.Table(
         columnWidths: {
-          0: const pw.FlexColumnWidth(3),
-          1: const pw.FlexColumnWidth(1),
+          0: const pw.FlexColumnWidth(2.5),
+          1: const pw.FlexColumnWidth(1.5),
         },
         children: [
           FinancialReportService.buildTableHeaderRow([title, 'Amount']),

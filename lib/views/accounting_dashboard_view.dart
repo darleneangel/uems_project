@@ -67,6 +67,33 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
     );
   }
 
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Logout"),
+        content: const Text("Are you sure you want to log out of the system?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("CANCEL"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onLogout();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text("LOG OUT"),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _notificationItem(String title, String subtitle) {
     return ListTile(
       leading: const Icon(Icons.notifications, color: Color(0xFF8B5CF6)),
@@ -272,7 +299,7 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
             "Logout System",
             9,
             isDestructive: true,
-            onTap: widget.onLogout,
+            onTap: _confirmLogout,
           ),
           const SizedBox(height: 20),
         ],
@@ -289,6 +316,7 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
   }) {
     bool isSelected = _selectedIndex == index;
     final activeColor = isDestructive ? Colors.redAccent : aViolet;
+    final inactiveColor = isDestructive ? Colors.redAccent : Colors.blueGrey;
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
@@ -300,14 +328,14 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
         visualDensity: VisualDensity.compact,
         leading: Icon(
           icon,
-          color: isSelected ? activeColor : Colors.blueGrey,
+          color: isSelected ? activeColor : inactiveColor,
           size: 20,
         ),
         title: _isSidebarExpanded
             ? Text(
                 title,
                 style: GoogleFonts.inter(
-                  color: isSelected ? Colors.white : Colors.blueGrey,
+                  color: isSelected ? Colors.white : inactiveColor,
                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                   fontSize: 13,
                 ),

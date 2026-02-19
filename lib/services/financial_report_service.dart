@@ -95,10 +95,6 @@ class FinancialReportService {
               border: pw.Border(
                 bottom: pw.BorderSide(color: borderLight),
               ),
-              borderRadius: const pw.BorderRadius.only(
-                topLeft: pw.Radius.circular(8),
-                topRight: pw.Radius.circular(8),
-              ),
             ),
             child: pw.Row(
               children: [
@@ -193,11 +189,8 @@ class FinancialReportService {
             String cell = entry.value;
             bool isAmount = index > 0; // Assume first column is label
 
+            // All text is dark/black for readability
             PdfColor textColor = textDark;
-            if (isAmount) {
-              if (isNegative) textColor = errorRed;
-              if (isPositive) textColor = successGreen;
-            }
 
             return pw.Padding(
               padding: const pw.EdgeInsets.symmetric(
@@ -263,12 +256,13 @@ class FinancialReportService {
     );
   }
 
-  // Format currency
+  // Format currency with PHP prefix
   static String formatCurrency(double amount) {
-    return '₱${amount.toStringAsFixed(2).replaceAllMapped(
+    final formatted = amount.toStringAsFixed(2).replaceAllMapped(
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (m) => '${m[1]},',
-        )}';
+        );
+    return 'PHP $formatted';
   }
 
   // Format percentage
