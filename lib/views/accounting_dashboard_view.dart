@@ -29,6 +29,79 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
       setState(() => _isSidebarExpanded = !_isSidebarExpanded);
   void _toggleTheme() => setState(() => _isDarkMode = !_isDarkMode);
 
+  // Accounting Functions
+  void _navigateToFeeManagement() {
+    setState(() => _selectedIndex = 1);
+  }
+
+  void _generateDailyReport() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Generating daily report..."),
+        backgroundColor: Color(0xFF8B5CF6),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showNotifications() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Notifications"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _notificationItem("New fee payment received", "Student #2024-001"),
+            _notificationItem("Payroll processed", "Faculty Department"),
+            _notificationItem("Report ready", "Monthly Financial Report"),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Logout"),
+        content: const Text("Are you sure you want to log out of the system?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("CANCEL"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onLogout();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text("LOG OUT"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _notificationItem(String title, String subtitle) {
+    return ListTile(
+      leading: const Icon(Icons.notifications, color: Color(0xFF8B5CF6)),
+      title: Text(title),
+      subtitle: Text(subtitle),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Dynamic theme colors
@@ -51,13 +124,18 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
                 _buildTopBar(textColor, subTextColor),
                 Expanded(
                   child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1400),
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: AccountingPanelContent(
-                          selectedIndex: _selectedIndex,
-                          isDarkMode: _isDarkMode,
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1400),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: AccountingPanelContent(
+                            selectedIndex: _selectedIndex,
+                            isDarkMode: _isDarkMode,
+                            onNavigateToFeeManagement: _navigateToFeeManagement,
+                            onGenerateDailyReport: _generateDailyReport,
+                          ),
                         ),
                       ),
                     ),
@@ -105,6 +183,26 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
               ),
             ),
           ),
+<<<<<<< HEAD
+=======
+          const Spacer(),
+          IconButton(
+            onPressed: _toggleTheme,
+            icon: Icon(
+              _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
+              color: aViolet,
+            ),
+          ),
+          const SizedBox(width: 20),
+          IconButton(
+            onPressed: _showNotifications,
+            icon: Icon(
+              LucideIcons.bell,
+              color: subTextColor,
+            ),
+          ),
+          const SizedBox(width: 24),
+>>>>>>> ade0bf853b14f953354f82427841c11017197893
           const VerticalDivider(
             color: Colors.white10,
             indent: 25,
@@ -188,6 +286,7 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
                 _sidebarHeader("FEES"),
                 _menuItem(LucideIcons.fileText, "Fee Management", 1),
                 _menuItem(LucideIcons.clipboardList, "Financial Reports", 2),
+<<<<<<< HEAD
                 _menuItem(LucideIcons.bookOpen, "Subject Load Fee", 3),
                 _sidebarHeader("MESSAGES"),
                 _menuItem(LucideIcons.mail, "Messaging", 4),
@@ -203,6 +302,30 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
               ],
             ),
           ),
+=======
+                _menuItem(LucideIcons.shieldCheck, "Payroll", 3),
+                _sidebarHeader("PAYMENTS"),
+                _menuItem(LucideIcons.send, "Payment Request", 4),
+                _menuItem(LucideIcons.creditCard, "Payment Channels", 5),
+                _menuItem(LucideIcons.calendar, "Payment Plans", 6),
+                _sidebarHeader("REPORTS"),
+                _menuItem(LucideIcons.fileText, "Documentation", 7),
+                _menuItem(LucideIcons.barChart3, "Daily Report", 8),
+                _sidebarHeader("MESSAGES"),
+                _menuItem(LucideIcons.mail, "Messaging", 9),
+              ],
+            ),
+          ),
+          const Divider(color: Colors.white10),
+          _menuItem(
+            LucideIcons.logOut,
+            "Logout System",
+            9,
+            isDestructive: true,
+            onTap: _confirmLogout,
+          ),
+          const SizedBox(height: 20),
+>>>>>>> ade0bf853b14f953354f82427841c11017197893
         ],
       ),
     );
@@ -217,6 +340,7 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
   }) {
     bool isSelected = _selectedIndex == index;
     final activeColor = isDestructive ? Colors.redAccent : aViolet;
+    final inactiveColor = isDestructive ? Colors.redAccent : Colors.blueGrey;
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
@@ -228,14 +352,14 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
         visualDensity: VisualDensity.compact,
         leading: Icon(
           icon,
-          color: isSelected ? activeColor : Colors.blueGrey,
+          color: isSelected ? activeColor : inactiveColor,
           size: 20,
         ),
         title: _isSidebarExpanded
             ? Text(
                 title,
                 style: GoogleFonts.inter(
-                  color: isSelected ? Colors.white : Colors.blueGrey,
+                  color: isSelected ? Colors.white : inactiveColor,
                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                   fontSize: 13,
                 ),
@@ -260,13 +384,4 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
       ),
     );
   }
-
-  Widget _headerAction(IconData icon, Color color) => Container(
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.05),
-      shape: BoxShape.circle,
-    ),
-    child: Icon(icon, color: color, size: 20),
-  );
 }

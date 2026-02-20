@@ -91,10 +91,25 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
   void _submitCreateOrUpdate() {
     final title = _titleController.text.trim();
     final desc = _descriptionController.text.trim();
-    if (title.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Title is required')));
+    final name = _nameController.text.trim();
+    final department = _departmentController.text.trim();
+    final email = _emailController.text.trim();
+    final employeeId = _employeeIdController.text.trim();
+    final password = _passwordController.text.trim();
+    
+    // Validate all required fields
+    if (title.isEmpty || name.isEmpty || department.isEmpty || email.isEmpty || employeeId.isEmpty || password.isEmpty) {
+      List<String> missingFields = [];
+      if (title.isEmpty) missingFields.add('Title');
+      if (name.isEmpty) missingFields.add('Name');
+      if (department.isEmpty) missingFields.add('Department');
+      if (email.isEmpty) missingFields.add('Email');
+      if (employeeId.isEmpty) missingFields.add('Employee ID');
+      if (password.isEmpty) missingFields.add('Password');
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill all required fields: ${missingFields.join(', ')}')),
+      );
       return;
     }
 
@@ -154,8 +169,8 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
   // Styled action card
   Widget _actionCard(String key, String label, IconData icon, bool selected) {
     final bg = selected
-        ? LinearGradient(colors: [aViolet, pViolet])
-        : LinearGradient(colors: [Colors.white10, Colors.white12]);
+        ? LinearGradient(colors: [_isDarkMode ? aViolet : pViolet, _isDarkMode ? pViolet : aViolet.withValues(alpha:0.8)])
+        : LinearGradient(colors: [_isDarkMode ? Colors.white10 : Colors.grey.shade100, _isDarkMode ? Colors.white12 : Colors.grey.shade200]);
     return GestureDetector(
       onTap: () {
         switch (key) {
@@ -183,7 +198,12 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         decoration: BoxDecoration(
           gradient: bg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? aViolet.withOpacity(0.6) : Colors.white10),
+          border: Border.all(
+            color: selected 
+                ? (_isDarkMode ? aViolet : pViolet)
+                : (_isDarkMode ? Colors.white10 : Colors.grey.shade300),
+            width: selected ? 1.5 : 1.0,
+          ),
         ),
         child: Row(
           children: [
@@ -192,8 +212,14 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
               decoration: BoxDecoration(
                 color: selected ? (_isDarkMode ? Colors.white24 : Colors.black12) : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: selected 
+                      ? (_isDarkMode ? Colors.white38 : Colors.black26)
+                      : Colors.transparent,
+                  width: 1.0,
+                ),
               ),
-              child: Icon(icon, color: selected ? Colors.white : Colors.white70, size: 20),
+              child: Icon(icon, color: selected ? Colors.white : (_isDarkMode ? Colors.white70 : Colors.black54), size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -213,69 +239,136 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
 
   // Create form
   Widget _buildCreateForm() {
+    // Theme-aware colors
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final subTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
+    final hintColor = _isDarkMode ? Colors.white30 : Colors.grey.shade500;
+    final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
+    final borderColor = _isDarkMode ? Colors.white24 : Colors.grey.shade300;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Administrator Details', style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        Text('Administrator Details', style: GoogleFonts.inter(color: textColor, fontSize: 14, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         TextField(
           controller: _nameController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: textColor),
           decoration: InputDecoration(
             hintText: 'Name',
-            hintStyle: TextStyle(color: Colors.white30),
+            hintStyle: TextStyle(color: hintColor),
             filled: true,
-            fillColor: Colors.white10,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            fillColor: fillColor,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: borderColor, width: 2.0),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: borderColor, width: 2.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: _isDarkMode ? aViolet : pViolet, width: 2.5),
+            ),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _departmentController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: textColor),
           decoration: InputDecoration(
             hintText: 'Department',
-            hintStyle: TextStyle(color: Colors.white30),
+            hintStyle: TextStyle(color: hintColor),
             filled: true,
-            fillColor: Colors.white10,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            fillColor: fillColor,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: borderColor, width: 2.0),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: borderColor, width: 2.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: _isDarkMode ? aViolet : pViolet, width: 2.5),
+            ),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _emailController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: textColor),
           decoration: InputDecoration(
             hintText: 'Personal Email',
-            hintStyle: TextStyle(color: Colors.white30),
+            hintStyle: TextStyle(color: hintColor),
             filled: true,
-            fillColor: Colors.white10,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            fillColor: fillColor,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: borderColor, width: 2.0),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: borderColor, width: 2.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: _isDarkMode ? aViolet : pViolet, width: 2.5),
+            ),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _employeeIdController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: textColor),
           decoration: InputDecoration(
             hintText: 'Employee ID',
-            hintStyle: TextStyle(color: Colors.white30),
+            hintStyle: TextStyle(color: hintColor),
             filled: true,
-            fillColor: Colors.white10,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            fillColor: fillColor,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: borderColor, width: 2.0),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: borderColor, width: 2.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: _isDarkMode ? aViolet : pViolet, width: 2.5),
+            ),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _passwordController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: textColor),
           obscureText: true,
           decoration: InputDecoration(
             hintText: 'Password (Temporary)',
-            hintStyle: TextStyle(color: Colors.white30),
+            hintStyle: TextStyle(color: hintColor),
             filled: true,
-            fillColor: Colors.white10,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white10)),
+            fillColor: fillColor,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: borderColor, width: 2.0),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: borderColor, width: 2.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10), 
+              borderSide: BorderSide(color: _isDarkMode ? aViolet : pViolet, width: 2.5),
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -284,12 +377,20 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
             Expanded(
               child: ElevatedButton(
                 onPressed: _submitCreateOrUpdate,
-                style: ElevatedButton.styleFrom(backgroundColor: aViolet),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isDarkMode ? aViolet : pViolet,
+                  side: BorderSide(color: _isDarkMode ? aViolet : pViolet, width: 2.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
                 child: Text(
                   _editingItem == null ? 'Create' : 'Update',
                   style: GoogleFonts.inter(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
                 ),
               ),
@@ -307,11 +408,19 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                 setState(() => _effectiveDate = null);
               },
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white10),
+                side: BorderSide(color: borderColor, width: 2.0),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               child: Text(
                 'Clear',
-                style: GoogleFonts.inter(color: Colors.white70),
+                style: GoogleFonts.inter(
+                  color: subTextColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
               ),
             ),
           ],
@@ -322,10 +431,15 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
 
   Widget _buildReviewList() {
     final visible = _items.where((i) => i['archived'] == false).toList();
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final subTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
+    final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
+    final borderColor = _isDarkMode ? Colors.white24 : Colors.grey.shade300;
+    
     if (visible.isEmpty) {
-      return const Text(
+      return Text(
         'No program items found.',
-        style: TextStyle(color: Colors.white70),
+        style: TextStyle(color: subTextColor),
       );
     }
     return ListView.separated(
@@ -338,9 +452,9 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white10,
+            color: fillColor,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white10),
+            border: Border.all(color: borderColor, width: 1.5),
           ),
           child: Row(
             children: [
@@ -351,7 +465,7 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                     Text(
                       item['title'],
                       style: GoogleFonts.inter(
-                        color: Colors.white,
+                        color: textColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -359,7 +473,7 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                     Text(
                       item['description'] ?? '',
                       style: GoogleFonts.inter(
-                        color: Colors.white70,
+                        color: subTextColor,
                         fontSize: 13,
                       ),
                     ),
@@ -370,13 +484,13 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                 children: [
                   IconButton(
                     onPressed: () => _startUpdate(item),
-                    icon: const Icon(LucideIcons.edit3, color: Colors.white70),
+                    icon: Icon(LucideIcons.edit3, color: subTextColor),
                   ),
                   IconButton(
                     onPressed: () => _archiveItem(item),
-                    icon: const Icon(
+                    icon: Icon(
                       LucideIcons.archive,
-                      color: Colors.white70,
+                      color: subTextColor,
                     ),
                   ),
                 ],
@@ -390,10 +504,15 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
 
   Widget _buildArchiveList() {
     final archived = _items.where((i) => i['archived'] == true).toList();
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final subTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
+    final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
+    final borderColor = _isDarkMode ? Colors.white24 : Colors.grey.shade300;
+    
     if (archived.isEmpty) {
-      return const Text(
+      return Text(
         'No archived items.',
-        style: TextStyle(color: Colors.white70),
+        style: TextStyle(color: subTextColor),
       );
     }
     return ListView.separated(
@@ -406,9 +525,9 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white10,
+            color: fillColor,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white10),
+            border: Border.all(color: borderColor, width: 1.5),
           ),
           child: Row(
             children: [
@@ -419,7 +538,7 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                     Text(
                       item['title'],
                       style: GoogleFonts.inter(
-                        color: Colors.white,
+                        color: textColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -427,7 +546,7 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                     Text(
                       item['description'] ?? '',
                       style: GoogleFonts.inter(
-                        color: Colors.white70,
+                        color: subTextColor,
                         fontSize: 13,
                       ),
                     ),
@@ -436,7 +555,7 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
               ),
               IconButton(
                 onPressed: () => _restoreItem(item),
-                icon: const Icon(LucideIcons.refreshCw, color: Colors.white70),
+                icon: Icon(LucideIcons.refreshCw, color: subTextColor),
               ),
             ],
           ),

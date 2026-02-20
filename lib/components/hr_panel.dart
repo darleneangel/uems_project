@@ -89,24 +89,27 @@ class _HRPanelState extends State<HRPanel> {
   }
 
   void _deleteEmployee(int index) {
+    final dialogTextColor = _isDarkMode ? Colors.white : pViolet;
+    final dialogSubTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
+
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1033),
+        backgroundColor: _isDarkMode ? const Color(0xFF1E1033) : lCard,
         title: Text(
           'Confirm Delete',
-          style: GoogleFonts.inter(color: Colors.white),
+          style: GoogleFonts.inter(color: dialogTextColor),
         ),
         content: Text(
           'Delete ${_employees[index]['name']}?',
-          style: GoogleFonts.inter(color: Colors.white70),
+          style: GoogleFonts.inter(color: dialogSubTextColor),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(c).pop(),
             child: Text(
               'Cancel',
-              style: GoogleFonts.inter(color: Colors.white70),
+              style: GoogleFonts.inter(color: dialogSubTextColor),
             ),
           ),
           ElevatedButton(
@@ -348,14 +351,10 @@ class _HRPanelState extends State<HRPanel> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: _isDarkMode
-                ? surfaceDark.withOpacity(0.5)
-                : Colors.white.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(24),
+            color: _isDarkMode ? const Color(0xFF1E1033) : lCard,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: _isDarkMode
-                  ? Colors.white10
-                  : Colors.black.withOpacity(0.05),
+              color: _isDarkMode ? Colors.white10 : Colors.black12,
             ),
           ),
           child: Column(
@@ -375,7 +374,7 @@ class _HRPanelState extends State<HRPanel> {
                     children: [
                       TextButton.icon(
                         onPressed: _showImportDialog,
-                        icon: const Icon(Icons.file_upload, color: aViolet),
+                        icon: Icon(Icons.file_upload, color: subTextColor),
                         label: Text(
                           'Import',
                           style: GoogleFonts.inter(color: subTextColor),
@@ -384,7 +383,7 @@ class _HRPanelState extends State<HRPanel> {
                       const SizedBox(width: 8),
                       TextButton.icon(
                         onPressed: _showExportDialog,
-                        icon: const Icon(Icons.file_download, color: aViolet),
+                        icon: Icon(Icons.file_download, color: subTextColor),
                         label: Text(
                           'Export',
                           style: GoogleFonts.inter(color: subTextColor),
@@ -400,11 +399,11 @@ class _HRPanelState extends State<HRPanel> {
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   hintText: 'Name',
-                  hintStyle: TextStyle(color: subTextColor.withOpacity(0.5)),
+                  hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                   filled: true,
                   fillColor: fillColor,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(color: borderColor),
                   ),
                 ),
@@ -415,11 +414,11 @@ class _HRPanelState extends State<HRPanel> {
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   hintText: 'Department',
-                  hintStyle: TextStyle(color: subTextColor.withOpacity(0.5)),
+                  hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                   filled: true,
                   fillColor: fillColor,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(color: borderColor),
                   ),
                 ),
@@ -430,11 +429,11 @@ class _HRPanelState extends State<HRPanel> {
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   hintText: 'Personal Email',
-                  hintStyle: TextStyle(color: subTextColor.withOpacity(0.5)),
+                  hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                   filled: true,
                   fillColor: fillColor,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(color: borderColor),
                   ),
                 ),
@@ -449,12 +448,12 @@ class _HRPanelState extends State<HRPanel> {
                       decoration: InputDecoration(
                         hintText: 'Employee ID',
                         hintStyle: TextStyle(
-                          color: subTextColor.withOpacity(0.5),
+                          color: subTextColor.withOpacity(0.6),
                         ),
                         filled: true,
                         fillColor: fillColor,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: borderColor),
                         ),
                       ),
@@ -468,12 +467,12 @@ class _HRPanelState extends State<HRPanel> {
                       decoration: InputDecoration(
                         hintText: 'Role',
                         hintStyle: TextStyle(
-                          color: subTextColor.withOpacity(0.5),
+                          color: subTextColor.withOpacity(0.6),
                         ),
                         filled: true,
                         fillColor: fillColor,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: borderColor),
                         ),
                       ),
@@ -484,37 +483,14 @@ class _HRPanelState extends State<HRPanel> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  SizedBox(
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _addEmployee,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Ink(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [aViolet, secondaryViolet],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          alignment: Alignment.center,
-                          child: Text(
-                            _editingIndex == null ? 'Create' : 'Save',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
+                  ElevatedButton(
+                    onPressed: _addEmployee,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8B5CF6),
+                    ),
+                    child: Text(
+                      _editingIndex == null ? 'Create' : 'Save',
+                      style: GoogleFonts.inter(color: Colors.white),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -522,9 +498,6 @@ class _HRPanelState extends State<HRPanel> {
                     onPressed: _clearForm,
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: borderColor),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
                     ),
                     child: Text(
                       'Clear',
@@ -548,15 +521,9 @@ class _HRPanelState extends State<HRPanel> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: _isDarkMode
-                ? surfaceDark.withOpacity(0.5)
-                : Colors.white.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: _isDarkMode
-                  ? Colors.white10
-                  : Colors.black.withOpacity(0.05),
-            ),
+            color: _isDarkMode ? const Color(0xFF1E1033) : lCard,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor),
           ),
           child: _employees.isEmpty
               ? Text(
@@ -567,31 +534,37 @@ class _HRPanelState extends State<HRPanel> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: _employees.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(color: Colors.white10),
+                  separatorBuilder: (_, __) => Divider(color: borderColor),
                   itemBuilder: (context, idx) {
                     final e = _employees[idx];
                     return ListTile(
                       onTap: () => _showEmployeeDetails(e),
                       title: Text(
                         e['name'] ?? '',
-                        style: GoogleFonts.inter(color: Colors.white),
+                        style: GoogleFonts.inter(color: textColor),
                       ),
                       subtitle: Text(
                         e['department'] ?? '',
-                        style: GoogleFonts.inter(color: Colors.white54),
+                        style: GoogleFonts.inter(
+                          color: subTextColor.withOpacity(0.8),
+                        ),
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             e['employeeId'] ?? '',
-                            style: GoogleFonts.inter(color: Colors.white54),
+                            style: GoogleFonts.inter(
+                              color: subTextColor.withOpacity(0.8),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           IconButton(
                             onPressed: () => _startEdit(idx),
-                            icon: const Icon(Icons.edit, color: Colors.white54),
+                            icon: Icon(
+                              Icons.edit,
+                              color: subTextColor.withOpacity(0.8),
+                            ),
                           ),
                           IconButton(
                             onPressed: () => _deleteEmployee(idx),

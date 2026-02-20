@@ -50,7 +50,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
   bool _isLoading = false;
   bool _isPasswordVisible = false;
 
@@ -305,7 +304,11 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
+<<<<<<< HEAD
                             accentViolet.withOpacity(_isDarkMode ? 0.2 : 0.1),
+=======
+                            accentViolet.withOpacity(0.1),
+>>>>>>> ade0bf853b14f953354f82427841c11017197893
                             Colors.transparent,
                           ],
                         ),
@@ -322,12 +325,21 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
+<<<<<<< HEAD
                             secondaryViolet.withOpacity(
                               _isDarkMode ? 0.15 : 0.05,
                             ),
+=======
+                            accentViolet.withOpacity(0.15),
+>>>>>>> ade0bf853b14f953354f82427841c11017197893
                             Colors.transparent,
                           ],
                         ),
+                      ),
+                      child: const Icon(
+                        LucideIcons.graduationCap,
+                        color: Colors.white,
+                        size: 28,
                       ),
                     ),
                   ),
@@ -358,6 +370,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
           // Main Content
           Center(
+<<<<<<< HEAD
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: FadeTransition(
@@ -403,7 +416,44 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                             )
                           : _buildRightForm(isDesktop),
                     ),
+=======
+            child: FadeTransition(
+              opacity: _formOpacity,
+              child: SlideTransition(
+                position: _formSlide,
+                child: Container(
+                  width: isDesktop ? 900 : 400,
+                  margin: const EdgeInsets.symmetric(vertical: 40),
+                  decoration: BoxDecoration(
+                    color: _isDarkMode ? surfaceDark : Colors.white,
+                    borderRadius: BorderRadius.circular(32),
+                     border: Border.all(
+                      color: Colors.white.withOpacity(0.1),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentViolet.withOpacity(0.15),
+                        blurRadius: 80,
+                        offset: const Offset(0, 20),
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+>>>>>>> ade0bf853b14f953354f82427841c11017197893
                   ),
+                  clipBehavior: Clip.antiAlias,
+                  child: isDesktop
+                      ? Row(
+                          children: [
+                            Expanded(child: _buildLeftBanner()),
+                            Expanded(child: _buildRightForm(isDesktop)),
+                          ],
+                        )
+                      : _buildRightForm(isDesktop),
                 ),
               ),
             ),
@@ -575,7 +625,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   Widget _buildLeftBanner() {
     return Container(
-      padding: const EdgeInsets.all(60),
+      padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -741,7 +791,11 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   Widget _buildRightForm(bool isDesktop) {
     return Container(
+<<<<<<< HEAD
       padding: EdgeInsets.all(isDesktop ? 80 : 40),
+=======
+      padding: const EdgeInsets.all(30),
+>>>>>>> ade0bf853b14f953354f82427841c11017197893
       color: _isDarkMode ? surfaceDark : Colors.white,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -754,7 +808,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                 Text(
                   "Sign in",
                   style: GoogleFonts.inter(
-                    fontSize: 32,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: _isDarkMode ? Colors.white : const Color(0xFF1E293B),
                   ),

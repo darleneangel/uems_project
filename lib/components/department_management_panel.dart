@@ -197,7 +197,7 @@ class _DepartmentManagementPanelState extends State<DepartmentManagementPanel> {
     final cardColor = _isDarkMode ? surfaceDark : lCard;
     final textColor = _isDarkMode ? Colors.white : pViolet;
     final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
-    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
+    final borderColor = _isDarkMode ? Colors.white24 : Colors.black45; // Darker border for better visibility
     final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
     
     return SingleChildScrollView(
@@ -213,7 +213,7 @@ class _DepartmentManagementPanelState extends State<DepartmentManagementPanel> {
                   flex: 1,
                   child: Container(
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,7 +230,7 @@ class _DepartmentManagementPanelState extends State<DepartmentManagementPanel> {
                             hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
                             fillColor: fillColor,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor, width: 2.0)),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -244,7 +244,7 @@ class _DepartmentManagementPanelState extends State<DepartmentManagementPanel> {
                             hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
                             fillColor: fillColor,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor, width: 2.0)),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -258,7 +258,7 @@ class _DepartmentManagementPanelState extends State<DepartmentManagementPanel> {
                             hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
                             fillColor: fillColor,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor, width: 2.0)),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -273,7 +273,7 @@ class _DepartmentManagementPanelState extends State<DepartmentManagementPanel> {
                             hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
                             filled: true,
                             fillColor: fillColor,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor, width: 2.0)),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -286,7 +286,7 @@ class _DepartmentManagementPanelState extends State<DepartmentManagementPanel> {
                           const SizedBox(width: 12),
                           OutlinedButton(
                             onPressed: _clearForm,
-                            style: OutlinedButton.styleFrom(side: BorderSide(color: _isDarkMode ? Colors.white10 : Colors.black26)),
+                            style: OutlinedButton.styleFrom(side: BorderSide(color: borderColor, width: 2.0)),
                             child: Text('Clear', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black54)),
                           ),
                         ]),
@@ -300,7 +300,7 @@ class _DepartmentManagementPanelState extends State<DepartmentManagementPanel> {
                   flex: 1,
                   child: Container(
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

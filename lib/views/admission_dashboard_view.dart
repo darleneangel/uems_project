@@ -28,6 +28,33 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
       setState(() => _isSidebarExpanded = !_isSidebarExpanded);
   void _toggleTheme() => setState(() => _isDarkMode = !_isDarkMode);
 
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Logout"),
+        content: const Text("Are you sure you want to log out of the system?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("CANCEL"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onLogout();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text("LOG OUT"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Dynamic theme colors
@@ -208,6 +235,18 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
               ],
             ),
           ),
+<<<<<<< HEAD
+=======
+          const Divider(color: Colors.white10),
+          _menuItem(
+            LucideIcons.logOut,
+            "Logout System",
+            8,
+            isDestructive: true,
+            onTap: _confirmLogout,
+          ),
+          const SizedBox(height: 20),
+>>>>>>> ade0bf853b14f953354f82427841c11017197893
         ],
       ),
     );
@@ -222,6 +261,7 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
   }) {
     bool isSelected = _selectedIndex == index;
     final activeColor = isDestructive ? Colors.redAccent : aViolet;
+    final inactiveColor = isDestructive ? Colors.redAccent : Colors.blueGrey;
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
@@ -233,14 +273,14 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
         visualDensity: VisualDensity.compact,
         leading: Icon(
           icon,
-          color: isSelected ? activeColor : Colors.blueGrey,
+          color: isSelected ? activeColor : inactiveColor,
           size: 20,
         ),
         title: _isSidebarExpanded
             ? Text(
                 title,
                 style: GoogleFonts.inter(
-                  color: isSelected ? Colors.white : Colors.blueGrey,
+                  color: isSelected ? Colors.white : inactiveColor,
                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                   fontSize: 13,
                 ),

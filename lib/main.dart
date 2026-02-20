@@ -11,11 +11,18 @@ class MyApp extends StatelessWidget {
   //HELLO
   @override
   Widget build(BuildContext context) {
+    final poppins = GoogleFonts.poppins();
+    final notoSans = GoogleFonts.notoSans();
+
     return MaterialApp(
       title: 'UEMS - Unified Education Management System',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.indigo,
+        fontFamily: poppins.fontFamily,
+        fontFamilyFallback: [
+          if (notoSans.fontFamily != null) notoSans.fontFamily!,
+        ],
         textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
       ),
       // This starts the app on the Login Page

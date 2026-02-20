@@ -162,9 +162,9 @@ class _AdminPanelContentState extends State<AdminPanelContent> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: surfaceDark,
+        color: _isDarkMode ? surfaceDark : lCard,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _isDarkMode ? Colors.white : pViolet10),
+        border: Border.all(color: _isDarkMode ? Colors.white10 : Colors.black12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,9 +188,9 @@ class _AdminPanelContentState extends State<AdminPanelContent> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: aViolet.withValues(alpha:0.1),
+                  color: _isDarkMode ? aViolet.withValues(alpha:0.1) : pViolet.withValues(alpha:0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: aViolet.withValues(alpha:0.3)),
+                  border: Border.all(color: _isDarkMode ? aViolet.withValues(alpha:0.3) : pViolet.withValues(alpha:0.2)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -417,9 +417,9 @@ class _AdminPanelContentState extends State<AdminPanelContent> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: surfaceDark,
+        color: _isDarkMode ? surfaceDark : lCard,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _isDarkMode ? Colors.white : pViolet10),
+        border: Border.all(color: _isDarkMode ? Colors.white10 : Colors.black12),
       ),
       child: RequestReceiver(isDarkMode: _isDarkMode),
     );
@@ -853,7 +853,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
     return Container(
       key: const ValueKey('review'),
       child: ValueListenableBuilder<List<OfficeRequest>>(
-        valueListenable: _service.notifier,
+        valueListenable: OfficeRequestService.notifier,
         builder: (context, list, _) {
           final pending = list.where((r) => r.status == 'pending').toList();
           if (pending.isEmpty) return Text('No pending requests.', style: TextStyle(color: _isDarkMode ? Colors.white : pViolet70));
@@ -921,7 +921,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
     return Container(
       key: const ValueKey('update'),
       child: ValueListenableBuilder<List<OfficeRequest>>(
-        valueListenable: _service.notifier,
+        valueListenable: OfficeRequestService.notifier,
         builder: (context, list, _) {
           final items = list.where((r) => r.status != 'archived').toList();
           if (items.isEmpty) return Text('No records to update.', style: GoogleFonts.inter(color: subTextColor));
@@ -976,7 +976,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
     return Container(
       key: const ValueKey('archive'),
       child: ValueListenableBuilder<List<OfficeRequest>>(
-        valueListenable: _service.notifier,
+        valueListenable: OfficeRequestService.notifier,
         builder: (context, list, _) {
           final items = list.where((r) => r.status == 'archived').toList();
           if (items.isEmpty) return Text('No archived items.', style: TextStyle(color: _isDarkMode ? Colors.white : pViolet70));
