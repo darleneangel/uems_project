@@ -21,14 +21,13 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
     'overview', // 0
     'records', // 1
     'enrollment', // 2
-    'add_drop', // 3
-    'grades', // 4
-    'credentials', // 5
-    'eligibility', // 6
-    'curriculum', // 7
-    'reports', // 8
-    'messages', // Added for inbox
-    'requests', // Added for student requests
+    'grades', // 3
+    'credentials', // 4
+    'eligibility', // 5
+    'curriculum', // 6
+    'reports', // 7
+    'messages', // 8
+    'requests', // 9
   ];
 
   static const Color pViolet = Color(0xFF2E1065);
@@ -101,7 +100,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
           ),
           const SizedBox(width: 16),
           Text(
-            "Registrar Intelligence Core",
+            "Registrar Office",
             style: GoogleFonts.inter(
               color: textColor,
               fontSize: 18,
@@ -176,17 +175,16 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
-                _menuItem(LucideIcons.layoutDashboard, "Overview", 0),
+                _menuItem(LucideIcons.layoutDashboard, "Dashboard", 0),
                 _sidebarHeader("RECORDS"),
                 _menuItem(LucideIcons.contact, "Student Directory", 1),
                 _menuItem(LucideIcons.clipboardCheck, "Enrollment Verify", 2),
-                _menuItem(LucideIcons.gitPullRequest, "Add/Drop Approval", 3),
                 _sidebarHeader("ACADEMICS"),
-                _menuItem(LucideIcons.star, "Grade Management", 4),
-                _menuItem(LucideIcons.fileText, "Transcripts & TOR", 5),
+                _menuItem(LucideIcons.star, "Grade Management", 3),
+                _menuItem(LucideIcons.fileText, "Transcripts & TOR", 4),
                 _sidebarHeader("SYSTEM"),
-                _menuItem(LucideIcons.mail, "Student Inbox", 9),
-                _menuItem(LucideIcons.fileSignature, "Document Requests", 10),
+                _menuItem(LucideIcons.mail, "Student Inbox", 8),
+                _menuItem(LucideIcons.fileSignature, "Document Requests", 9),
               ],
             ),
           ),
@@ -194,7 +192,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
           _menuItem(
             LucideIcons.logOut,
             "Logout",
-            11,
+            10,
             isDestructive: true,
             onTap: widget.onLogout,
           ),
@@ -265,7 +263,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
         if (_isSidebarExpanded) ...[
           const SizedBox(width: 12),
           Text(
-            "UEMS Records",
+            "UEMSSP Registrar",
             style: GoogleFonts.orbitron(
               color: textColor,
               fontWeight: FontWeight.bold,

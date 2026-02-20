@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
@@ -19,118 +20,336 @@ class AssessmentPanel extends StatelessWidget {
 
   // --- BUSINESS LOGIC (MOCK ENGINE) ---
   double get totalUnits => 21.0;
-  double get ratePerUnit => 1500.0;
-  double get miscTotal => 5450.0;
+  double get ratePerUnit => 1550.0;
+  double get miscTotal => 9168.00;
+  double get laboratoryFee => 10865.00;
+  double get otherFees => 1680.00;
   double get scholarshipDiscount => 0.20;
 
   double calculateGrossTuition() => totalUnits * ratePerUnit;
   double calculateDiscountAmount() =>
       calculateGrossTuition() * scholarshipDiscount;
   double calculateTotalAssessment() =>
-      (calculateGrossTuition() + miscTotal) - calculateDiscountAmount();
+      (calculateGrossTuition() + miscTotal + laboratoryFee + otherFees) -
+      calculateDiscountAmount();
 
   bool isClearedForExam() {
-    return studentData['balance'] <= 0 &&
+    return (studentData['balance'] ?? 0.0) <= 0 &&
         studentData['clearance_status'] != 'Pending';
   }
 
-  // --- PDF GENERATION LOGIC ---
-
+  // --- MODERNIZED PDF GENERATION LOGIC ---
   Future<void> _generatePdfExport(BuildContext context, String type) async {
     final pdf = pw.Document();
     final String timestamp = DateTime.now().toString().split('.')[0];
+    final PdfColor brandViolet = PdfColor.fromInt(0xFF7C3AED);
+
+    // LOGO LOADING LOGIC
+    pw.ImageProvider? logoImage;
+    try {
+      final ByteData data = await rootBundle.load('assets/image/logo (2).png');
+      logoImage = pw.MemoryImage(data.buffer.asUint8List());
+    } catch (e) {
+      logoImage = null;
+    }
 
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(
-                "SAN SEBASTIAN COLLEGE - RECOLETOS DE CAVITE",
-                style: pw.TextStyle(
-                  fontWeight: pw.FontWeight.bold,
-                  fontSize: 14,
+              // 1. MODERN BRANDED HEADER (UEMSSP)
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Row(
+                    children: [
+                      if (logoImage != null)
+                        pw.Container(
+                          width: 40,
+                          height: 40,
+                          child: pw.Image(logoImage),
+                        )
+                      else
+                        pw.Container(
+                          width: 35,
+                          height: 35,
+                          decoration: pw.BoxDecoration(
+                            color: brandViolet,
+                            borderRadius: pw.BorderRadius.circular(8),
+                          ),
+                          child: pw.Center(
+                            child: pw.Text(
+                              "U",
+                              style: pw.TextStyle(
+                                color: PdfColors.white,
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      pw.SizedBox(width: 12),
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            "UEMSSP",
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 22,
+                              color: brandViolet,
+                            ),
+                          ),
+                          pw.Text(
+                            "Unified Education Management System",
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              color: PdfColors.grey700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text(
+                        "OFFICIAL DOCUMENT",
+                        style: pw.TextStyle(
+                          fontSize: 8,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey500,
+                        ),
+                      ),
+                      pw.Text(
+                        type.toUpperCase(),
+                        style: pw.TextStyle(
+                          fontSize: 10,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+              pw.Divider(color: brandViolet, thickness: 1.5),
+              pw.SizedBox(height: 25),
+
+              // 2. STUDENT METADATA GRID
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Column(
+                  children: [
+                    pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: _pdfMetaItem(
+                            "STUDENT NAME",
+                            studentData['name'],
+                          ),
+                        ),
+                        pw.Expanded(
+                          child: _pdfMetaItem("STUDENT ID", studentData['id']),
+                        ),
+                      ],
+                    ),
+                    pw.SizedBox(height: 10),
+                    pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: _pdfMetaItem(
+                            "PROGRAM",
+                            studentData['program'],
+                          ),
+                        ),
+                        pw.Expanded(
+                          child: _pdfMetaItem("DATE GENERATED", timestamp),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              pw.Text(
-                "Unified Education Management System - $type",
-                style: pw.TextStyle(fontSize: 10),
-              ),
-              pw.Divider(),
-              pw.SizedBox(height: 20),
-              pw.Text("Student Name: ${studentData['name']}"),
-              pw.Text("Student ID: ${studentData['id']}"),
-              pw.Text("Program: ${studentData['program']}"),
-              pw.Text("Date Generated: $timestamp"),
-              pw.SizedBox(height: 30),
+              pw.SizedBox(height: 40),
+
+              // 3. DYNAMIC CONTENT AREA
               if (type == "Exam Permit") ...[
                 pw.Center(
-                  child: pw.Text(
-                    "OFFICIAL EXAM PERMIT",
-                    style: pw.TextStyle(
-                      fontSize: 22,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ),
-                pw.SizedBox(height: 10),
-                pw.Center(
-                  child: pw.Text(
-                    "STATUS: CLEARED",
-                    style: pw.TextStyle(
-                      color: PdfColors.green,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
+                  child: pw.Column(
+                    children: [
+                      pw.Text(
+                        "OFFICIAL EXAM PERMIT",
+                        style: pw.TextStyle(
+                          fontSize: 22,
+                          fontWeight: pw.FontWeight.bold,
+                          color: brandViolet,
+                        ),
+                      ),
+                      pw.SizedBox(height: 10),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        decoration: pw.BoxDecoration(
+                          color: PdfColors.green100,
+                          borderRadius: pw.BorderRadius.circular(4),
+                        ),
+                        child: pw.Text(
+                          "STATUS: CLEARED",
+                          style: pw.TextStyle(
+                            color: PdfColors.green900,
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 pw.SizedBox(height: 40),
                 pw.Text(
-                  "This permit allows the student to take the 2nd Semester Midterm Examinations.",
+                  "This permit officially authorizes the student to participate in the scheduled examination period for the 2nd Semester, Academic Year 2025-2026. Please present this document to the proctor upon entry.",
+                  style: pw.TextStyle(fontSize: 11, lineSpacing: 4),
+                  textAlign: pw.TextAlign.justify,
                 ),
               ] else if (type == "Assessment Form") ...[
                 pw.Text(
-                  "TUITION BREAKDOWN",
-                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  "TUITION & FEES BREAKDOWN",
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                    color: brandViolet,
+                  ),
                 ),
-                pw.Bullet(
-                  text: "Gross Tuition: PHP ${calculateGrossTuition()}",
+                pw.SizedBox(height: 15),
+                _pdfFeeRow(
+                  "Gross Tuition Fee",
+                  "PHP ${calculateGrossTuition().toStringAsFixed(2)}",
                 ),
-                pw.Bullet(text: "Miscellaneous: PHP $miscTotal"),
-                pw.Bullet(text: "Discounts: PHP ${calculateDiscountAmount()}"),
-                pw.Divider(),
-                pw.Text(
-                  "TOTAL NET ASSESSMENT: PHP ${calculateTotalAssessment()}",
-                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                _pdfFeeRow(
+                  "Miscellaneous Fees",
+                  "PHP ${miscTotal.toStringAsFixed(2)}",
+                ),
+                _pdfFeeRow(
+                  "Laboratory Fees",
+                  "PHP ${laboratoryFee.toStringAsFixed(2)}",
+                ),
+                _pdfFeeRow(
+                  "Other Institutional Fees",
+                  "PHP ${otherFees.toStringAsFixed(2)}",
+                ),
+                _pdfFeeRow(
+                  "Scholarship (20% Discount)",
+                  "- PHP ${calculateDiscountAmount().toStringAsFixed(2)}",
+                  isDiscount: true,
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(vertical: 10),
+                  child: pw.Divider(thickness: 0.5),
+                ),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      "TOTAL NET ASSESSMENT",
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    pw.Text(
+                      "PHP ${calculateTotalAssessment().toStringAsFixed(2)}",
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 13,
+                        color: brandViolet,
+                      ),
+                    ),
+                  ],
                 ),
               ] else if (type == "Audit Trail") ...[
                 pw.Text(
                   "SECURITY TRANSACTION LOGS",
-                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                    color: brandViolet,
+                  ),
                 ),
-                pw.SizedBox(height: 10),
-                pw.Text(
-                  "[2026-02-01 09:00] Account Created via Admissions Office",
+                pw.SizedBox(height: 15),
+                _pdfAuditItem(
+                  "2026-02-01 09:00",
+                  "Account Created via Admissions Office",
                 ),
-                pw.Text(
-                  "[2026-02-03 14:20] Subject Load Validated by Program Chair",
+                _pdfAuditItem(
+                  "2026-02-03 14:20",
+                  "Subject Load Validated by Program Chair",
                 ),
-                pw.Text(
-                  "[2026-02-05 11:00] Scholarship applied (Academic 20%)",
+                _pdfAuditItem(
+                  "2026-02-05 11:00",
+                  "Scholarship applied (Academic 20%)",
                 ),
-                pw.Text(
-                  "[2026-02-07 16:45] Assessment Finalized by Accounting",
+                _pdfAuditItem(
+                  "2026-02-07 16:45",
+                  "Assessment Finalized by Accounting",
                 ),
               ],
+
               pw.Spacer(),
-              pw.Divider(),
-              pw.Align(
-                alignment: pw.Alignment.centerRight,
-                child: pw.Text(
-                  "Computer Generated Document - No Signature Required",
-                  style: pw.TextStyle(fontSize: 8, color: PdfColors.grey),
-                ),
+
+              // 4. MODERN FOOTER
+              pw.Divider(color: PdfColors.grey300),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        "AUTHENTICATED BY UEMSSP CORE",
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 8,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
+                      pw.Text(
+                        "Computer Generated Document - Manual signature not required.",
+                        style: pw.TextStyle(
+                          fontSize: 7,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Container(
+                    width: 40,
+                    height: 40,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey300),
+                    ),
+                    child: pw.Center(
+                      child: pw.Text(
+                        "QR",
+                        style: pw.TextStyle(
+                          fontSize: 8,
+                          color: PdfColors.grey400,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           );
@@ -152,6 +371,69 @@ class AssessmentPanel extends StatelessWidget {
     }
   }
 
+  // --- PDF HELPER WIDGETS ---
+  pw.Widget _pdfMetaItem(String label, String val) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            fontSize: 7,
+            color: PdfColors.grey600,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+        pw.Text(
+          val,
+          style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _pdfFeeRow(String label, String amount, {bool isDiscount = false}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 4),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            label,
+            style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
+          ),
+          pw.Text(
+            amount,
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: pw.FontWeight.bold,
+              color: isDiscount ? PdfColors.green700 : PdfColors.black,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _pdfAuditItem(String date, String action) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 8),
+      child: pw.Row(
+        children: [
+          pw.Text(
+            "[$date] ",
+            style: pw.TextStyle(
+              fontSize: 9,
+              color: PdfColors.grey600,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.Text(action, style: pw.TextStyle(fontSize: 9)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color cardColor = isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
@@ -163,21 +445,15 @@ class AssessmentPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. LIFECYCLE TRACKER (ENROLLMENT STATUS)
           _buildEnrollmentTracker(textColor),
           const SizedBox(height: 24),
-
           _buildHeader(textColor, subTextColor),
           const SizedBox(height: 24),
-
-          // 2. FINANCIAL ASSESSMENT CARD
           _buildFinancialCard(cardColor, textColor, subTextColor),
           const SizedBox(height: 24),
-
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 3. CLEARANCE & ELIGIBILITY
               Expanded(
                 flex: 5,
                 child: _buildClearanceCard(
@@ -188,7 +464,6 @@ class AssessmentPanel extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 20),
-              // 4. ACADEMIC STANDING
               Expanded(
                 flex: 4,
                 child: _buildAcademicStandingCard(
@@ -200,8 +475,6 @@ class AssessmentPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-
-          // 5. FOOTER ACTIONS
           _buildActionFooter(context, cardColor, textColor),
         ],
       ),
@@ -237,18 +510,13 @@ class AssessmentPanel extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Verified Student Data | ${studentData['semester']}",
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: subTextColor,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+        Text(
+          "Verified Student Data | ${studentData['semester']}",
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: subTextColor,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         _statusBadge("ENROLLED", const Color(0xFF69F0AE)),
       ],
@@ -293,7 +561,11 @@ class AssessmentPanel extends StatelessWidget {
             calculateGrossTuition(),
             textColor,
           ),
-          _breakdownRow("Miscellaneous & Lab Fees", miscTotal, textColor),
+          _breakdownRow(
+            "Miscellaneous & Lab Fees",
+            miscTotal + laboratoryFee + otherFees,
+            textColor,
+          ),
           _breakdownRow(
             "Scholarship (20% Discount)",
             -calculateDiscountAmount(),
@@ -348,7 +620,7 @@ class AssessmentPanel extends StatelessWidget {
           const SizedBox(height: 24),
           _clearanceItem(
             "Accounting (Balance)",
-            studentData['balance'] <= 0,
+            (studentData['balance'] ?? 0.0) <= 0,
             subTextColor,
           ),
           _clearanceItem("Library & Lab", true, subTextColor),
@@ -463,8 +735,7 @@ class AssessmentPanel extends StatelessWidget {
     );
   }
 
-  // --- UI ATOMS ---
-
+  // --- UI HELPERS ---
   Widget _trackStep(
     String label,
     bool isDone, {
@@ -477,7 +748,6 @@ class AssessmentPanel extends StatelessWidget {
     final Color labelColor = isCurrent
         ? (isDarkMode ? Colors.white : const Color(0xFF2E1065))
         : (isDarkMode ? Colors.white38 : Colors.black38);
-
     return Column(
       children: [
         Icon(

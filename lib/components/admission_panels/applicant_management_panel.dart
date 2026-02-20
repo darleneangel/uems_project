@@ -20,7 +20,7 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
   final List<Map<String, dynamic>> _applicants = [
     {
       "id": "APL-2026-001",
-      "name": "SARAH JENKINS",
+      "name": "KUH JANE VALENZUELA",
       "program": "BACHELOR OF SCIENCE IN COMPUTER ENGINEERING (BSCPE)",
       "category": "New Student",
       "status": "Pending Face-to-Face",
@@ -32,7 +32,7 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
     },
     {
       "id": "APL-2026-004",
-      "name": "MICHAEL CHEN",
+      "name": "SEAN KIEFER BENITEZ",
       "program": "BACHELOR OF SCIENCE IN INFORMATION TECHNOLOGY",
       "category": "Transferee",
       "status": "For Interview",
@@ -44,7 +44,7 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
     },
     {
       "id": "APL-2026-088",
-      "name": "JESSICA ALBA",
+      "name": "KURT DELASA",
       "program": "BACHELOR OF SCIENCE IN NURSING",
       "category": "Returning Student",
       "status": "Verified",
@@ -382,10 +382,10 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: widget.isDarkMode
               ? Colors.white.withOpacity(0.05)
@@ -395,8 +395,8 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
       child: Row(
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [aViolet.withOpacity(0.2), aViolet.withOpacity(0.05)],
@@ -407,7 +407,7 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
               child: Text(
                 name[0],
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: aViolet,
                 ),
@@ -424,7 +424,7 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
                     Text(
                       name,
                       style: GoogleFonts.inter(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: textColor,
                       ),

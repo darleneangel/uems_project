@@ -1,5 +1,3 @@
-// c:\Users\Darlene Angel\uems_project\lib\components\accounting_panels\accounting_overview_panel.dart
-
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,149 +7,188 @@ class AccountingOverviewPanel extends StatelessWidget {
   final bool isDarkMode;
   const AccountingOverviewPanel({super.key, required this.isDarkMode});
 
+  // Standardized Tonal Palette
+  static const Color pViolet = Color(0xFF2E1065);
+  static const Color aViolet = Color(0xFF7C3AED);
+  static const Color success = Color(0xFF69F0AE);
+  static const Color surfaceDark = Color(0xFF1E1B4B);
+
   @override
   Widget build(BuildContext context) {
-    final cardColor = isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
-    final textColor = isDarkMode ? Colors.white : const Color(0xFF2E1065);
+    final cardColor = isDarkMode ? surfaceDark : Colors.white;
+    final textColor = isDarkMode ? Colors.white : pViolet;
     final subTextColor = isDarkMode ? Colors.white54 : Colors.blueGrey;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildChartDescription(cardColor, textColor, subTextColor),
-        const SizedBox(height: 24),
-        // Quick Actions
-        Row(
-          children: [
-            ElevatedButton.icon(
-              onPressed: () {}, // Navigate to Fee Management
-              icon: const Icon(LucideIcons.plusCircle, size: 16),
-              label: const Text("NEW PAYMENT"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF8B5CF6),
-                foregroundColor: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 12),
-            OutlinedButton.icon(
-              onPressed: () {},
-              icon: const Icon(LucideIcons.fileText, size: 16),
-              label: const Text("GENERATE DAILY REPORT"),
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
-        Row(
-          children: [
-            _statCard(
-              "Total Revenue",
-              "₱4,821,000",
-              LucideIcons.trendingUp,
-              const Color(0xFF69F0AE),
-              cardColor,
-              textColor,
-              subTextColor,
-            ),
-            const SizedBox(width: 16),
-            _statCard(
-              "Outstanding Fees",
-              "₱240,500",
-              LucideIcons.alertCircle,
-              Colors.orangeAccent,
-              cardColor,
-              textColor,
-              subTextColor,
-            ),
-            const SizedBox(width: 16),
-            _statCard(
-              "Active Grants",
-              "152",
-              LucideIcons.award,
-              Colors.blueAccent,
-              cardColor,
-              textColor,
-              subTextColor,
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: isDarkMode ? Colors.white10 : Colors.black12,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. HEADER DESCRIPTION & QUICK ACTIONS
+          _buildTopBanner(cardColor, textColor, subTextColor),
+          const SizedBox(height: 32),
+
+          // 2. STAT CARDS ROW
+          Row(
             children: [
-              Text(
-                "Recent Transactions",
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 20),
-              _transactionRow(
-                "Tuition Payment - BSCS 2A",
-                "Student #2024-001",
-                "+ ₱15,000.00",
-                const Color(0xFF69F0AE),
+              _statCard(
+                "Total Revenue",
+                "₱4,821,000",
+                LucideIcons.trendingUp,
+                success,
+                cardColor,
                 textColor,
-                subTextColor,
               ),
-              _transactionRow(
-                "Vendor Payment - IT Supplies",
-                "PC Express Inc.",
-                "- ₱42,000.00",
-                Colors.redAccent,
+              const SizedBox(width: 16),
+              _statCard(
+                "Outstanding Fees",
+                "₱240,500",
+                LucideIcons.alertCircle,
+                Colors.orangeAccent,
+                cardColor,
                 textColor,
-                subTextColor,
               ),
-              _transactionRow(
-                "Tuition Payment - BSIT 1B",
-                "Student #2024-089",
-                "+ ₱8,500.00",
-                const Color(0xFF69F0AE),
+              const SizedBox(width: 16),
+              _statCard(
+                "Active Grants",
+                "152",
+                LucideIcons.award,
+                Colors.blueAccent,
+                cardColor,
                 textColor,
-                subTextColor,
-              ),
-              _transactionRow(
-                "Payroll Disbursement",
-                "Faculty Dept.",
-                "- ₱1,200,000.00",
-                Colors.redAccent,
-                textColor,
-                subTextColor,
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 32),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 4,
-              child: _buildPieChartCard(cardColor, textColor, subTextColor),
+          const SizedBox(height: 32),
+
+          // 3. RECENT TRANSACTIONS TABLE
+          _buildTransactionsCard(cardColor, textColor, subTextColor),
+          const SizedBox(height: 32),
+
+          // 4. ANALYTICS GRID (Charts)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 4,
+                child: _buildChartCard(
+                  "Revenue Sources",
+                  "Distribution of institutional income",
+                  _PieChart(textColor: textColor),
+                  cardColor,
+                  textColor,
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                flex: 6,
+                child: _buildChartCard(
+                  "Monthly Expenses",
+                  "Operational and salary disbursements",
+                  _BarGraph(),
+                  cardColor,
+                  textColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildChartCard(
+            "Fee Collection Frequency",
+            "Distribution of payment amounts processed today",
+            _Histogram(),
+            cardColor,
+            textColor,
+            height: 250,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopBanner(Color cardColor, Color textColor, Color subTextColor) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: isDarkMode ? Colors.white10 : Colors.black12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Financial Intelligence Overview",
+                  style: GoogleFonts.inter(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: textColor,
+                    letterSpacing: -1,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Real-time visibility into revenue streams, outstanding accountabilities, and institutional disbursements. Use the analytics below to monitor fiscal health.",
+                  style: TextStyle(
+                    color: subTextColor,
+                    height: 1.5,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 24),
-            Expanded(
-              flex: 6,
-              child: _buildBarGraphCard(cardColor, textColor, subTextColor),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        SizedBox(
-          height: 350,
-          child: _buildHistogramCard(cardColor, textColor, subTextColor),
-        ),
-      ],
+          ),
+          const SizedBox(width: 40),
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(LucideIcons.plusCircle, size: 16),
+                label: const Text(
+                  "NEW PAYMENT",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: aViolet,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 22,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: () {},
+                icon: const Icon(LucideIcons.fileText, size: 16),
+                label: const Text(
+                  "DAILY REPORT",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: textColor,
+                  side: BorderSide(color: textColor.withOpacity(0.2)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 22,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -160,15 +197,14 @@ class AccountingOverviewPanel extends StatelessWidget {
     String value,
     IconData icon,
     Color color,
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
+    Color cardBg,
+    Color text,
   ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: cardColor,
+          color: cardBg,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isDarkMode ? Colors.white10 : Colors.black12,
@@ -177,22 +213,29 @@ class AccountingOverviewPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 28),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
             const SizedBox(height: 16),
             Text(
               value,
-              style: GoogleFonts.inter(
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                color: textColor,
+              style: GoogleFonts.orbitron(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: text,
               ),
             ),
             Text(
               label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
+              style: const TextStyle(
                 color: Colors.blueGrey,
-                fontWeight: FontWeight.w600,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
@@ -201,30 +244,76 @@ class AccountingOverviewPanel extends StatelessWidget {
     );
   }
 
+  Widget _buildTransactionsCard(Color cardBg, Color text, Color subText) {
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: isDarkMode ? Colors.white10 : Colors.black12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Recent Ledger Activity",
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w800,
+              color: text,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 24),
+          _transactionRow(
+            "Tuition Settlement - BSCS 4A",
+            "Darlene Angel (OR#8821)",
+            "+ ₱15,000.00",
+            success,
+            text,
+            subText,
+          ),
+          _transactionRow(
+            "Vendor: Campus IT Supplies",
+            "PC Express Disbursement",
+            "- ₱42,000.00",
+            Colors.redAccent,
+            text,
+            subText,
+          ),
+          _transactionRow(
+            "Student Enrollment Fee - BSIT",
+            "Juan Dela Cruz (OR#9012)",
+            "+ ₱8,500.00",
+            success,
+            text,
+            subText,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _transactionRow(
     String title,
-    String subtitle,
-    String amount,
-    Color amountColor,
-    Color textColor,
-    Color subTextColor,
+    String sub,
+    String amt,
+    Color amtColor,
+    Color text,
+    Color subText,
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: amountColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
+          CircleAvatar(
+            backgroundColor: amtColor.withOpacity(0.1),
+            radius: 18,
             child: Icon(
-              amount.startsWith('+')
+              amt.startsWith('+')
                   ? LucideIcons.arrowDownLeft
                   : LucideIcons.arrowUpRight,
-              color: amountColor,
-              size: 18,
+              color: amtColor,
+              size: 16,
             ),
           ),
           const SizedBox(width: 16),
@@ -234,23 +323,22 @@ class AccountingOverviewPanel extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
+                    color: text,
                     fontWeight: FontWeight.bold,
-                    color: textColor,
+                    fontSize: 14,
                   ),
                 ),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.inter(fontSize: 12, color: subTextColor),
-                ),
+                Text(sub, style: TextStyle(color: subText, fontSize: 12)),
               ],
             ),
           ),
           Text(
-            amount,
+            amt,
             style: GoogleFonts.inter(
-              fontWeight: FontWeight.bold,
-              color: amountColor,
+              fontWeight: FontWeight.w900,
+              color: amtColor,
+              fontSize: 14,
             ),
           ),
         ],
@@ -258,72 +346,80 @@ class AccountingOverviewPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildChartDescription(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
+  Widget _buildChartCard(
+    String title,
+    String sub,
+    Widget chart,
+    Color cardBg,
+    Color text, {
+    double height = 200,
+  }) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(24),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(color: isDarkMode ? Colors.white10 : Colors.black12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Financial Analytics & Chart Breakdown",
+            title,
             style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: textColor,
+              fontWeight: FontWeight.w800,
+              color: text,
+              fontSize: 16,
             ),
           ),
-          const SizedBox(height: 16),
           Text(
-            "This dashboard visualizes key financial metrics. The Pie Chart details revenue sources dominated by Tuition (70%). "
-            "The Bar Graph tracks monthly expenses showing stability. The Histogram analyzes fee collection frequency, peaking in the 1k-5k range.",
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: subTextColor,
-              height: 1.5,
-            ),
+            sub,
+            style: const TextStyle(color: Colors.blueGrey, fontSize: 12),
           ),
-          const SizedBox(height: 24),
-          Wrap(
-            spacing: 24,
-            runSpacing: 12,
+          const SizedBox(height: 32),
+          SizedBox(height: height, child: chart),
+        ],
+      ),
+    );
+  }
+}
+
+// --- VISUALIZATION COMPONENTS ---
+
+class _PieChart extends StatelessWidget {
+  final Color textColor;
+  const _PieChart({required this.textColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: 150,
+            height: 150,
+            child: CustomPaint(painter: PiePainter()),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _breakdownItem(
-                "Revenue Dominance",
-                "Tuition (70%)",
-                Colors.deepPurpleAccent,
-                textColor,
-                subTextColor,
+              Text(
+                "70%",
+                style: GoogleFonts.orbitron(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: AccountingOverviewPanel.aViolet,
+                ),
               ),
-              _breakdownItem(
-                "Expense Trend",
-                "Stable / Low Variance",
-                Colors.orangeAccent,
-                textColor,
-                subTextColor,
-              ),
-              _breakdownItem(
-                "Peak Collection",
-                "1k - 5k Range",
-                Colors.tealAccent,
-                textColor,
-                subTextColor,
-              ),
-              _breakdownItem(
-                "Net Cash Flow",
-                "Positive (+15%)",
-                const Color(0xFF69F0AE),
-                textColor,
-                subTextColor,
+              const Text(
+                "TUITION",
+                style: TextStyle(
+                  color: Colors.blueGrey,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1,
+                ),
               ),
             ],
           ),
@@ -331,329 +427,94 @@ class AccountingOverviewPanel extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _breakdownItem(
-    String label,
-    String value,
-    Color color,
-    Color textColor,
-    Color subTextColor,
-  ) {
+class PiePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 18
+      ..strokeCap = StrokeCap.round;
+
+    // Background
+    paint.color = Colors.blueGrey.withOpacity(0.05);
+    canvas.drawCircle(center, radius, paint);
+
+    // Tuition segment
+    paint.color = AccountingOverviewPanel.aViolet;
+    canvas.drawArc(rect, -math.pi / 2, math.pi * 1.4, false, paint);
+
+    // Misc segment
+    paint.color = Colors.blueAccent;
+    canvas.drawArc(rect, math.pi * 0.9, math.pi * 0.4, false, paint);
+
+    // Others
+    paint.color = Colors.orangeAccent;
+    canvas.drawArc(rect, math.pi * 1.3, math.pi * 0.2, false, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter old) => false;
+}
+
+class _BarGraph extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final List<double> values = [0.4, 0.9, 0.6, 0.8, 0.5];
     return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(LucideIcons.activity, size: 16, color: color),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.inter(fontSize: 11, color: subTextColor),
-            ),
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: textColor,
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: values
+          .map(
+            (h) => Container(
+              width: 35,
+              height: 180 * h,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AccountingOverviewPanel.aViolet,
+                    AccountingOverviewPanel.aViolet.withOpacity(0.3),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
-          ],
-        ),
-      ],
+          )
+          .toList(),
     );
   }
 }
 
-Widget _buildPieChartCard(
-  Color cardColor,
-  Color textColor,
-  Color subTextColor,
-) {
-  return Container(
-    height: 350,
-    padding: const EdgeInsets.all(24),
-    decoration: BoxDecoration(
-      color: cardColor,
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(
-        color: cardColor == Colors.white ? Colors.black12 : Colors.white10,
-      ),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Revenue Sources",
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: textColor,
-          ),
-        ),
-        const SizedBox(height: 24),
-        Expanded(
-          child: Center(
-            child: SizedBox(
-              width: 150,
-              height: 150,
-              child: CustomPaint(
-                painter: _PieChartPainter(),
-                child: Center(
-                  child: Text(
-                    "₱4.8M",
-                    style: GoogleFonts.inter(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: textColor,
+class _Histogram extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final List<double> values = [0.3, 0.8, 0.5, 0.2, 0.1];
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: values
+          .map(
+            (val) => Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Container(
+                  height: 200 * val,
+                  decoration: BoxDecoration(
+                    color: Colors.tealAccent.withOpacity(0.6),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(8),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _chartLegend("Tuition", Colors.deepPurpleAccent),
-            _chartLegend("Misc.", Colors.blueAccent),
-            _chartLegend("Other", Colors.orangeAccent),
-          ],
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildBarGraphCard(
-  Color cardColor,
-  Color textColor,
-  Color subTextColor,
-) {
-  return Container(
-    height: 350,
-    padding: const EdgeInsets.all(24),
-    decoration: BoxDecoration(
-      color: cardColor,
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(
-        color: cardColor == Colors.white ? Colors.black12 : Colors.white10,
-      ),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Monthly Expenses",
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: textColor,
-          ),
-        ),
-        const SizedBox(height: 24),
-        Expanded(child: CustomPaint(painter: _BarGraphPainter())),
-      ],
-    ),
-  );
-}
-
-Widget _buildHistogramCard(
-  Color cardColor,
-  Color textColor,
-  Color subTextColor,
-) {
-  return Container(
-    padding: const EdgeInsets.all(24),
-    decoration: BoxDecoration(
-      color: cardColor,
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(
-        color: cardColor == Colors.white ? Colors.black12 : Colors.white10,
-      ),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Fee Collection Frequency (Histogram)",
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: textColor,
-          ),
-        ),
-        Text(
-          "Distribution of payment amounts processed today",
-          style: GoogleFonts.inter(fontSize: 12, color: subTextColor),
-        ),
-        const SizedBox(height: 24),
-        Expanded(child: CustomPaint(painter: _HistogramPainter())),
-      ],
-    ),
-  );
-}
-
-Widget _chartLegend(String label, Color color) {
-  return Row(
-    children: [
-      Container(width: 10, height: 10, color: color),
-      const SizedBox(width: 8),
-      Text(
-        label,
-        style: GoogleFonts.inter(fontSize: 12, color: Colors.blueGrey),
-      ),
-    ],
-  );
-}
-
-class _PieChartPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 20;
-
-    // Background Circle
-    paint.color = Colors.blueGrey.withOpacity(0.1);
-    canvas.drawCircle(center, radius, paint);
-
-    // Data segments
-    double startAngle = -math.pi / 2;
-
-    // Tuition (70%)
-    paint.color = Colors.deepPurpleAccent;
-    double sweepAngle = 2 * math.pi * 0.7;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      startAngle,
-      sweepAngle,
-      false,
-      paint,
-    );
-    startAngle += sweepAngle;
-
-    // Misc (20%)
-    paint.color = Colors.blueAccent;
-    sweepAngle = 2 * math.pi * 0.2;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      startAngle,
-      sweepAngle,
-      false,
-      paint,
-    );
-    startAngle += sweepAngle;
-
-    // Other (10%)
-    paint.color = Colors.orangeAccent;
-    sweepAngle = 2 * math.pi * 0.1;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      startAngle,
-      sweepAngle,
-      false,
-      paint,
+          )
+          .toList(),
     );
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-
-  @override
-  bool hitTest(Offset position) => false;
-
-  @override
-  SemanticsBuilderCallback? get semanticsBuilder => null;
-}
-
-class _HistogramPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    // Mock data: frequency of payments in ranges [0-1k, 1k-5k, 5k-10k, 10k-20k, >20k]
-    final frequencies = [0.3, 0.8, 0.5, 0.2, 0.1];
-    final barWidth = size.width / frequencies.length;
-
-    for (int i = 0; i < frequencies.length; i++) {
-      final barHeight = size.height * frequencies[i];
-      final left = i * barWidth + (barWidth * 0.1); // 10% gap
-      final width = barWidth * 0.8;
-      final top = size.height - barHeight;
-
-      final rect = Rect.fromLTWH(left, top, width, barHeight);
-
-      paint.shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Colors.tealAccent, Colors.teal.withOpacity(0.3)],
-      ).createShader(rect);
-
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(4)),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-
-  @override
-  bool hitTest(Offset position) => false;
-
-  @override
-  SemanticsBuilderCallback? get semanticsBuilder => null;
-}
-
-class _BarGraphPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    final barData = [0.8, 0.6, 0.9, 0.5, 0.7]; // Mock data for 5 bars
-    final barWidth = size.width / (barData.length * 2);
-
-    for (int i = 0; i < barData.length; i++) {
-      final barHeight = size.height * barData[i];
-      final left = i * barWidth * 2 + barWidth / 2;
-      final top = size.height - barHeight;
-      final rect = Rect.fromLTWH(left, top, barWidth, barHeight);
-
-      // Create a gradient for each bar
-      paint.shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          const Color(0xFF8B5CF6),
-          const Color(0xFF8B5CF6).withOpacity(0.3),
-        ],
-      ).createShader(rect);
-
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(4)),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-
-  @override
-  bool hitTest(Offset position) => false;
-
-  @override
-  SemanticsBuilderCallback? get semanticsBuilder => null;
 }

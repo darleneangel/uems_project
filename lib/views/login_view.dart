@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'dart:ui';
 import 'dart:math' as math;
 // Import your student dashboard file here
 import 'student_dashboard_view.dart';
@@ -23,6 +25,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     with TickerProviderStateMixin {
   // Navigation State: 'login', 'admin_dashboard', or 'student_portal'
   String _currentView = 'login';
+  String _targetView = ''; // Stores destination after welcome animation
   bool _isDarkMode = true; // Global theme state
 
   // Standardized Violet Theme Palette
@@ -39,6 +42,11 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   late AnimationController _entranceController;
   late Animation<double> _formOpacity;
   late Animation<Offset> _formSlide;
+
+  // Welcome Animation Controllers
+  late AnimationController _welcomeController;
+  late Animation<double> _welcomeScale;
+  late Animation<double> _welcomeOpacity;
 
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -75,8 +83,28 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
           ),
         );
 
+    _welcomeController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _welcomeScale = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _welcomeController, curve: Curves.easeOutBack),
+    );
+
+    _welcomeOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _welcomeController,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+      ),
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _entranceController.forward();
+      if (mounted) {
+        _entranceController.forward();
+        // Ensure full screen mode is triggered after the first frame (Mobile)
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      }
     });
   }
 
@@ -96,8 +124,12 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   @override
   void dispose() {
+    // Restore system overlays when the login view is disposed
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
     _bgController.dispose();
     _entranceController.dispose();
+    _welcomeController.dispose();
     _idController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -110,26 +142,45 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
     final id = _idController.text;
     final pass = _passwordController.text;
-    setState(() => _isLoading = false);
 
     // CENTRALIZED ROUTING LOGIC
+    String destination = '';
     if (id == '123' && pass == '123') {
-      setState(() => _currentView = 'student_portal');
+      destination = 'student_portal';
     } else if (id == '456' && pass == '456') {
-      setState(() => _currentView = 'admin_dashboard');
+      destination = 'admin_dashboard';
     } else if (id == '789' && pass == '789') {
-      setState(() => _currentView = 'admission_dashboard');
+      destination = 'admission_dashboard';
     } else if (id == '321' && pass == '321') {
-      // Added Accounting ID
-      setState(() => _currentView = 'accounting_dashboard');
+      destination = 'accounting_dashboard';
     } else if (id == '910' && pass == '910' || id == '111' && pass == '111') {
-      setState(() => _currentView = 'registrar_dashboard');
+      destination = 'registrar_dashboard';
     } else if (id == '222' && pass == '222') {
-      setState(() => _currentView = 'program_chair_dashboard');
+      destination = 'program_chair_dashboard';
     } else if (id == '333' && pass == '333') {
-      setState(() => _currentView = 'teacher_dashboard');
+      destination = 'teacher_dashboard';
     } else if (id == '444' && pass == '444') {
-      setState(() => _currentView = 'hr_dashboard');
+      destination = 'hr_dashboard';
+    }
+
+    setState(() => _isLoading = false);
+
+    if (destination.isNotEmpty) {
+      setState(() {
+        _targetView = destination;
+        _currentView = 'welcome_animation';
+      });
+
+      // Start the welcome sequence
+      _welcomeController.forward().then((_) async {
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) {
+          setState(() {
+            _currentView = _targetView;
+            _welcomeController.reset();
+          });
+        }
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -196,6 +247,8 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         return HrDashboardView(
           onLogout: () => setState(() => _currentView = 'login'),
         );
+      case 'welcome_animation':
+        return _buildWelcomeView();
       case 'login':
       default:
         return _buildLoginView();
@@ -210,10 +263,15 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       body: Stack(
         children: [
           // Background Layer
-          Container(
-            color: _isDarkMode
-                ? const Color(0xFF0F071D)
-                : const Color(0xFFF1F5F9),
+          AnimatedBuilder(
+            animation: _bgAnimation,
+            builder: (context, child) => Container(
+              color:
+                  _bgAnimation.value ??
+                  (_isDarkMode
+                      ? const Color(0xFF0F071D)
+                      : const Color(0xFFF1F5F9)),
+            ),
           ),
 
           // Ambient Background Elements
@@ -222,16 +280,21 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
             builder: (context, child) {
               final t = _bgController.value;
               final offset1 = Offset(
-                50 * math.sin(t * 2 * math.pi),
-                50 * math.cos(t * 2 * math.pi),
+                100 * math.sin(t * 2 * math.pi),
+                100 * math.cos(t * 2 * math.pi),
               );
               final offset2 = Offset(
-                30 * math.sin((t + 0.5) * 2 * math.pi),
-                30 * math.cos((t + 0.5) * 2 * math.pi),
+                80 * math.sin((t + 0.3) * 2 * math.pi),
+                80 * math.cos((t + 0.3) * 2 * math.pi),
+              );
+              final offset3 = Offset(
+                120 * math.cos((t + 0.7) * 2 * math.pi),
+                120 * math.sin((t + 0.7) * 2 * math.pi),
               );
 
               return Stack(
                 children: [
+                  // Ambient Orbs
                   Positioned(
                     top: -100 + offset1.dy,
                     left: -100 + offset1.dx,
@@ -242,7 +305,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            accentViolet.withOpacity(0.15),
+                            accentViolet.withOpacity(_isDarkMode ? 0.2 : 0.1),
                             Colors.transparent,
                           ],
                         ),
@@ -259,13 +322,35 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            secondaryViolet.withOpacity(0.1),
+                            secondaryViolet.withOpacity(
+                              _isDarkMode ? 0.15 : 0.05,
+                            ),
                             Colors.transparent,
                           ],
                         ),
                       ),
                     ),
                   ),
+                  Positioned(
+                    top: size.height * 0.4 + offset3.dy,
+                    left: size.width * 0.3 + offset3.dx,
+                    child: Container(
+                      width: 400,
+                      height: 400,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            successColor.withOpacity(_isDarkMode ? 0.05 : 0.02),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Floating Books
+                  ..._buildFloatingBooks(size, t),
                 ],
               );
             },
@@ -280,40 +365,44 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                 child: SlideTransition(
                   position: _formSlide,
                   child: Container(
-                    width: isDesktop ? 1000 : 450,
+                    width: isDesktop ? 1100 : 450,
                     constraints: const BoxConstraints(minHeight: 600),
                     decoration: BoxDecoration(
-                      color: _isDarkMode ? surfaceDark : Colors.white,
+                      color: _isDarkMode
+                          ? surfaceDark.withOpacity(0.7)
+                          : Colors.white.withOpacity(0.8),
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.1),
+                        color: _isDarkMode
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.black.withOpacity(0.05),
                         width: 1,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: accentViolet.withOpacity(0.15),
+                          color: accentViolet.withOpacity(
+                            _isDarkMode ? 0.2 : 0.1,
+                          ),
                           blurRadius: 80,
                           offset: const Offset(0, 20),
-                        ),
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 30,
-                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: isDesktop
-                        ? IntrinsicHeight(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(child: _buildLeftBanner()),
-                                Expanded(child: _buildRightForm(isDesktop)),
-                              ],
-                            ),
-                          )
-                        : _buildRightForm(isDesktop),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: isDesktop
+                          ? IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(child: _buildLeftBanner()),
+                                  Expanded(child: _buildRightForm(isDesktop)),
+                                ],
+                              ),
+                            )
+                          : _buildRightForm(isDesktop),
+                    ),
                   ),
                 ),
               ),
@@ -324,6 +413,166 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     );
   }
 
+  Widget _buildWelcomeView() {
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Reuse the animated background for continuity
+          AnimatedBuilder(
+            animation: _bgAnimation,
+            builder: (context, child) => Container(color: _bgAnimation.value),
+          ),
+          AnimatedBuilder(
+            animation: _bgController,
+            builder: (context, child) => Stack(
+              children: [
+                ..._buildFloatingBooks(
+                  MediaQuery.of(context).size,
+                  _bgController.value,
+                ),
+              ],
+            ),
+          ),
+          Center(
+            child: AnimatedBuilder(
+              animation: _welcomeController,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: _welcomeOpacity,
+                  child: ScaleTransition(
+                    scale: _welcomeScale,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Animated Icon with Glow
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: accentViolet.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: accentViolet.withOpacity(0.2),
+                                blurRadius: 40,
+                                spreadRadius: 10,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            LucideIcons.graduationCap,
+                            color: Colors.white,
+                            size: 80,
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        // Primary Welcome Text
+                        Text(
+                          "Welcome to the UEMSSP System",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Subtitle / Status
+                        Text(
+                          "Preparing your personalized workspace...",
+                          style: GoogleFonts.inter(
+                            color: Colors.white70,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        const SizedBox(height: 48),
+                        // Minimalist Loading Indicator
+                        SizedBox(
+                          width: 200,
+                          child: LinearProgressIndicator(
+                            backgroundColor: Colors.white10,
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              accentViolet,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildFloatingBooks(Size size, double t) {
+    final List<Map<String, dynamic>> books = [
+      {
+        'icon': LucideIcons.book,
+        'size': 40.0,
+        'top': 0.1,
+        'left': 0.1,
+        'speed': 1.0,
+      },
+      {
+        'icon': LucideIcons.bookOpen,
+        'size': 30.0,
+        'top': 0.7,
+        'left': 0.8,
+        'speed': 1.5,
+      },
+      {
+        'icon': LucideIcons.book,
+        'size': 50.0,
+        'top': 0.4,
+        'left': 0.05,
+        'speed': 0.8,
+      },
+      {
+        'icon': LucideIcons.bookOpen,
+        'size': 35.0,
+        'top': 0.8,
+        'left': 0.2,
+        'speed': 1.2,
+      },
+      {
+        'icon': LucideIcons.book,
+        'size': 25.0,
+        'top': 0.2,
+        'left': 0.9,
+        'speed': 2.0,
+      },
+    ];
+
+    return books.map((book) {
+      final double speed = book['speed'];
+      final double xOffset = 30 * math.sin((t * speed) * 2 * math.pi);
+      final double yOffset = 50 * math.cos((t * speed) * 2 * math.pi);
+      final double rotation = math.sin((t * speed) * math.pi) * 0.2;
+
+      return Positioned(
+        top: size.height * book['top'] + yOffset,
+        left: size.width * book['left'] + xOffset,
+        child: Opacity(
+          opacity: _isDarkMode ? 0.15 : 0.08,
+          child: Transform.rotate(
+            angle: rotation,
+            child: Icon(
+              book['icon'],
+              size: book['size'],
+              color: _isDarkMode ? Colors.white : primaryViolet,
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+
   Widget _buildLeftBanner() {
     return Container(
       padding: const EdgeInsets.all(60),
@@ -332,8 +581,8 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: _isDarkMode
-              ? [const Color(0xFF2E1065), const Color(0xFF4C1D95)]
-              : [const Color(0xFF4C1D95), const Color(0xFF6D28D9)],
+              ? [primaryViolet, secondaryViolet]
+              : [secondaryViolet, accentViolet],
         ),
         image: DecorationImage(
           image: const NetworkImage(
@@ -351,31 +600,45 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         children: [
           // Logo Area (Animated)
           _buildAnimatedItem(
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+            AnimatedBuilder(
+              animation: _bgController,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(
+                    0,
+                    5 * math.sin(_bgController.value * 2 * math.pi),
                   ),
-                  child: const Icon(
-                    LucideIcons.graduationCap,
-                    color: Colors.white,
-                    size: 28,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.1),
+                          ),
+                        ),
+                        child: const Icon(
+                          LucideIcons.graduationCap,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        "UEMSSP",
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 16),
-                Text(
-                  "UEMS PORTAL",
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-              ],
+                );
+              },
             ),
             0,
           ),
@@ -395,7 +658,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
           const SizedBox(height: 24),
           _buildAnimatedItem(
             Text(
-              "Login to access your student portal, view grades, manage subjects, and more. Your academic journey starts here.",
+              "One Portal. One System. One School. Streamlining education, empowering connection.",
               style: GoogleFonts.inter(
                 color: Colors.white.withOpacity(0.8),
                 fontSize: 16,
@@ -408,20 +671,33 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
           _buildAnimatedItem(
             OutlinedButton(
               onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.white),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+              style: ButtonStyle(
+                foregroundColor: WidgetStateProperty.all(Colors.white),
+                side: WidgetStateProperty.all(
+                  const BorderSide(color: Colors.white24),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+                shape: WidgetStateProperty.all(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                padding: WidgetStateProperty.all(
+                  const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                ),
+                overlayColor: WidgetStateProperty.all(
+                  Colors.white.withOpacity(0.1),
                 ),
               ),
-              child: Text(
-                "Learn More",
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Learn More",
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(LucideIcons.arrowRight, size: 16),
+                ],
               ),
             ),
             3,
@@ -465,7 +741,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   Widget _buildRightForm(bool isDesktop) {
     return Container(
-      padding: const EdgeInsets.all(60),
+      padding: EdgeInsets.all(isDesktop ? 80 : 40),
       color: _isDarkMode ? surfaceDark : Colors.white,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -501,8 +777,8 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
           _buildAnimatedItem(
             _buildInputField(
               controller: _idController,
-              label: "User Name",
-              hint: "Enter Username",
+              label: "User ID",
+              hint: "Enter User ID",
               icon: LucideIcons.user,
             ),
             1,
@@ -519,61 +795,28 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
             2,
           ),
 
-          const SizedBox(height: 32),
-          _buildAnimatedItem(_buildLoginButton(), 3),
-
-          const SizedBox(height: 40),
+          const SizedBox(height: 16),
           _buildAnimatedItem(
-            Center(
-              child: Text(
-                "Or sign in with",
-                style: GoogleFonts.inter(
-                  color: _isDarkMode ? Colors.white54 : Colors.grey,
-                  fontSize: 12,
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {},
+                child: Text(
+                  "Forgot Password?",
+                  style: GoogleFonts.inter(
+                    color: accentViolet,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
-            4,
+            2,
           ),
-          const SizedBox(height: 20),
-          _buildAnimatedItem(
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _socialIcon(LucideIcons.facebook),
-                const SizedBox(width: 20),
-                _socialIcon(LucideIcons.instagram),
-                const SizedBox(width: 20),
-                _socialIcon(LucideIcons.twitter),
-              ],
-            ),
-            5,
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _socialIcon(IconData icon) {
-    return InkWell(
-      onTap: () {},
-      borderRadius: BorderRadius.circular(50),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: _isDarkMode ? Colors.white24 : Colors.grey.shade300,
-          ),
-          shape: BoxShape.circle,
-          color: _isDarkMode
-              ? Colors.white.withOpacity(0.05)
-              : Colors.transparent,
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: _isDarkMode ? Colors.white70 : Colors.grey.shade700,
-        ),
+          const SizedBox(height: 32),
+          _buildAnimatedItem(_buildLoginButton(), 3),
+        ],
       ),
     );
   }
@@ -588,8 +831,8 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     final textColor = _isDarkMode ? Colors.white : const Color(0xFF1E293B);
     final hintColor = _isDarkMode ? Colors.white38 : Colors.grey[400];
     final fillColor = _isDarkMode
-        ? const Color(0xFF2D2445)
-        : const Color(0xFFF8FAFC);
+        ? Colors.white.withOpacity(0.05)
+        : Colors.grey.shade100;
     final borderColor = _isDarkMode ? Colors.white10 : Colors.grey[200]!;
 
     return Column(
@@ -605,10 +848,11 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         ),
         const SizedBox(height: 8),
         Container(
+          height: 56,
           decoration: BoxDecoration(
             color: fillColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: borderColor),
+            border: Border.all(color: borderColor, width: 1.5),
           ),
           child: TextField(
             controller: controller,
@@ -621,10 +865,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
               hintText: hint,
               hintStyle: GoogleFonts.inter(color: hintColor),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
-              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 16),
               prefixIcon: Icon(
                 icon,
                 color: _isDarkMode ? Colors.white30 : Colors.grey[400],
@@ -657,31 +898,52 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       height: 56,
       child: ElevatedButton(
         onPressed: _isLoading ? null : _handleLogin,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: accentViolet,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
+        style:
+            ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.zero,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 0,
+            ).copyWith(
+              // FIX: Use WidgetStatePropertyAll to wrap the Color
+              shadowColor: WidgetStatePropertyAll(
+                accentViolet.withOpacity(0.4),
+              ),
+              // If you are on an older Flutter version and WidgetStatePropertyAll is not found,
+              // use: shadowColor: WidgetStateProperty.all(accentViolet.withOpacity(0.4)),
+            ),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [accentViolet, secondaryViolet],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
             borderRadius: BorderRadius.circular(16),
           ),
-          elevation: 8,
-          shadowColor: accentViolet.withOpacity(0.4),
+          child: Container(
+            alignment: Alignment.center,
+            child: _isLoading
+                ? const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : Text(
+                    "Sign In",
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+          ),
         ),
-        child: _isLoading
-            ? const SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2.5,
-                ),
-              )
-            : Text(
-                "Sign In",
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
       ),
     );
   }

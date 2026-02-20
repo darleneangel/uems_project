@@ -153,7 +153,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
-                _menuItem(LucideIcons.layoutDashboard, "Overview", 0),
+                _menuItem(LucideIcons.layoutDashboard, "Dashboard", 0),
                 _sidebarHeader("ACADEMIC MANAGEMENT"),
                 _menuItem(LucideIcons.bookOpen, "Curriculum Review", 1),
                 _menuItem(LucideIcons.users, "Faculty Load", 2),
@@ -192,7 +192,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
         if (_isSidebarExpanded) ...[
           const SizedBox(width: 12),
           Text(
-            "UEMS Chair",
+            "UEMSSP Program Chair",
             style: GoogleFonts.orbitron(
               color: textColor,
               fontWeight: FontWeight.bold,

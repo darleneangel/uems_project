@@ -16,6 +16,7 @@ class DashboardPanelTemplate extends StatefulWidget {
   final bool isAdminPanel;
   final VoidCallback? themeToggle;
   final String? logoText;
+  final IconData? logoIcon;
 
   const DashboardPanelTemplate({
     super.key,
@@ -32,6 +33,7 @@ class DashboardPanelTemplate extends StatefulWidget {
     this.isAdminPanel = false,
     this.themeToggle,
     this.logoText,
+    this.logoIcon,
   });
 
   @override
@@ -119,11 +121,17 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
   @override
   Widget build(BuildContext context) {
     final bgColor = widget.isDarkMode ? tDark : const Color(0xFFF8FAFC);
-    // Use the primary violet for the admin sidebar so it matches the
-    // main admin styling. Non-admin panels keep the original logic.
+
+    // Sidebar is dark if it's an admin panel OR if dark mode is enabled.
+    final bool isSidebarDark = widget.isAdminPanel || widget.isDarkMode;
     final sidebarColor = widget.isAdminPanel
         ? pViolet
         : (widget.isDarkMode ? pViolet : const Color(0xFFF1F5F9));
+
+    final sidebarTextColor = isSidebarDark ? Colors.white : pViolet;
+    final sidebarSubTextColor = isSidebarDark
+        ? Colors.white60
+        : Colors.blueGrey;
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
     final subTextColor = widget.isDarkMode ? Colors.white70 : Colors.blueGrey;
 
@@ -151,9 +159,10 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
-                        widget.isAdminPanel
-                            ? LucideIcons.shield
-                            : LucideIcons.graduationCap,
+                        widget.logoIcon ??
+                            (widget.isAdminPanel
+                                ? LucideIcons.shield
+                                : LucideIcons.graduationCap),
                         color: aViolet,
                         size: 24,
                       ),
@@ -163,10 +172,10 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                       Text(
                         widget.logoText ??
                             (widget.isAdminPanel
-                                ? "UEMS ADMIN"
-                                : "UEMS Portal"),
+                                ? "UEMSSP ADMIN"
+                                : "UEMSSP Portal"),
                         style: GoogleFonts.orbitron(
-                          color: textColor,
+                          color: sidebarTextColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -179,7 +188,7 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                       IconButton(
                         icon: Icon(
                           LucideIcons.chevronLeft,
-                          color: subTextColor,
+                          color: sidebarSubTextColor,
                           size: 18,
                         ),
                         onPressed: () => widget.onSidebarToggle(false),
@@ -190,7 +199,10 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                 if (!widget.isSidebarExpanded)
                   Center(
                     child: IconButton(
-                      icon: Icon(LucideIcons.chevronRight, color: subTextColor),
+                      icon: Icon(
+                        LucideIcons.chevronRight,
+                        color: sidebarSubTextColor,
+                      ),
                       onPressed: () => widget.onSidebarToggle(true),
                     ),
                   ),
@@ -234,10 +246,8 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                             color: isDestructive
                                 ? Colors.redAccent
                                 : (isSelected
-                                      ? (widget.isDarkMode
-                                            ? Colors.white
-                                            : pViolet)
-                                      : (widget.isDarkMode
+                                      ? (isSidebarDark ? Colors.white : pViolet)
+                                      : (isSidebarDark
                                             ? Colors.white54
                                             : Colors.blueGrey)),
                             size: 20,
@@ -249,10 +259,10 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                                     color: isDestructive
                                         ? Colors.redAccent
                                         : (isSelected
-                                              ? (widget.isDarkMode
+                                              ? (isSidebarDark
                                                     ? Colors.white
                                                     : pViolet)
-                                              : (widget.isDarkMode
+                                              : (isSidebarDark
                                                     ? Colors.white60
                                                     : Colors.blueGrey)),
                                     fontWeight: isSelected

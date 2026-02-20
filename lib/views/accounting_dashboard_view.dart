@@ -74,7 +74,7 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
   Widget _buildTopBar(Color textColor, Color subTextColor) {
     return Container(
       height: 75,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.only(left: 24, right: 16),
       decoration: BoxDecoration(
         color: _isDarkMode ? tDark : Colors.white,
         border: Border(
@@ -93,62 +93,54 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
             onPressed: _toggleSidebar,
           ),
           const SizedBox(width: 16),
-          Text(
-            "Accounting Office",
-            style: GoogleFonts.inter(
-              color: textColor,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
+          Expanded(
+            child: Text(
+              "Accounting Office",
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                color: textColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
-          const Spacer(),
-          IconButton(
-            onPressed: _toggleTheme,
-            icon: Icon(
-              _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
-              color: aViolet,
-            ),
-          ),
-          const SizedBox(width: 20),
-          _headerAction(LucideIcons.bell, subTextColor),
-          const SizedBox(width: 24),
           const VerticalDivider(
             color: Colors.white10,
-            indent: 20,
-            endIndent: 20,
+            indent: 25,
+            endIndent: 25,
           ),
-          const SizedBox(width: 24),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                "ACCOUNTING_OFFICER",
-                style: GoogleFonts.inter(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+          const SizedBox(width: 16),
+          Flexible(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  "Accounting Officer",
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-              Text(
-                "Verified Access",
-                style: GoogleFonts.inter(
-                  color: success,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                Text(
+                  "Verified Access",
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: success,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(width: 12),
           CircleAvatar(
             backgroundColor: aViolet,
-            child: const Icon(
-              LucideIcons.userPlus,
-              color: Colors.white,
-              size: 18,
-            ),
+            child: const Icon(LucideIcons.user, color: Colors.white, size: 18),
           ),
         ],
       ),
@@ -177,7 +169,7 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
               if (_isSidebarExpanded) ...[
                 const SizedBox(width: 12),
                 Text(
-                  "UEMS ACCOUNTING",
+                  "UEMSSP ACCOUNTING",
                   style: GoogleFonts.orbitron(
                     color: textColor,
                     fontWeight: FontWeight.bold,
@@ -196,21 +188,21 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
                 _sidebarHeader("FEES"),
                 _menuItem(LucideIcons.fileText, "Fee Management", 1),
                 _menuItem(LucideIcons.clipboardList, "Financial Reports", 2),
-                _menuItem(LucideIcons.shieldCheck, "Payroll", 3),
+                _menuItem(LucideIcons.bookOpen, "Subject Load Fee", 3),
                 _sidebarHeader("MESSAGES"),
                 _menuItem(LucideIcons.mail, "Messaging", 4),
+                const Divider(color: Colors.white10),
+                _menuItem(
+                  LucideIcons.logOut,
+                  "Logout System",
+                  8,
+                  isDestructive: true,
+                  onTap: widget.onLogout,
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
-          const Divider(color: Colors.white10),
-          _menuItem(
-            LucideIcons.logOut,
-            "Logout System",
-            8,
-            isDestructive: true,
-            onTap: widget.onLogout,
-          ),
-          const SizedBox(height: 20),
         ],
       ),
     );

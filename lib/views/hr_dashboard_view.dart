@@ -33,7 +33,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
       builder: (BuildContext context) {
         final isDark = _isDarkMode;
         final dialogTextColor = isDark ? Colors.white : pViolet;
-        
+
         return AlertDialog(
           backgroundColor: isDark ? surfaceDark : Colors.white,
           shape: RoundedRectangleBorder(
@@ -235,7 +235,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
               if (_isSidebarExpanded) ...[
                 const SizedBox(width: 12),
                 Text(
-                  "UEMS HR",
+                  "UEMSSP Human Resource",
                   style: GoogleFonts.orbitron(
                     color: textColor,
                     fontWeight: FontWeight.bold,
@@ -250,15 +250,15 @@ class _HrDashboardViewState extends State<HrDashboardView> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
-                _menuItem(LucideIcons.layoutDashboard, "DASHBOARD", 0),
+                _menuItem(LucideIcons.layoutDashboard, "Dashboard", 0),
                 _sidebarHeader("RECORDS"),
-                _menuItem(LucideIcons.database, "VIEW RECORDS", 1),
-                _menuItem(LucideIcons.userPlus, "CREATE RECORD", 2),
-                _menuItem(LucideIcons.archive, "ARCHIVE", 3),
+                _menuItem(LucideIcons.database, "View Records", 1),
+                _menuItem(LucideIcons.userPlus, "Create Records", 2),
+                _menuItem(LucideIcons.archive, "Archive", 3),
                 _sidebarHeader("MESSAGES & NOTIFICATION"),
-                _menuItem(LucideIcons.send, "CREATE MESSAGE", 4),
-                _menuItem(LucideIcons.inbox, "VIEW MESSAGES", 5),
-                _menuItem(LucideIcons.trash2, "MESSAGE ARCHIVE", 6),
+                _menuItem(LucideIcons.send, "Create Messages", 4),
+                _menuItem(LucideIcons.inbox, "View Messages", 5),
+                _menuItem(LucideIcons.trash2, "Message Archive", 6),
               ],
             ),
           ),
@@ -287,28 +287,38 @@ class _HrDashboardViewState extends State<HrDashboardView> {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        color: isSelected ? (isDestructive ? Colors.red.withOpacity(0.15) : aViolet.withOpacity(0.15)) : Colors.transparent,
+        color: isSelected
+            ? (isDestructive
+                  ? Colors.red.withOpacity(0.15)
+                  : aViolet.withOpacity(0.15))
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
       ),
       child: ListTile(
-        onTap: onTap ?? () {
-          if (isDestructive) {
-            _showLogoutConfirmation();
-          } else {
-            setState(() => _selectedIndex = index);
-          }
-        },
+        onTap:
+            onTap ??
+            () {
+              if (isDestructive) {
+                _showLogoutConfirmation();
+              } else {
+                setState(() => _selectedIndex = index);
+              }
+            },
         visualDensity: VisualDensity.compact,
         leading: Icon(
           icon,
-          color: isSelected ? activeColor : (isDestructive ? Colors.red : Colors.blueGrey),
+          color: isSelected
+              ? activeColor
+              : (isDestructive ? Colors.red : Colors.blueGrey),
           size: 20,
         ),
         title: _isSidebarExpanded
             ? Text(
                 title,
                 style: GoogleFonts.inter(
-                  color: isSelected ? Colors.white : (isDestructive ? Colors.red : Colors.blueGrey),
+                  color: isSelected
+                      ? Colors.white
+                      : (isDestructive ? Colors.red : Colors.blueGrey),
                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                   fontSize: 13,
                 ),
@@ -443,9 +453,27 @@ class _HrDashboardViewState extends State<HrDashboardView> {
           Expanded(
             child: ListView(
               children: [
-                _employeeRecordCard("John Doe", "HR Manager", "EMP001", panelColor, textColor),
-                _employeeRecordCard("Jane Smith", "Software Engineer", "EMP002", panelColor, textColor),
-                _employeeRecordCard("Mike Johnson", "Accountant", "EMP003", panelColor, textColor),
+                _employeeRecordCard(
+                  "John Doe",
+                  "HR Manager",
+                  "EMP001",
+                  panelColor,
+                  textColor,
+                ),
+                _employeeRecordCard(
+                  "Jane Smith",
+                  "Software Engineer",
+                  "EMP002",
+                  panelColor,
+                  textColor,
+                ),
+                _employeeRecordCard(
+                  "Mike Johnson",
+                  "Accountant",
+                  "EMP003",
+                  panelColor,
+                  textColor,
+                ),
               ],
             ),
           ),
@@ -493,7 +521,9 @@ class _HrDashboardViewState extends State<HrDashboardView> {
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("Employee record created successfully!"),
+                          content: Text(
+                            "Employee record created successfully!",
+                          ),
                           backgroundColor: success,
                         ),
                       );
@@ -547,11 +577,29 @@ class _HrDashboardViewState extends State<HrDashboardView> {
             ),
             child: Column(
               children: [
-                _archiveItem("Former Employee Records", "23 records", LucideIcons.userX, panelColor, textColor),
+                _archiveItem(
+                  "Former Employee Records",
+                  "23 records",
+                  LucideIcons.userX,
+                  panelColor,
+                  textColor,
+                ),
                 const SizedBox(height: 12),
-                _archiveItem("Old Messages", "156 messages", LucideIcons.messageSquare, panelColor, textColor),
+                _archiveItem(
+                  "Old Messages",
+                  "156 messages",
+                  LucideIcons.messageSquare,
+                  panelColor,
+                  textColor,
+                ),
                 const SizedBox(height: 12),
-                _archiveItem("Previous Reports", "45 reports", LucideIcons.fileText, panelColor, textColor),
+                _archiveItem(
+                  "Previous Reports",
+                  "45 reports",
+                  LucideIcons.fileText,
+                  panelColor,
+                  textColor,
+                ),
               ],
             ),
           ),
@@ -585,7 +633,11 @@ class _HrDashboardViewState extends State<HrDashboardView> {
             ),
             child: Column(
               children: [
-                _buildTextField("Recipient", "Enter recipient name or email", textColor),
+                _buildTextField(
+                  "Recipient",
+                  "Enter recipient name or email",
+                  textColor,
+                ),
                 const SizedBox(height: 16),
                 _buildTextField("Subject", "Enter message subject", textColor),
                 const SizedBox(height: 16),
@@ -645,7 +697,10 @@ class _HrDashboardViewState extends State<HrDashboardView> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 24,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                           side: BorderSide(color: aViolet),
@@ -688,9 +743,27 @@ class _HrDashboardViewState extends State<HrDashboardView> {
           Expanded(
             child: ListView(
               children: [
-                _messageCard("System Update", "New HR policies have been updated.", "2 hours ago", panelColor, textColor),
-                _messageCard("Meeting Reminder", "Team meeting scheduled for tomorrow.", "5 hours ago", panelColor, textColor),
-                _messageCard("Employee Request", "Leave application from John Doe.", "1 day ago", panelColor, textColor),
+                _messageCard(
+                  "System Update",
+                  "New HR policies have been updated.",
+                  "2 hours ago",
+                  panelColor,
+                  textColor,
+                ),
+                _messageCard(
+                  "Meeting Reminder",
+                  "Team meeting scheduled for tomorrow.",
+                  "5 hours ago",
+                  panelColor,
+                  textColor,
+                ),
+                _messageCard(
+                  "Employee Request",
+                  "Leave application from John Doe.",
+                  "1 day ago",
+                  panelColor,
+                  textColor,
+                ),
               ],
             ),
           ),
@@ -698,6 +771,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
       ),
     );
   }
+
   // --- MODULE: MESSAGE ARCHIVE ---
   Widget _buildMessageArchivePanel(Color panelColor, Color textColor) {
     return Padding(
@@ -723,11 +797,29 @@ class _HrDashboardViewState extends State<HrDashboardView> {
             ),
             child: Column(
               children: [
-                _archiveItem("Old Notifications", "89 items", LucideIcons.bell, panelColor, textColor),
+                _archiveItem(
+                  "Old Notifications",
+                  "89 items",
+                  LucideIcons.bell,
+                  panelColor,
+                  textColor,
+                ),
                 const SizedBox(height: 12),
-                _archiveItem("Sent Messages", "234 messages", LucideIcons.send, panelColor, textColor),
+                _archiveItem(
+                  "Sent Messages",
+                  "234 messages",
+                  LucideIcons.send,
+                  panelColor,
+                  textColor,
+                ),
                 const SizedBox(height: 12),
-                _archiveItem("Deleted Items", "45 items", LucideIcons.trash2, panelColor, textColor),
+                _archiveItem(
+                  "Deleted Items",
+                  "45 items",
+                  LucideIcons.trash2,
+                  panelColor,
+                  textColor,
+                ),
               ],
             ),
           ),
@@ -782,6 +874,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
       ),
     );
   }
+
   Widget _buildHrActionGrid(Color panelColor, Color textColor) {
     return GridView.count(
       shrinkWrap: true,
@@ -1015,10 +1108,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
           const SizedBox(height: 8),
           Text(
             message,
-            style: TextStyle(
-              color: textColor.withOpacity(0.7),
-              fontSize: 12,
-            ),
+            style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 12),
           ),
         ],
       ),

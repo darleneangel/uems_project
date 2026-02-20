@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
+import 'dart:ui';
 
 class HRPanel extends StatefulWidget {
   const HRPanel({super.key, this.isDarkMode = true});
@@ -19,13 +20,14 @@ class _HRPanelState extends State<HRPanel> {
   final _roleCtl = TextEditingController();
   int? _editingIndex;
   final TextEditingController _importCtl = TextEditingController();
-  
+
   // Theme colors
   static const Color pViolet = Color(0xFF2E1065);
   static const Color aViolet = Color(0xFF8B5CF6);
-  static const Color surfaceDark = Color(0xFF1E1033);
+  static const Color surfaceDark = Color(0xFF1E1B4B);
   static const Color lCard = Color(0xFFFFFFFF);
-  
+  static const Color secondaryViolet = Color(0xFF4C1D95);
+
   late bool _isDarkMode;
 
   @override
@@ -339,81 +341,267 @@ class _HRPanelState extends State<HRPanel> {
     final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
     final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
     final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: const Color(0xFF1E1033), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white10)),
+          decoration: BoxDecoration(
+            color: _isDarkMode
+                ? surfaceDark.withOpacity(0.5)
+                : Colors.white.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: _isDarkMode
+                  ? Colors.white10
+                  : Colors.black.withOpacity(0.05),
+            ),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Create Employee Record', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
-                  Row(children: [
-                    TextButton.icon(
-                      onPressed: _showImportDialog,
-                      icon: const Icon(Icons.file_upload, color: Colors.white70),
-                      label: Text('Import', style: GoogleFonts.inter(color: Colors.white70)),
+                  Text(
+                    'Create Employee Record',
+                    style: GoogleFonts.inter(
+                      color: textColor,
+                      fontWeight: FontWeight.w700,
                     ),
-                    const SizedBox(width: 8),
-                    TextButton.icon(
-                      onPressed: _showExportDialog,
-                      icon: const Icon(Icons.file_download, color: Colors.white70),
-                      label: Text('Export', style: GoogleFonts.inter(color: Colors.white70)),
-                    ),
-                  ])
+                  ),
+                  Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: _showImportDialog,
+                        icon: const Icon(Icons.file_upload, color: aViolet),
+                        label: Text(
+                          'Import',
+                          style: GoogleFonts.inter(color: subTextColor),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: _showExportDialog,
+                        icon: const Icon(Icons.file_download, color: aViolet),
+                        label: Text(
+                          'Export',
+                          style: GoogleFonts.inter(color: subTextColor),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
-              TextField(controller: _nameCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Name', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)))),
+              TextField(
+                controller: _nameCtl,
+                style: TextStyle(color: textColor),
+                decoration: InputDecoration(
+                  hintText: 'Name',
+                  hintStyle: TextStyle(color: subTextColor.withOpacity(0.5)),
+                  filled: true,
+                  fillColor: fillColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: borderColor),
+                  ),
+                ),
+              ),
               const SizedBox(height: 8),
-              TextField(controller: _deptCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Department', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)))),
+              TextField(
+                controller: _deptCtl,
+                style: TextStyle(color: textColor),
+                decoration: InputDecoration(
+                  hintText: 'Department',
+                  hintStyle: TextStyle(color: subTextColor.withOpacity(0.5)),
+                  filled: true,
+                  fillColor: fillColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: borderColor),
+                  ),
+                ),
+              ),
               const SizedBox(height: 8),
-              TextField(controller: _emailCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Personal Email', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10)))),
+              TextField(
+                controller: _emailCtl,
+                style: TextStyle(color: textColor),
+                decoration: InputDecoration(
+                  hintText: 'Personal Email',
+                  hintStyle: TextStyle(color: subTextColor.withOpacity(0.5)),
+                  filled: true,
+                  fillColor: fillColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: borderColor),
+                  ),
+                ),
+              ),
               const SizedBox(height: 8),
-              Row(children: [
-                Expanded(child: TextField(controller: _empIdCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Employee ID', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10))))),
-                const SizedBox(width: 8),
-                Expanded(child: TextField(controller: _roleCtl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'Role', hintStyle: TextStyle(color: Colors.white30), filled: true, fillColor: Colors.white10, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white10))))),
-              ]),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _empIdCtl,
+                      style: TextStyle(color: textColor),
+                      decoration: InputDecoration(
+                        hintText: 'Employee ID',
+                        hintStyle: TextStyle(
+                          color: subTextColor.withOpacity(0.5),
+                        ),
+                        filled: true,
+                        fillColor: fillColor,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _roleCtl,
+                      style: TextStyle(color: textColor),
+                      decoration: InputDecoration(
+                        hintText: 'Role',
+                        hintStyle: TextStyle(
+                          color: subTextColor.withOpacity(0.5),
+                        ),
+                        filled: true,
+                        fillColor: fillColor,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
-              Row(children: [
-                ElevatedButton(onPressed: _addEmployee, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)), child: Text(_editingIndex == null ? 'Create' : 'Save', style: GoogleFonts.inter(color: Colors.white))),
-                const SizedBox(width: 12),
-                OutlinedButton(onPressed: _clearForm, style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white10)), child: Text('Clear', style: GoogleFonts.inter(color: Colors.white70)))
-              ]),
+              Row(
+                children: [
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _addEmployee,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Ink(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [aViolet, secondaryViolet],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          alignment: Alignment.center,
+                          child: Text(
+                            _editingIndex == null ? 'Create' : 'Save',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton(
+                    onPressed: _clearForm,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: borderColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Clear',
+                      style: GoogleFonts.inter(color: subTextColor),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        Text('Employee Directory', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+        Text(
+          'Employee Directory',
+          style: GoogleFonts.inter(
+            color: textColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: const Color(0xFF1E1033), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white10)),
+          decoration: BoxDecoration(
+            color: _isDarkMode
+                ? surfaceDark.withOpacity(0.5)
+                : Colors.white.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: _isDarkMode
+                  ? Colors.white10
+                  : Colors.black.withOpacity(0.05),
+            ),
+          ),
           child: _employees.isEmpty
-              ? Text('No employees added.', style: GoogleFonts.inter(color: Colors.white70))
+              ? Text(
+                  'No employees added.',
+                  style: GoogleFonts.inter(color: subTextColor),
+                )
               : ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: _employees.length,
-                  separatorBuilder: (_, __) => const Divider(color: Colors.white10),
+                  separatorBuilder: (_, __) =>
+                      const Divider(color: Colors.white10),
                   itemBuilder: (context, idx) {
                     final e = _employees[idx];
                     return ListTile(
                       onTap: () => _showEmployeeDetails(e),
-                      title: Text(e['name'] ?? '', style: GoogleFonts.inter(color: Colors.white)),
-                      subtitle: Text(e['department'] ?? '', style: GoogleFonts.inter(color: Colors.white54)),
-                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Text(e['employeeId'] ?? '', style: GoogleFonts.inter(color: Colors.white54)),
-                        const SizedBox(width: 8),
-                        IconButton(onPressed: () => _startEdit(idx), icon: const Icon(Icons.edit, color: Colors.white54)),
-                        IconButton(onPressed: () => _deleteEmployee(idx), icon: const Icon(Icons.delete, color: Colors.redAccent)),
-                      ]),
+                      title: Text(
+                        e['name'] ?? '',
+                        style: GoogleFonts.inter(color: Colors.white),
+                      ),
+                      subtitle: Text(
+                        e['department'] ?? '',
+                        style: GoogleFonts.inter(color: Colors.white54),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            e['employeeId'] ?? '',
+                            style: GoogleFonts.inter(color: Colors.white54),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: () => _startEdit(idx),
+                            icon: const Icon(Icons.edit, color: Colors.white54),
+                          ),
+                          IconButton(
+                            onPressed: () => _deleteEmployee(idx),
+                            icon: const Icon(
+                              Icons.delete,
+                              color: Colors.redAccent,
+                            ),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),

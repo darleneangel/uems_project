@@ -4,6 +4,7 @@ import 'accounting_panels/fee_management_panel.dart';
 import 'accounting_panels/financial_reports_panel.dart';
 import 'accounting_panels/payroll_panel.dart';
 import 'shared/messaging_panel.dart';
+import 'accounting_panels/subject_load_fee_panel.dart';
 
 class AccountingPanelContent extends StatelessWidget {
   final int selectedIndex;
@@ -33,7 +34,7 @@ class AccountingPanelContent extends StatelessWidget {
       case 2:
         return FinancialReportsPanel(isDarkMode: isDarkMode);
       case 3:
-        return PayrollPanel(isDarkMode: isDarkMode);
+        return SubjectLoadFeePanel(isDarkMode: isDarkMode);
       case 4:
         return MessagingPanel(isDarkMode: isDarkMode);
       default:

@@ -73,7 +73,7 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
   Widget _buildTopBar(Color textColor, Color subTextColor) {
     return Container(
       height: 75,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.only(left: 24, right: 0),
       decoration: BoxDecoration(
         color: _isDarkMode ? tDark : Colors.white,
         border: Border(
@@ -92,53 +92,49 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
             onPressed: _toggleSidebar,
           ),
           const SizedBox(width: 16),
-          Text(
-            "Admissions Intelligence & Recruitment",
-            style: GoogleFonts.inter(
-              color: textColor,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
+          Expanded(
+            child: Text(
+              "Admissions Office",
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                color: textColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
-          const Spacer(),
-          IconButton(
-            onPressed: _toggleTheme,
-            icon: Icon(
-              _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
-              color: aViolet,
-            ),
-          ),
-          const SizedBox(width: 20),
-          _headerAction(LucideIcons.bell, subTextColor),
-          const SizedBox(width: 24),
           const VerticalDivider(
             color: Colors.white10,
             indent: 20,
             endIndent: 20,
           ),
           const SizedBox(width: 24),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                "ADMISSIONS_OFFICER",
-                style: GoogleFonts.inter(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+          Flexible(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  "ADMISSIONS_OFFICER",
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-              Text(
-                "Verified Access",
-                style: GoogleFonts.inter(
-                  color: success,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                Text(
+                  "Verified Access",
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: success,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(width: 12),
           CircleAvatar(
@@ -176,7 +172,7 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
               if (_isSidebarExpanded) ...[
                 const SizedBox(width: 12),
                 Text(
-                  "UEMS Admissions",
+                  "UEMSSP Admissions",
                   style: GoogleFonts.orbitron(
                     color: textColor,
                     fontWeight: FontWeight.bold,
@@ -196,20 +192,22 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
                 _menuItem(LucideIcons.fileText, "Applications", 1),
                 _menuItem(LucideIcons.clipboardList, "Interview Management", 2),
                 _menuItem(LucideIcons.shieldCheck, "Document Verification", 3),
+                _sidebarHeader("ENROLLMENT"),
+                _menuItem(LucideIcons.userCheck, "Enrollment Verification", 5),
                 _sidebarHeader("MESSAGES"),
                 _menuItem(LucideIcons.mail, "Admission Letters", 4),
+                const Divider(color: Colors.white10),
+                _menuItem(
+                  LucideIcons.logOut,
+                  "Logout System",
+                  8,
+                  isDestructive: true,
+                  onTap: widget.onLogout,
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
-          const Divider(color: Colors.white10),
-          _menuItem(
-            LucideIcons.logOut,
-            "Logout System",
-            8,
-            isDestructive: true,
-            onTap: widget.onLogout,
-          ),
-          const SizedBox(height: 20),
         ],
       ),
     );

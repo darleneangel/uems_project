@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
@@ -26,7 +27,7 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
   // --- INTERNAL STATE ---
   final List<Map<String, dynamic>> _queue = [
     {
-      "name": "MICHAEL CHEN",
+      "name": "JOHN GIL JAVIER",
       "id": "APL-2026-004",
       "course": "BS Information Technology",
       "isApproved": false,
@@ -39,7 +40,7 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
       ],
     },
     {
-      "name": "SARAH JENKINS",
+      "name": "JAYRONE GINES",
       "id": "APL-2026-001",
       "course": "BS Computer Science",
       "isApproved": false,
@@ -71,94 +72,243 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
     });
   }
 
+  // --- MODERNIZED PDF GENERATION ENGINE ---
   Future<void> _finalizeAndTransfer(
     int index, {
     bool isHistoryItem = false,
   }) async {
     final student = isHistoryItem ? _history[index] : _queue[index];
-
-    // 1. Generate PDF
     final pdf = pw.Document();
+    final String timestamp = DateTime.now().toString().split('.')[0];
+    final PdfColor brandViolet = PdfColor.fromInt(0xFF7C3AED);
+
+    // LOGO LOADING LOGIC
+    pw.ImageProvider? logoImage;
+    try {
+      final ByteData data = await rootBundle.load('assets/image/logo (2).png');
+      logoImage = pw.MemoryImage(data.buffer.asUint8List());
+    } catch (e) {
+      logoImage = null;
+    }
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
         build: (pw.Context context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(30),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Center(
-                  child: pw.Text(
-                    "SAN SEBASTIAN COLLEGE - RECOLETOS DE CAVITE",
-                    style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                pw.Center(
-                  child: pw.Text(
-                    "OFFICE OF ADMISSIONS",
-                    style: pw.TextStyle(fontSize: 10),
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-                pw.Divider(),
-                pw.SizedBox(height: 20),
-                pw.Text(
-                  "OFFICIAL ADMISSION SLIP",
-                  style: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-                pw.Text("Student Name: ${student['name']}"),
-                pw.Text("Application ID: ${student['id']}"),
-                pw.Text("Course/Program: ${student['course']}"),
-                pw.SizedBox(height: 30),
-                pw.Text(
-                  "DOCUMENTATION STATUS: CLEARANCE OBTAINED",
-                  style: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.green,
-                  ),
-                ),
-                pw.SizedBox(height: 10),
-                pw.Text(
-                  "The applicant has successfully submitted and verified the following requirements:",
-                ),
-                pw.SizedBox(height: 10),
-                ...student['docs']
-                    .where((d) => d['status'] == true)
-                    .map((doc) => pw.Bullet(text: doc['name'])),
-                pw.Spacer(),
-                pw.Divider(),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text(
-                          "Issued by: ADMISSIONS_OFFICER",
-                          style: pw.TextStyle(fontSize: 8),
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // 1. MODERN BRANDED HEADER (UEMS)
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Row(
+                    children: [
+                      if (logoImage != null)
+                        pw.Container(
+                          width: 40,
+                          height: 40,
+                          child: pw.Image(logoImage),
+                        )
+                      else
+                        pw.Container(
+                          width: 35,
+                          height: 35,
+                          decoration: pw.BoxDecoration(
+                            color: brandViolet,
+                            borderRadius: pw.BorderRadius.circular(8),
+                          ),
+                          child: pw.Center(
+                            child: pw.Text(
+                              "U",
+                              style: pw.TextStyle(
+                                color: PdfColors.white,
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 20,
+                              ),
+                            ),
+                          ),
                         ),
-                        pw.Text(
-                          "Date: ${DateTime.now().toString().split(' ')[0]}",
-                          style: pw.TextStyle(fontSize: 8),
+                      pw.SizedBox(width: 12),
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            "UEMSSP",
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 22,
+                              color: brandViolet,
+                            ),
+                          ),
+                          pw.Text(
+                            "UNIFIED EDUCATION MANAGEMENT SYSTEM AND STUDENT PORTAL",
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              color: PdfColors.grey700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text(
+                        "OFFICIAL DOCUMENT",
+                        style: pw.TextStyle(
+                          fontSize: 8,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey500,
+                        ),
+                      ),
+                      pw.Text(
+                        "ADMISSION SLIP",
+                        style: pw.TextStyle(
+                          fontSize: 10,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+              pw.Divider(color: brandViolet, thickness: 1.5),
+              pw.SizedBox(height: 25),
+
+              // 2. STUDENT METADATA GRID
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Column(
+                  children: [
+                    pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: _pdfMetaItem("STUDENT NAME", student['name']),
+                        ),
+                        pw.Expanded(
+                          child: _pdfMetaItem("APPLICATION ID", student['id']),
                         ),
                       ],
                     ),
-                    pw.Text(
-                      "System Verified Copy",
-                      style: pw.TextStyle(fontSize: 8, color: PdfColors.grey),
+                    pw.SizedBox(height: 10),
+                    pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: _pdfMetaItem("PROGRAM", student['course']),
+                        ),
+                        pw.Expanded(
+                          child: _pdfMetaItem("VERIFICATION DATE", timestamp),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              pw.SizedBox(height: 35),
+
+              // 3. ADMISSION STATUS CONTENT
+              pw.Text(
+                "DOCUMENTATION STATUS: CLEARANCE OBTAINED",
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.green700,
+                  fontSize: 12,
+                ),
+              ),
+              pw.SizedBox(height: 12),
+              pw.Text(
+                "The applicant has successfully submitted and verified the following requirements as part of the official admissions package:",
+                style: pw.TextStyle(fontSize: 10, color: PdfColors.grey900),
+              ),
+              pw.SizedBox(height: 20),
+
+              // Checklist
+              ...student['docs']
+                  .where((d) => d['status'] == true)
+                  .map(
+                    (doc) => pw.Padding(
+                      padding: const pw.EdgeInsets.only(bottom: 6),
+                      child: pw.Row(
+                        children: [
+                          pw.Container(
+                            width: 4,
+                            height: 4,
+                            decoration: pw.BoxDecoration(
+                              color: brandViolet,
+                              shape: pw.BoxShape.circle,
+                            ),
+                          ),
+                          pw.SizedBox(width: 10),
+                          pw.Text(
+                            doc['name'],
+                            style: pw.TextStyle(fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+              pw.Spacer(),
+
+              // 4. MODERN FOOTER
+              pw.Divider(color: PdfColors.grey300),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        "AUTHENTICATED BY ADMISSIONS CORE",
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 8,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
+                      pw.Text(
+                        "Computer Generated Document - Manual signature not required.",
+                        style: pw.TextStyle(
+                          fontSize: 7,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                      pw.Text(
+                        "Reference: $timestamp",
+                        style: pw.TextStyle(
+                          fontSize: 7,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Container(
+                    width: 50,
+                    height: 50,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey300),
+                    ),
+                    child: pw.Center(
+                      child: pw.Text(
+                        "QR TICKET",
+                        style: pw.TextStyle(
+                          fontSize: 6,
+                          color: PdfColors.grey400,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           );
         },
       ),
@@ -171,13 +321,10 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
       await OpenFile.open(file.path);
 
       if (!isHistoryItem) {
-        // 2. Perform Transfer to History
         setState(() {
           final completedStudent = _queue.removeAt(index);
           completedStudent['isApproved'] = true;
-          completedStudent['transferDate'] = DateTime.now().toString().split(
-            '.',
-          )[0];
+          completedStudent['transferDate'] = timestamp;
           _history.insert(0, completedStudent);
         });
 
@@ -198,6 +345,26 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
         ),
       );
     }
+  }
+
+  pw.Widget _pdfMetaItem(String label, String val) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            fontSize: 7,
+            color: PdfColors.grey600,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+        pw.Text(
+          val,
+          style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+        ),
+      ],
+    );
   }
 
   @override
@@ -284,7 +451,7 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Document Verification Pipeline",
+          "Document Verification",
           style: GoogleFonts.inter(
             fontSize: 28,
             fontWeight: FontWeight.w900,
@@ -358,10 +525,10 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
     bool isApproved = student['isApproved'];
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: widget.isDarkMode
               ? Colors.white.withOpacity(0.05)
@@ -371,7 +538,7 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           leading: Stack(
             alignment: Alignment.center,
             children: [
@@ -392,7 +559,7 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
             style: GoogleFonts.inter(
               fontWeight: FontWeight.w800,
               color: textColor,
-              fontSize: 18,
+              fontSize: 16,
             ),
           ),
           subtitle: Text(
@@ -409,7 +576,7 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
                       )),
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

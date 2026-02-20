@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
@@ -146,8 +147,8 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
     double totalPoints = 0;
     double totalUnits = 0;
     for (var g in grades) {
-      double grade = double.tryParse(g['grade']) ?? 0.0;
-      int units = g['units'];
+      double grade = double.tryParse(g['grade'].toString()) ?? 0.0;
+      int units = int.tryParse(g['units'].toString()) ?? 0;
       if (grade > 0) {
         totalPoints += grade * units;
         totalUnits += units;
@@ -156,45 +157,193 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
     return totalUnits == 0 ? 0.0 : totalPoints / totalUnits;
   }
 
+  // --- MODERNIZED PDF GENERATION LOGIC ---
   Future<void> _exportGradesPdf() async {
     final grades = _semesterGrades[_selectedSemester] ?? [];
     final pdf = pw.Document();
+    final String timestamp = DateTime.now().toString().split('.')[0];
+    final PdfColor brandViolet = PdfColor.fromInt(0xFF7C3AED);
+
+    // LOGO LOADING LOGIC
+    pw.ImageProvider? logoImage;
+    try {
+      final ByteData data = await rootBundle.load('assets/image/logo (2).png');
+      logoImage = pw.MemoryImage(data.buffer.asUint8List());
+    } catch (e) {
+      logoImage = null;
+    }
 
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(
-                "SAN SEBASTIAN COLLEGE - RECOLETOS DE CAVITE",
-                style: pw.TextStyle(
-                  fontWeight: pw.FontWeight.bold,
-                  fontSize: 14,
+              // 1. MODERN BRANDED HEADER (UEMS)
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Row(
+                    children: [
+                      if (logoImage != null)
+                        pw.Container(
+                          width: 40,
+                          height: 40,
+                          child: pw.Image(logoImage),
+                        )
+                      else
+                        pw.Container(
+                          width: 35,
+                          height: 35,
+                          decoration: pw.BoxDecoration(
+                            color: brandViolet,
+                            borderRadius: pw.BorderRadius.circular(8),
+                          ),
+                          child: pw.Center(
+                            child: pw.Text(
+                              "U",
+                              style: pw.TextStyle(
+                                color: PdfColors.white,
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      pw.SizedBox(width: 12),
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            "UEMSSP",
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 22,
+                              color: brandViolet,
+                            ),
+                          ),
+                          pw.Text(
+                            "UNIFIED EDUCATION MANAGEMENT SYSTEM AND STUDENT PORTAL",
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              color: PdfColors.grey700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text(
+                        "OFFICIAL DOCUMENT",
+                        style: pw.TextStyle(
+                          fontSize: 8,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey500,
+                        ),
+                      ),
+                      pw.Text(
+                        "OFFICIAL GRADE REPORT",
+                        style: pw.TextStyle(
+                          fontSize: 10,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+              pw.Divider(color: brandViolet, thickness: 1.5),
+              pw.SizedBox(height: 25),
+
+              // 2. STUDENT METADATA GRID
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Column(
+                  children: [
+                    pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: _pdfMetaItem(
+                            "STUDENT NAME",
+                            widget.studentData['name'],
+                          ),
+                        ),
+                        pw.Expanded(
+                          child: _pdfMetaItem(
+                            "STUDENT ID",
+                            widget.studentData['id'],
+                          ),
+                        ),
+                      ],
+                    ),
+                    pw.SizedBox(height: 10),
+                    pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: _pdfMetaItem(
+                            "PROGRAM",
+                            widget.studentData['program'],
+                          ),
+                        ),
+                        pw.Expanded(
+                          child: _pdfMetaItem(
+                            "ACADEMIC PERIOD",
+                            _selectedSemester,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
+              pw.SizedBox(height: 40),
+
+              // 3. DYNAMIC CONTENT AREA
               pw.Text(
-                "OFFICIAL GRADE REPORT",
-                style: pw.TextStyle(fontSize: 10),
+                "ACADEMIC PERFORMANCE SUMMARY",
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                  color: brandViolet,
+                ),
               ),
-              pw.Divider(),
-              pw.SizedBox(height: 10),
-              pw.Text(
-                "Student: ${widget.studentData['name']} (${widget.studentData['id']})",
-              ),
-              pw.Text("Period: $_selectedSemester"),
-              pw.SizedBox(height: 20),
+              pw.SizedBox(height: 15),
               pw.Table.fromTextArray(
                 headers: [
-                  "Code",
-                  "Description",
-                  "Units",
-                  "Midterm",
-                  "Final",
-                  "Grade",
-                  "Status",
+                  "CODE",
+                  "DESCRIPTION",
+                  "UNITS",
+                  "MID",
+                  "FINAL",
+                  "GRADE",
+                  "STATUS",
                 ],
+                headerStyle: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 8,
+                  color: PdfColors.white,
+                ),
+                headerDecoration: pw.BoxDecoration(color: brandViolet),
+                cellStyle: pw.TextStyle(fontSize: 8),
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(1.2),
+                  1: const pw.FlexColumnWidth(3),
+                  2: const pw.FlexColumnWidth(1),
+                  3: const pw.FlexColumnWidth(1),
+                  4: const pw.FlexColumnWidth(1),
+                  5: const pw.FlexColumnWidth(1),
+                  6: const pw.FlexColumnWidth(1.2),
+                },
                 data: grades
                     .map(
                       (g) => [
@@ -208,26 +357,119 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
                       ],
                     )
                     .toList(),
-                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                cellAlignment: pw.Alignment.centerLeft,
               ),
-              pw.SizedBox(height: 20),
-              pw.Text(
-                "GWA: ${_calculateGWA(grades).toStringAsFixed(2)}",
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              pw.SizedBox(height: 25),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Text(
+                    "GENERAL WEIGHTED AVERAGE (GWA): ",
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.Text(
+                    _calculateGWA(grades).toStringAsFixed(2),
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
+                      color: brandViolet,
+                    ),
+                  ),
+                ],
               ),
+
               pw.Spacer(),
-              pw.Text("Generated on: ${DateTime.now()}"),
+
+              // 4. MODERN FOOTER
+              pw.Divider(color: PdfColors.grey300),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        "AUTHENTICATED BY UEMS CORE",
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 8,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
+                      pw.Text(
+                        "Computer Generated Document - Manual signature not required.",
+                        style: pw.TextStyle(
+                          fontSize: 7,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                      pw.Text(
+                        "Reference: $timestamp",
+                        style: pw.TextStyle(
+                          fontSize: 7,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Container(
+                    width: 40,
+                    height: 40,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey300),
+                    ),
+                    child: pw.Center(
+                      child: pw.Text(
+                        "QR",
+                        style: pw.TextStyle(
+                          fontSize: 8,
+                          color: PdfColors.grey400,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           );
         },
       ),
     );
 
-    final dir = await getTemporaryDirectory();
-    final file = File("${dir.path}/grades_${widget.studentData['id']}.pdf");
-    await file.writeAsBytes(await pdf.save());
-    await OpenFile.open(file.path);
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File(
+        "${dir.path}/UEMS_Grades_${widget.studentData['id']}.pdf",
+      );
+      await file.writeAsBytes(await pdf.save());
+      await OpenFile.open(file.path);
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error exporting PDF: $e")));
+    }
+  }
+
+  pw.Widget _pdfMetaItem(String label, String val) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            fontSize: 7,
+            color: PdfColors.grey600,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+        pw.Text(
+          val,
+          style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+        ),
+      ],
+    );
   }
 
   @override
@@ -354,7 +596,7 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 "GWA Standing",
                 style: TextStyle(color: Colors.white70, fontSize: 12),
               ),
@@ -392,7 +634,7 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
+              const Text(
                 "Total Subjects",
                 style: TextStyle(color: Colors.white70, fontSize: 12),
               ),
@@ -405,7 +647,7 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
+              const Text(
                 "Academic Status",
                 style: TextStyle(color: Colors.white70, fontSize: 12),
               ),

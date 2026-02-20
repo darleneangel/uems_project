@@ -147,12 +147,11 @@ class _TeacherDashboardViewState extends State<TeacherDashboardView> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
-                _menuItem(LucideIcons.layoutDashboard, "Overview", 0),
+                _menuItem(LucideIcons.layoutDashboard, "Dashboard", 0),
                 _sidebarHeader("INSTRUCTION"),
                 _menuItem(LucideIcons.bookOpen, "Teaching Load", 1),
                 _sidebarHeader("STUDENT TRACKING"),
                 _menuItem(LucideIcons.edit3, "Grade Encoding", 2),
-                _menuItem(LucideIcons.barChart2, "Progress Reports", 3),
                 _sidebarHeader("COMMUNICATION"),
                 _menuItem(LucideIcons.mail, "Messages", 4),
               ],
@@ -191,7 +190,7 @@ class _TeacherDashboardViewState extends State<TeacherDashboardView> {
         if (_isSidebarExpanded) ...[
           const SizedBox(width: 12),
           Text(
-            "UEMS Faculty",
+            "UEMSSP Faculty",
             style: GoogleFonts.orbitron(
               color: textColor,
               fontWeight: FontWeight.bold,

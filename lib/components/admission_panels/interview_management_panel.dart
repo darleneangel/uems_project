@@ -16,7 +16,7 @@ class _InterviewManagementPanelState extends State<InterviewManagementPanel> {
   final List<Map<String, dynamic>> _interviewQueue = [
     {
       "id": "APL-2026-004",
-      "name": "MICHAEL CHEN",
+      "name": "KUH JANE VALENZUELA",
       "program": "BS INFORMATION TECHNOLOGY",
       "date": "Oct 24, 2025",
       "time": "10:30 AM",
@@ -24,7 +24,7 @@ class _InterviewManagementPanelState extends State<InterviewManagementPanel> {
     },
     {
       "id": "APL-2026-012",
-      "name": "SOPHIA RODRIGUEZ",
+      "name": "JOSH AREVALO",
       "program": "BS NURSING",
       "date": "Oct 24, 2025",
       "time": "02:00 PM",
