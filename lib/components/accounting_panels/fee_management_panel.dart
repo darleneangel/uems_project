@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
@@ -8,6 +7,7 @@ import 'package:open_file/open_file.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../services/accounting_data_service.dart';
 
 class FeeManagementPanel extends StatefulWidget {
   final bool isDarkMode;
@@ -22,118 +22,35 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
   late TabController _tabController;
   String? _selectedStudentId;
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _amountInputController = TextEditingController();
+
+  // Service reference
+  final AccountingDataService _accountingService = AccountingDataService();
 
   // Payment Entry State
   String _selectedCategory = "Tuition";
   String _selectedTerm = "Midterm Block A";
   String? _selectedBook;
   int _quantity = 1;
-  String _miscType = "Library Fine";
   int _printPages = 1;
+  String _miscType = "Library Fine";
   double _customAmount = 0.0;
-  double _manualAmount = 0.0;
   String _paymentMethod = "Cash";
 
   // Scholarship State
   final TextEditingController _scholarshipSearchController =
       TextEditingController();
   String _scholarshipFilter = "All";
-  final List<Map<String, dynamic>> _availableScholarships = [
-    {
-      "name": "Academic Scholar",
-      "discount": 0.20,
-      "type": "Merit",
-    },
-    {
-      "name": "Dean's Lister",
-      "discount": 0.30,
-      "type": "Merit",
-    },
-    {
-      "name": "Athletic Grant",
-      "discount": 0.25,
-      "type": "Athletics",
-    },
-    {
-      "name": "Financial Aid",
-      "discount": 0.35,
-      "type": "Needs-Based",
-    },
-    {
-      "name": "Staff Dependent",
-      "discount": 0.15,
-      "type": "Special",
-    },
-  ];
 
-  // Cart State for "Checkout" style payment
-  final List<Map<String, dynamic>> _cartItems = [];
-  double get _cartTotal =>
-      _cartItems.fold(0, (sum, item) => sum + (item['amount'] * item['qty']));
+  // Get scholarships from service
+  List<Map<String, dynamic>> get _availableScholarships =>
+      _accountingService.availableScholarships;
 
-  // Theme Constants
-  static const Color pViolet = Color(0xFF2E1065);
-  static const Color aViolet = Color(0xFF7C3AED);
-  static const Color success = Color(0xFF69F0AE);
-  static const Color surfaceDark = Color(0xFF1E1B4B);
+  // Cart State - now uses service
+  List<Map<String, dynamic>> get _cartItems => _accountingService.cartItems;
+  double get _cartTotal => _accountingService.cartTotal;
 
-  // --- MOCK DATABASE ---
-  final Map<String, dynamic> _studentDb = {
-    "2024-00001": {
-      "name": "DARLENE ANGEL",
-      "id": "2024-00001",
-      "course": "BS Computer Science",
-      "year": "4th Year",
-      "section": "BSCS-4A",
-      "tuition_breakdown": {
-        "Midterm Block A": 25000.0,
-        "Finals Block B": 25000.0,
-      },
-      "balance": 15000.00,
-      "status": "Overdue",
-      "cleared": false,
-      "scholarship": "Academic Scholar (20%)",
-      "ledger": [
-        {
-          "date": "2025-01-15",
-          "desc": "Tuition Fee (Prelim)",
-          "debit": 20000.0,
-          "credit": 0.0,
-        },
-        {
-          "date": "2025-01-20",
-          "desc": "Scholarship Discount",
-          "debit": 0.0,
-          "credit": 5000.0,
-        },
-      ],
-    },
-    "2024-00002": {
-      "name": "JUAN DELA CRUZ",
-      "id": "2024-00002",
-      "course": "BS Info Tech",
-      "year": "3rd Year",
-      "section": "BSIT-3B",
-      "tuition_breakdown": {
-        "Midterm Block A": 20000.0,
-        "Finals Block B": 20000.0,
-      },
-      "balance": 5500.00,
-      "status": "Due Soon",
-      "cleared": false,
-      "scholarship": "None",
-      "ledger": [
-        {
-          "date": "2025-01-15",
-          "desc": "Tuition Fee",
-          "debit": 18000.0,
-          "credit": 0.0,
-        },
-      ],
-    },
-  };
-
+  // --- MOCK DATABASE (Linked to Student ID) ---
+  // Book prices
   final Map<String, double> _bookPrices = {
     "Intro to AI": 850.0,
     "Data Structures": 450.0,
@@ -146,467 +63,411 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     _tabController = TabController(length: 4, vsync: this);
   }
 
-  void _addItemToCart() {
-    double amount = 0;
-    String label = "";
+  void _addToCart(String category, String item, double amount, {int qty = 1}) {
+    _accountingService.addToCart(category, item, amount, qty: qty);
+    setState(() {}); // Trigger rebuild
+  }
 
+  void _addItemToCart() {
     if (_selectedCategory == "Tuition") {
-      amount = _manualAmount > 0
-          ? _manualAmount
-          : (_studentDb[_selectedStudentId]['tuition_breakdown'][_selectedTerm] ??
-                0.0);
-      label = "Tuition: $_selectedTerm";
+      // Auto-load fee logic if available, otherwise use custom amount
+      double amount = _customAmount;
+      if (amount <= 0 && _selectedStudentId != null) {
+        final student = _accountingService.getStudent(_selectedStudentId!);
+        if (student != null && student['tuition_breakdown'] != null) {
+          amount = student['tuition_breakdown'][_selectedTerm] ?? 0.0;
+        }
+      }
+
+      if (amount <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please enter a valid amount.")),
+        );
+        return;
+      }
+      _addToCart("Tuition", "Tuition - $_selectedTerm", amount);
     } else if (_selectedCategory == "Books") {
       final book = _selectedBook ?? _bookPrices.keys.first;
-      amount = _bookPrices[book]!;
-      label = "Book: $book";
-    } else {
-      amount = _manualAmount;
-      label = "$_selectedCategory: $_miscType";
+      final price = _bookPrices[book]!;
+      _addToCart("Books", book, price, qty: _quantity);
+    } else if (_selectedCategory == "Printing") {
+      if (_printPages <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please enter valid number of pages.")),
+        );
+        return;
+      }
+      _addToCart("Printing", "Printing Services", 5.0, qty: _printPages);
+    } else if (_selectedCategory == "Miscellaneous") {
+      if (_customAmount <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please enter a valid amount.")),
+        );
+        return;
+      }
+      _addToCart("Miscellaneous", _miscType, _customAmount);
     }
-
-    if (amount <= 0) {
-      _showSnackBar("Please enter a valid payment amount.", isError: true);
-      return;
-    }
-
+    // Reset fields
     setState(() {
-      _cartItems.add({
-        "category": _selectedCategory,
-        "item": label,
-        "amount": amount,
-        "qty": _quantity,
-      });
-      _amountInputController.clear();
-      _manualAmount = 0;
+      // _customAmount = 0.0; // Keep amount for easier multiple entry if needed, or reset. Let's reset.
+      _quantity = 1;
+      _printPages = 1;
     });
   }
 
+  // --- ACTIONS ---
   Future<void> _processTransaction() async {
-    if (_selectedStudentId == null) return;
     final id = _selectedStudentId!;
-    final total = _cartTotal;
-    final items = List<Map<String, dynamic>>.from(_cartItems);
+    final amount = _cartTotal;
+    final itemsToPrint = List<Map<String, dynamic>>.from(_cartItems);
 
-    setState(() {
-      _studentDb[id]['balance'] -= total;
-      for (var item in items) {
-        _studentDb[id]['ledger'].add({
-          "date": DateTime.now().toString().split(' ')[0],
-          "desc": "Payment: ${item['item']}",
-          "debit": 0.0,
-          "credit": item['amount'] * item['qty'],
-        });
-      }
-      if (_studentDb[id]['balance'] <= 0) {
-        _studentDb[id]['balance'] = 0.0;
-        _studentDb[id]['status'] = "Cleared";
-        _studentDb[id]['cleared'] = true;
-      }
-      _cartItems.clear();
-    });
+    // Use service to process checkout
+    _accountingService.checkoutCart(id, _paymentMethod);
 
-    await _generatePdfReceipt(id, total, items);
+    try {
+      final path = await _generateReceipt(
+        id,
+        amount,
+        _paymentMethod,
+        itemsToPrint,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Receipt generated: $path")));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error generating receipt: $e")));
+      }
+    }
+
+    if (mounted) {
+      setState(() {}); // Trigger rebuild to reflect service changes
+    }
   }
 
-  // --- MODERNIZED E-DOC RECEIPT GENERATION ---
-  Future<void> _generatePdfReceipt(
+  Future<String> _generateReceipt(
     String id,
-    double total,
+    double amount,
+    String method,
     List<Map<String, dynamic>> items,
   ) async {
-    final pdf = pw.Document();
-    final student = _studentDb[id];
-    final String timestamp = DateTime.now().toString().split('.')[0];
-    final String orNumber =
-        "OR-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}";
-    final PdfColor brandViolet = PdfColor.fromInt(0xFF7C3AED);
-
-    pw.ImageProvider? logoImage;
     try {
-      final ByteData data = await rootBundle.load('assets/image/logo (2).png');
-      logoImage = pw.MemoryImage(data.buffer.asUint8List());
-    } catch (e) {
-      logoImage = null;
-    }
+      final pdf = pw.Document();
+      final student = _accountingService.getStudent(id);
+      if (student == null) throw Exception("Student not found");
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(40),
-        build: (pw.Context context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            // 1. BRANDED HEADER
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Row(
-                  children: [
-                    if (logoImage != null)
-                      pw.Container(
-                        width: 45,
-                        height: 45,
-                        child: pw.Image(logoImage),
-                      )
-                    else
-                      pw.Container(
-                        width: 40,
-                        height: 40,
-                        decoration: pw.BoxDecoration(
-                          color: brandViolet,
-                          borderRadius: pw.BorderRadius.circular(8),
-                        ),
-                        child: pw.Center(
-                          child: pw.Text(
-                            "U",
-                            style: pw.TextStyle(
-                              color: PdfColors.white,
-                              fontWeight: pw.FontWeight.bold,
-                              fontSize: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                    pw.SizedBox(width: 15),
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text(
-                          "UEMSSP Portal",
-                          style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold,
-                            fontSize: 24,
-                            color: brandViolet,
-                          ),
-                        ),
-                        pw.Text(
-                          "UNIFIED EDUCATION MANAGEMENT SYSTEM AND STUDENT PORTAL",
-                          style: pw.TextStyle(
-                            fontSize: 8,
-                            color: PdfColors.grey700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    pw.Text(
-                      "OFFICIAL E-RECEIPT",
-                      style: pw.TextStyle(
-                        fontSize: 10,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.Text(
-                      "No: $orNumber",
-                      style: pw.TextStyle(
-                        fontSize: 9,
-                        color: PdfColors.grey800,
-                      ),
-                    ),
-                    pw.Text(
-                      "Date: $timestamp",
-                      style: pw.TextStyle(
-                        fontSize: 8,
-                        color: PdfColors.grey600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 20),
-            pw.Divider(color: brandViolet, thickness: 1.5),
-            pw.SizedBox(height: 25),
+      final isCleared = student['cleared'] == true;
 
-            // 2. STUDENT INFO GRID
-            pw.Container(
-              padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey300),
-                borderRadius: pw.BorderRadius.circular(8),
-              ),
-              child: pw.Column(
-                children: [
-                  pw.Row(
-                    children: [
-                      pw.Expanded(
-                        child: _pdfMetaItem("RECEIVED FROM", student['name']),
-                      ),
-                      pw.Expanded(
-                        child: _pdfMetaItem("STUDENT ID", student['id']),
-                      ),
-                    ],
-                  ),
-                  pw.SizedBox(height: 10),
-                  pw.Row(
-                    children: [
-                      pw.Expanded(
-                        child: _pdfMetaItem(
-                          "COURSE / PROGRAM",
-                          student['course'],
-                        ),
-                      ),
-                      pw.Expanded(
-                        child: _pdfMetaItem("PAYMENT METHOD", _paymentMethod),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            pw.SizedBox(height: 35),
-
-            // 3. ITEMIZATION TABLE
-            pw.Text(
-              "TRANSACTION DETAILS",
-              style: pw.TextStyle(
-                fontSize: 10,
-                fontWeight: pw.FontWeight.bold,
-                color: brandViolet,
-              ),
-            ),
-            pw.SizedBox(height: 10),
-            pw.Table.fromTextArray(
-              headers: ["Description", "Qty", "Amount"],
-              headerStyle: pw.TextStyle(
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.white,
-                fontSize: 9,
-              ),
-              headerDecoration: pw.BoxDecoration(color: brandViolet),
-              cellStyle: const pw.TextStyle(fontSize: 9),
-              data: items
-                  .map(
-                    (i) => [
-                      i['item'],
-                      i['qty'].toString(),
-                      "PHP ${(i['amount'] * i['qty']).toStringAsFixed(2)}",
-                    ],
-                  )
-                  .toList(),
-            ),
-
-            pw.Spacer(),
-
-            // 4. TOTALS
-            pw.Align(
-              alignment: pw.Alignment.centerRight,
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end,
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
-                    "TOTAL PAID AMOUNT",
-                    style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
-                  ),
-                  pw.Text(
-                    "PHP ${total.toStringAsFixed(2)}",
+                    "OFFICIAL RECEIPT",
                     style: pw.TextStyle(
-                      fontSize: 18,
+                      fontSize: 24,
                       fontWeight: pw.FontWeight.bold,
-                      color: brandViolet,
+                    ),
+                  ),
+                  pw.Text(
+                    "NO: ${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}",
+                    style: pw.TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+              pw.Divider(),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text("Student: ${student['name']}"),
+                      pw.Text("ID: ${student['id']}"),
+                      pw.Text("Course: ${student['course']}"),
+                      pw.Text("Year Level: ${student['year']}"),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text(
+                        "Date: ${DateTime.now().toString().split('.')[0]}",
+                      ),
+                      pw.Text("Payment Method: $method"),
+                    ],
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 30),
+              pw.Text(
+                "Transaction Summary",
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 10),
+              pw.Table.fromTextArray(
+                headers: ['Item', 'Qty', 'Amount'],
+                data: items
+                    .map(
+                      (item) => [
+                        item['item'],
+                        item['qty'].toString(),
+                        "PHP ${(item['amount'] * item['qty']).toStringAsFixed(2)}",
+                      ],
+                    )
+                    .toList(),
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                cellAlignment: pw.Alignment.centerLeft,
+                cellAlignments: {
+                  1: pw.Alignment.center,
+                  2: pw.Alignment.centerRight,
+                },
+              ),
+              pw.Divider(),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    "TOTAL AMOUNT PAID",
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.Text(
+                    "PHP ${amount.toStringAsFixed(2)}",
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
                     ),
                   ),
                 ],
               ),
-            ),
-
-            pw.SizedBox(height: 40),
-
-            // 5. DIGITAL FOOTER
-            pw.Divider(color: PdfColors.grey300),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      "AUTHENTICATED BY UEMSSP FINANCE CORE",
-                      style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold,
-                        fontSize: 8,
-                        color: PdfColors.grey700,
-                      ),
+              pw.SizedBox(height: 20),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text("Remaining Balance:"),
+                  pw.Text(
+                    "PHP ${student['balance'].toStringAsFixed(2)}",
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      color: isCleared ? PdfColors.green : PdfColors.red,
                     ),
-                    pw.Text(
-                      "This is a system-generated document. No signature required.",
-                      style: pw.TextStyle(
-                        fontSize: 7,
-                        color: PdfColors.grey600,
-                      ),
-                    ),
-                    pw.Text(
-                      "Reference Code: ${id.split('-').last}-$orNumber",
-                      style: pw.TextStyle(
-                        fontSize: 7,
-                        color: PdfColors.grey600,
-                      ),
-                    ),
-                  ],
-                ),
-                pw.Container(
-                  width: 50,
-                  height: 50,
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey300),
                   ),
-                  child: pw.Center(
+                ],
+              ),
+              if (isCleared) ...[
+                pw.SizedBox(height: 20),
+                pw.Center(
+                  child: pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.green, width: 2),
+                      borderRadius: pw.BorderRadius.circular(8),
+                    ),
                     child: pw.Text(
-                      "QR TICKET",
+                      "OFFICIALLY CLEARED",
                       style: pw.TextStyle(
-                        fontSize: 6,
-                        color: PdfColors.grey400,
+                        color: PdfColors.green,
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
                   ),
                 ),
               ],
-            ),
-          ],
+              pw.Spacer(),
+              pw.Center(
+                child: pw.Text(
+                  "Thank you for your payment!",
+                  style: pw.TextStyle(fontStyle: pw.FontStyle.italic),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
-    try {
       final dir = await getTemporaryDirectory();
-      final file = File("${dir.path}/Receipt_$orNumber.pdf");
+      final file = File(
+        "${dir.path}/receipt_${id}_${DateTime.now().millisecondsSinceEpoch}.pdf",
+      );
       await file.writeAsBytes(await pdf.save());
-      await OpenFile.open(file.path);
-    } catch (e) {
-      _showSnackBar("Error generating document: $e", isError: true);
-    }
-  }
 
-  // Fixed: This was returning pw.Widget but contained Flutter UI code
-  pw.Widget _pdfMetaItem(String label, String val) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(label, style: pw.TextStyle(fontSize: 8, color: PdfColors.grey)),
-        pw.Text(val, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-      ],
-    );
+      final result = await OpenFile.open(file.path);
+      if (result.type != ResultType.done) {
+        debugPrint("Error opening file: ${result.message}");
+      }
+      return file.path;
+    } catch (e) {
+      debugPrint("PDF Generation Error: $e");
+      rethrow;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color textColor = widget.isDarkMode ? Colors.white : pViolet;
-    final Color cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
+    final Color cardColor = widget.isDarkMode
+        ? const Color(0xFF1E1B4B)
+        : Colors.white;
+    final Color textColor = widget.isDarkMode
+        ? Colors.white
+        : const Color(0xFF2E1065);
     final Color subTextColor = widget.isDarkMode
         ? Colors.white54
         : Colors.blueGrey;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Column(
-          children: [
-            _buildTabBar(textColor),
-            const SizedBox(height: 24),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildLedgerTab(cardColor, textColor, subTextColor),
-                  _buildPaymentTab(cardColor, textColor, subTextColor),
-                  _buildPlaceholder("Grants Engine Active"),
-                  _buildPlaceholder("Global Daily Logs"),
-                ],
-              ),
+    return Column(
+      children: [
+        Container(
+          height: 50,
+          decoration: BoxDecoration(
+            color: widget.isDarkMode
+                ? Colors.white.withOpacity(0.05)
+                : Colors.black.withOpacity(0.03),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: TabBar(
+            controller: _tabController,
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicator: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFF8B5CF6),
             ),
-          ],
-        );
-      },
+            labelColor: Colors.white,
+            unselectedLabelColor: textColor.withOpacity(0.5),
+            labelStyle: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+            tabs: const [
+              Tab(text: "STUDENT LEDGER"),
+              Tab(text: "PAYMENT PROCESSING"),
+              Tab(text: "SCHOLARSHIPS"),
+              Tab(text: "TRANSACTION HISTORY"),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              SingleChildScrollView(
+                child: _buildBillingList(cardColor, textColor, subTextColor),
+              ),
+              SingleChildScrollView(
+                child: _buildPaymentProcessing(
+                  cardColor,
+                  textColor,
+                  subTextColor,
+                ),
+              ),
+              SingleChildScrollView(
+                child: _buildScholarshipsList(
+                  cardColor,
+                  textColor,
+                  subTextColor,
+                ),
+              ),
+              SingleChildScrollView(
+                child: _buildTransactionHistory(
+                  cardColor,
+                  textColor,
+                  subTextColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildTabBar(Color textColor) {
-    return Container(
-      height: 40,
-      decoration: BoxDecoration(
-        color: widget.isDarkMode
-            ? Colors.white.withOpacity(0.05)
-            : Colors.black.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        indicatorSize: TabBarIndicatorSize.tab,
-        indicator: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: aViolet,
-        ),
-        labelColor: Colors.white,
-        unselectedLabelColor: textColor.withOpacity(0.5),
-        labelStyle: GoogleFonts.inter(
-          fontWeight: FontWeight.bold,
-          fontSize: 10,
-        ),
-        tabs: const [
-          Tab(text: "LEDGER"),
-          Tab(text: "PAYMENT"),
-          Tab(text: "GRANTS"),
-          Tab(text: "LOGS"),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLedgerTab(Color cardColor, Color textColor, Color subTextColor) {
-    if (_selectedStudentId != null)
-      return _buildDetailLedger(cardColor, textColor);
+  Widget _buildBillingList(
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+  ) {
+    if (_selectedStudentId != null) {
+      return _buildStudentLedgerView(cardColor, textColor, subTextColor);
+    }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
+        ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            controller: _searchController,
-            style: TextStyle(color: textColor, fontSize: 12),
-            decoration: InputDecoration(
-              hintText: "Search Student Name or ID...",
-              prefixIcon: const Icon(LucideIcons.search, size: 16),
-              filled: true,
-              fillColor: Colors.black.withOpacity(0.05),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  style: TextStyle(color: textColor),
+                  decoration: InputDecoration(
+                    hintText: "Search Student ID or Name...",
+                    hintStyle: TextStyle(color: subTextColor),
+                    prefixIcon: Icon(LucideIcons.search, color: subTextColor),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  onChanged: (val) => setState(() {}),
+                ),
               ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 8),
-            ),
-            onChanged: (v) => setState(() {}),
+              const SizedBox(width: 16),
+              ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(LucideIcons.send, size: 16),
+                label: const Text("SEND REMINDERS"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8B5CF6),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           ListView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            children: _studentDb.entries
-                .where((entry) {
-                  final s = entry.value;
+            children: _accountingService
+                .getAllStudents()
+                .where((s) {
                   final q = _searchController.text.toLowerCase();
                   return s['name'].toLowerCase().contains(q) ||
                       s['id'].contains(q);
                 })
-                .map((entry) {
-                  final s = entry.value;
+                .map((s) {
                   Color statusColor = s['status'] == 'Overdue'
                       ? Colors.redAccent
                       : (s['status'] == 'Cleared'
                             ? const Color(0xFF69F0AE)
                             : Colors.orangeAccent);
                   return InkWell(
-                    onTap: () =>
-                        setState(() => _selectedStudentId = entry.key),
+                    onTap: () => setState(() => _selectedStudentId = s['id']),
                     child: _studentRow(
                       s['name'],
                       s['section'],
@@ -625,26 +486,82 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     );
   }
 
-  Widget _buildDetailLedger(Color cardColor, Color textColor) {
-    final student = _studentDb[_selectedStudentId];
+  Widget _buildStudentLedgerView(
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+  ) {
+    final student = _selectedStudentId != null
+        ? _accountingService.getStudent(_selectedStudentId!)
+        : null;
+    if (student == null) return const SizedBox();
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(
+          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
+        ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               IconButton(
-                icon: Icon(LucideIcons.arrowLeft, color: textColor, size: 18),
+                icon: Icon(LucideIcons.arrowLeft, color: textColor),
                 onPressed: () => setState(() => _selectedStudentId = null),
               ),
               const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    student['name'],
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  Text(
+                    "${student['id']} • ${student['course']}",
+                    style: TextStyle(color: subTextColor),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: student['cleared']
+                      ? const Color(0xFF69F0AE).withOpacity(0.2)
+                      : Colors.redAccent.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  student['cleared'] ? "CLEARED" : "NOT CLEARED",
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: student['cleared']
+                        ? const Color(0xFF69F0AE)
+                        : Colors.redAccent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 32),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
               Text(
-                student['name'],
+                "Financial Ledger",
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -670,96 +587,96 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                 color: subTextColor.withOpacity(0.1),
               ),
             ),
-                columnWidths: const {
-                  0: FlexColumnWidth(1),
-                  1: FlexColumnWidth(3),
-                  2: FlexColumnWidth(1),
-                  3: FlexColumnWidth(1),
-                },
+            columnWidths: const {
+              0: FlexColumnWidth(1),
+              1: FlexColumnWidth(3),
+              2: FlexColumnWidth(1),
+              3: FlexColumnWidth(1),
+            },
+            children: [
+              TableRow(
                 children: [
-                  TableRow(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          "Date",
-                          style: TextStyle(
-                            color: subTextColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      "Date",
+                      style: TextStyle(
+                        color: subTextColor,
+                        fontWeight: FontWeight.bold,
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          "Description",
-                          style: TextStyle(
-                            color: subTextColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          "Debit",
-                          style: TextStyle(
-                            color: subTextColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          "Credit",
-                          style: TextStyle(
-                            color: subTextColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  ...(student['ledger'] as List).map(
-                    (t) => TableRow(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Text(
-                            t['date'],
-                            style: TextStyle(color: textColor),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Text(
-                            t['desc'],
-                            style: TextStyle(color: textColor),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Text(
-                            t['debit'] > 0 ? "₱${t['debit']}" : "-",
-                            style: TextStyle(color: textColor),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Text(
-                            t['credit'] > 0 ? "₱${t['credit']}" : "-",
-                            style: TextStyle(
-                              color: const Color(0xFF69F0AE),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      "Description",
+                      style: TextStyle(
+                        color: subTextColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      "Debit",
+                      style: TextStyle(
+                        color: subTextColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      "Credit",
+                      style: TextStyle(
+                        color: subTextColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
+              ...(student['ledger'] as List).map(
+                (t) => TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        t['date'],
+                        style: TextStyle(color: textColor),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        t['desc'],
+                        style: TextStyle(color: textColor),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        t['debit'] > 0 ? "₱${t['debit']}" : "-",
+                        style: TextStyle(color: textColor),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        t['credit'] > 0 ? "₱${t['credit']}" : "-",
+                        style: TextStyle(
+                          color: const Color(0xFF69F0AE),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -773,68 +690,100 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                   color: textColor,
                 ),
               ),
-              const Spacer(),
-              _badge(
-                "₱${student['balance']}",
-                student['balance'] > 0 ? Colors.redAccent : success,
-              ),
             ],
-          ),
-          const Divider(height: 24, color: Colors.white10),
-          Expanded(
-            child: ListView(
-              children: (student['ledger'] as List)
-                  .map((l) => _ledgerEntry(l, textColor))
-                  .toList(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 45,
-            child: ElevatedButton.icon(
-              onPressed: () => _tabController.animateTo(1),
-              icon: const Icon(
-                LucideIcons.creditCard,
-                size: 18,
-                color: Colors.white,
-              ),
-              label: Text(
-                "PROCEED TO PAYMENT",
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  fontSize: 12,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: aViolet,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 0,
-              ),
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPaymentTab(
+  Widget _buildPaymentProcessing(
     Color cardColor,
     Color textColor,
     Color subTextColor,
   ) {
-    if (_selectedStudentId == null) return _buildEmptyPrompt(textColor);
-    final student = _studentDb[_selectedStudentId];
+    if (_selectedStudentId != null) {
+      return _buildCheckoutInterface(cardColor, textColor, subTextColor);
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            LucideIcons.creditCard,
+            size: 48,
+            color: textColor.withOpacity(0.5),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            "Process Tuition Payment",
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Accept Cash, Card, or Digital Wallet payments instantly.",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: subTextColor),
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: 300,
+            child: ElevatedButton.icon(
+              onPressed: () =>
+                  _showStudentSelectionDialog(context, textColor, cardColor),
+              icon: const Icon(LucideIcons.shoppingCart),
+              label: const Text("START CHECKOUT"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF8B5CF6),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "Supported: GCash, PayMaya, Bank Transfer",
+            style: TextStyle(color: subTextColor, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckoutInterface(
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+  ) {
+    final student = _selectedStudentId != null
+        ? _accountingService.getStudent(_selectedStudentId!)
+        : null;
+    if (student == null) return const SizedBox();
+
     return Column(
       children: [
         // Enhanced Student Header
-        _buildEnhancedStudentHeader(student, cardColor, textColor, subTextColor),
+        _buildEnhancedStudentHeader(
+          student,
+          cardColor,
+          textColor,
+          subTextColor,
+        ),
         const SizedBox(height: 20),
-        
+
         // Main Content Row
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -903,7 +852,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
             ),
           ),
           const SizedBox(width: 20),
-          
+
           // Student Info
           Expanded(
             child: Column(
@@ -921,7 +870,10 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF8B5CF6).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -948,7 +900,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
               ],
             ),
           ),
-          
+
           // Balance Section
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -963,14 +915,17 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
               ),
               const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: student['balance'] > 0 
+                  color: student['balance'] > 0
                       ? Colors.redAccent.withOpacity(0.1)
                       : const Color(0xFF69F0AE).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: student['balance'] > 0 
+                    color: student['balance'] > 0
                         ? Colors.redAccent.withOpacity(0.3)
                         : const Color(0xFF69F0AE).withOpacity(0.3),
                   ),
@@ -980,7 +935,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    color: student['balance'] > 0 
+                    color: student['balance'] > 0
                         ? Colors.redAccent
                         : const Color(0xFF69F0AE),
                   ),
@@ -1086,12 +1041,13 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
               onChanged: (val) => setState(() {
                 _selectedTerm = val!;
                 // Auto-load fee if available
-                if (_selectedStudentId != null &&
-                    _studentDb[_selectedStudentId]['tuition_breakdown'] !=
-                        null) {
-                  _customAmount =
-                      _studentDb[_selectedStudentId]['tuition_breakdown'][val] ??
-                      0.0;
+                if (_selectedStudentId != null) {
+                  final student = _accountingService.getStudent(
+                    _selectedStudentId!,
+                  );
+                  if (student != null && student['tuition_breakdown'] != null) {
+                    _customAmount = student['tuition_breakdown'][val] ?? 0.0;
+                  }
                 }
               }),
               textColor: textColor,
@@ -1122,9 +1078,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                     "Quantity",
                     textColor,
                     _quantity,
-                    (val) => setState(
-                      () => _quantity = int.tryParse(val) ?? 1,
-                    ),
+                    (val) => setState(() => _quantity = int.tryParse(val) ?? 1),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1138,7 +1092,10 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
               ],
             ),
           ] else if (_selectedCategory == "Printing") ...[
-            _buildEnhancedSectionHeader("Printing Services", LucideIcons.printer),
+            _buildEnhancedSectionHeader(
+              "Printing Services",
+              LucideIcons.printer,
+            ),
             const SizedBox(height: 8),
             _buildEnhancedNumberField(
               "Number of Pages",
@@ -1171,7 +1128,10 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
               ),
             ),
           ] else if (_selectedCategory == "Miscellaneous") ...[
-            _buildEnhancedSectionHeader("Miscellaneous Fee", LucideIcons.fileText),
+            _buildEnhancedSectionHeader(
+              "Miscellaneous Fee",
+              LucideIcons.fileText,
+            ),
             const SizedBox(height: 8),
             _buildEnhancedDropdown(
               value: _miscType,
@@ -1202,7 +1162,13 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
           const SizedBox(height: 8),
           _buildEnhancedDropdown(
             value: _paymentMethod,
-            items: ["Cash", "GCash", "Online Banking", "Bank Transfer", "Credit Card"],
+            items: [
+              "Cash",
+              "GCash",
+              "Online Banking",
+              "Bank Transfer",
+              "Credit Card",
+            ],
             onChanged: (val) => setState(() => _paymentMethod = val!),
             textColor: textColor,
             cardColor: cardColor,
@@ -1235,7 +1201,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
           ],
 
           const SizedBox(height: 24),
-          
+
           // Add to Cart Button
           SizedBox(
             width: double.infinity,
@@ -1267,11 +1233,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
             color: const Color(0xFF8B5CF6).withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            size: 16,
-            color: const Color(0xFF8B5CF6),
-          ),
+          child: Icon(icon, size: 16, color: const Color(0xFF8B5CF6)),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1311,10 +1273,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
           value: value,
           isExpanded: true,
           dropdownColor: cardColor,
-          style: GoogleFonts.inter(
-            color: textColor,
-            fontSize: 14,
-          ),
+          style: GoogleFonts.inter(color: textColor, fontSize: 14),
           icon: Icon(
             LucideIcons.chevronDown,
             color: textColor.withOpacity(0.6),
@@ -1326,10 +1285,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                   value: e,
                   child: Text(
                     e,
-                    style: GoogleFonts.inter(
-                      color: textColor,
-                      fontSize: 14,
-                    ),
+                    style: GoogleFonts.inter(color: textColor, fontSize: 14),
                   ),
                 ),
               )
@@ -1360,10 +1316,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
         const SizedBox(height: 8),
         TextField(
           keyboardType: TextInputType.number,
-          style: GoogleFonts.inter(
-            color: textColor,
-            fontSize: 14,
-          ),
+          style: GoogleFonts.inter(color: textColor, fontSize: 14),
           decoration: InputDecoration(
             prefixText: "₱ ",
             prefixStyle: GoogleFonts.inter(
@@ -1414,10 +1367,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
         const SizedBox(height: 8),
         TextField(
           keyboardType: TextInputType.number,
-          style: GoogleFonts.inter(
-            color: textColor,
-            fontSize: 14,
-          ),
+          style: GoogleFonts.inter(color: textColor, fontSize: 14),
           decoration: InputDecoration(
             filled: true,
             fillColor: widget.isDarkMode
@@ -1459,16 +1409,11 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
         ),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             color: const Color(0xFF69F0AE).withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFF69F0AE).withOpacity(0.3),
-            ),
+            border: Border.all(color: const Color(0xFF69F0AE).withOpacity(0.3)),
           ),
           child: Text(
             price,
@@ -1544,9 +1489,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
             decoration: BoxDecoration(
               color: Colors.greenAccent.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.greenAccent.withOpacity(0.3),
-              ),
+              border: Border.all(color: Colors.greenAccent.withOpacity(0.3)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1576,34 +1519,37 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _cartItems.isNotEmpty ? () {
-                if (_paymentMethod == "GCash" || 
-                    _paymentMethod == "Online Banking" || 
-                    _paymentMethod == "Bank Transfer") {
-                  _showQRPaymentDialog(context, cardColor, textColor);
-                } else {
-                  _processCheckout();
-                }
-              } : null,
+              onPressed: _cartItems.isNotEmpty
+                  ? () {
+                      if (_paymentMethod == "GCash" ||
+                          _paymentMethod == "Online Banking" ||
+                          _paymentMethod == "Bank Transfer") {
+                        _showQRPaymentDialog(context, cardColor, textColor);
+                      } else {
+                        _processCheckout();
+                      }
+                    }
+                  : null,
               icon: Icon(
-                (_paymentMethod == "GCash" || 
-                 _paymentMethod == "Online Banking" || 
-                 _paymentMethod == "Bank Transfer") 
-                    ? LucideIcons.qrCode 
+                (_paymentMethod == "GCash" ||
+                        _paymentMethod == "Online Banking" ||
+                        _paymentMethod == "Bank Transfer")
+                    ? LucideIcons.qrCode
                     : LucideIcons.creditCard,
               ),
               label: Text(
-                (_paymentMethod == "GCash" || 
-                 _paymentMethod == "Online Banking" || 
-                 _paymentMethod == "Bank Transfer")
-                    ? "GENERATE QR CODE" 
-                    : "PROCESS PAYMENT"
+                (_paymentMethod == "GCash" ||
+                        _paymentMethod == "Online Banking" ||
+                        _paymentMethod == "Bank Transfer")
+                    ? "GENERATE QR CODE"
+                    : "PROCESS PAYMENT",
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: (_paymentMethod == "GCash" || 
-                                  _paymentMethod == "Online Banking" || 
-                                  _paymentMethod == "Bank Transfer")
-                    ? Colors.blueAccent 
+                backgroundColor:
+                    (_paymentMethod == "GCash" ||
+                        _paymentMethod == "Online Banking" ||
+                        _paymentMethod == "Bank Transfer")
+                    ? Colors.blueAccent
                     : Colors.greenAccent,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1622,17 +1568,14 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: (widget.isDarkMode ? Colors.white10 : Colors.black12).withOpacity(0.3),
+        color: (widget.isDarkMode ? Colors.white10 : Colors.black12)
+            .withOpacity(0.3),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            LucideIcons.shoppingCart,
-            size: 48,
-            color: subTextColor,
-          ),
+          Icon(LucideIcons.shoppingCart, size: 48, color: subTextColor),
           const SizedBox(height: 16),
           Text(
             "No items in cart",
@@ -1645,10 +1588,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
           const SizedBox(height: 8),
           Text(
             "Add items from the left panel to get started",
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: subTextColor,
-            ),
+            style: GoogleFonts.inter(fontSize: 12, color: subTextColor),
             textAlign: TextAlign.center,
           ),
         ],
@@ -1753,10 +1693,9 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     }
   }
 
-  List<MapEntry<String, dynamic>> _filteredScholarshipStudents() {
+  List<Map<String, dynamic>> _filteredScholarshipStudents() {
     final query = _scholarshipSearchController.text.toLowerCase();
-    return _studentDb.entries.where((entry) {
-      final student = entry.value as Map<String, dynamic>;
+    return _accountingService.getAllStudents().where((student) {
       final matchesQuery =
           student['name'].toLowerCase().contains(query) ||
           student['id'].toLowerCase().contains(query) ||
@@ -1766,14 +1705,15 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
       if (_scholarshipFilter == "All") return true;
       if (_scholarshipFilter == "None") return !_hasScholarship(student);
 
-      final scholarshipName =
-          _normalizeScholarshipName((student['scholarship'] ?? '').toString())
-              .toLowerCase();
+      final scholarshipName = _normalizeScholarshipName(
+        (student['scholarship'] ?? '').toString(),
+      ).toLowerCase();
       final scholarship = _availableScholarships.firstWhere(
         (s) => s['name'].toString().toLowerCase() == scholarshipName,
         orElse: () => {},
       );
-      return scholarship.isNotEmpty && scholarship['type'] == _scholarshipFilter;
+      return scholarship.isNotEmpty &&
+          scholarship['type'] == _scholarshipFilter;
     }).toList();
   }
 
@@ -1781,70 +1721,52 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     String studentId,
     Map<String, dynamic> scholarship,
   ) {
-    final student = _studentDb[studentId];
+    final student = _accountingService.getStudent(studentId);
     if (student == null) return;
 
-    final discountRate = (scholarship['discount'] as num).toDouble();
-    final currentBalance = (student['balance'] as num).toDouble();
-    final discountAmount = currentBalance * discountRate;
-    final newBalance = currentBalance - discountAmount;
-
-    setState(() {
-      student['scholarship'] = scholarship['name'];
-      if (discountAmount > 0) {
-        student['balance'] = newBalance > 0 ? newBalance : 0.0;
-        student['ledger'].add({
-          "date": DateTime.now().toString().split(' ')[0],
-          "desc":
-              "Scholarship Discount - ${scholarship['name']} (${(discountRate * 100).round()}%)",
-          "debit": 0.0,
-          "credit": discountAmount,
-        });
-      }
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "Scholarship applied to ${student['name']}.",
-        ),
-        backgroundColor: Colors.green,
-      ),
+    // Use service to apply scholarship
+    final success = _accountingService.applyScholarship(
+      studentId,
+      scholarship['name'],
     );
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Scholarship applied to ${student['name']}."),
+          backgroundColor: Colors.green,
+        ),
+      );
+      setState(() {}); // Trigger rebuild
+    }
   }
 
   void _removeScholarshipFromStudent(String studentId) {
-    final student = _studentDb[studentId];
+    final student = _accountingService.getStudent(studentId);
     if (student == null) return;
 
-    setState(() {
-      student['scholarship'] = "None";
-      student['ledger'].add({
-        "date": DateTime.now().toString().split(' ')[0],
-        "desc": "Scholarship Removed",
-        "debit": 0.0,
-        "credit": 0.0,
-      });
-    });
+    _accountingService.removeScholarship(studentId);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("Scholarship removed from ${student['name']}.") ,
+        content: Text("Scholarship removed from ${student['name']}."),
         backgroundColor: Colors.orangeAccent,
       ),
     );
+    setState(() {}); // Trigger rebuild
   }
 
   void _showAssignScholarshipDialog({String? studentId}) {
+    final allStudents = _accountingService.getAllStudents();
     String selectedStudentId =
-        studentId ?? _studentDb.keys.first.toString();
+        studentId ?? (allStudents.isNotEmpty ? allStudents[0]['id'] : '');
     Map<String, dynamic> selectedScholarship = _availableScholarships.first;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
-          final student = _studentDb[selectedStudentId];
+          final student = _accountingService.getStudent(selectedStudentId);
           return AlertDialog(
             backgroundColor: widget.isDarkMode
                 ? const Color(0xFF1E1B4B)
@@ -1853,7 +1775,9 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
               "Assign Scholarship",
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold,
-                color: widget.isDarkMode ? Colors.white : const Color(0xFF2E1065),
+                color: widget.isDarkMode
+                    ? Colors.white
+                    : const Color(0xFF2E1065),
               ),
             ),
             content: SizedBox(
@@ -1865,17 +1789,22 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                   Text(
                     "Select Student",
                     style: TextStyle(
-                      color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                      color: widget.isDarkMode
+                          ? Colors.white70
+                          : Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: selectedStudentId,
-                    items: _studentDb.entries
+                    items: _accountingService
+                        .getAllStudents()
                         .map(
-                          (entry) => DropdownMenuItem<String>(
-                            value: entry.key,
-                            child: Text("${entry.value['name']} • ${entry.key}"),
+                          (student) => DropdownMenuItem<String>(
+                            value: student['id'],
+                            child: Text(
+                              "${student['name']} • ${student['id']}",
+                            ),
                           ),
                         )
                         .toList(),
@@ -1888,7 +1817,9 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                   Text(
                     "Select Scholarship",
                     style: TextStyle(
-                      color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                      color: widget.isDarkMode
+                          ? Colors.white70
+                          : Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1907,8 +1838,9 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                     onChanged: (val) {
                       if (val == null) return;
                       setDialogState(() {
-                        selectedScholarship = _availableScholarships
-                            .firstWhere((s) => s['name'] == val);
+                        selectedScholarship = _availableScholarships.firstWhere(
+                          (s) => s['name'] == val,
+                        );
                       });
                     },
                   ),
@@ -1917,7 +1849,9 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                     Text(
                       "Current Balance: ₱${(student['balance'] as num).toStringAsFixed(2)}",
                       style: TextStyle(
-                        color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                        color: widget.isDarkMode
+                            ? Colors.white70
+                            : Colors.black87,
                       ),
                     ),
                 ],
@@ -1962,7 +1896,9 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
               "Create Scholarship",
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold,
-                color: widget.isDarkMode ? Colors.white : const Color(0xFF2E1065),
+                color: widget.isDarkMode
+                    ? Colors.white
+                    : const Color(0xFF2E1065),
               ),
             ),
             content: SizedBox(
@@ -1998,7 +1934,10 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                         value: "Needs-Based",
                         child: Text("Needs-Based"),
                       ),
-                      DropdownMenuItem(value: "Special", child: Text("Special")),
+                      DropdownMenuItem(
+                        value: "Special",
+                        child: Text("Special"),
+                      ),
                     ],
                     onChanged: (val) {
                       if (val == null) return;
@@ -2051,15 +1990,16 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     Color subTextColor,
   ) {
     final students = _filteredScholarshipStudents();
-    final totalWithScholarship = _studentDb.values
-        .where((s) => _hasScholarship(s as Map<String, dynamic>))
+    final totalWithScholarship = _accountingService
+        .getAllStudents()
+        .where((s) => _hasScholarship(s))
         .length;
     final averageDiscount = _availableScholarships.isEmpty
         ? 0
         : _availableScholarships
-                .map((s) => (s['discount'] as num).toDouble())
-                .reduce((a, b) => a + b) /
-            _availableScholarships.length;
+                  .map((s) => (s['discount'] as num).toDouble())
+                  .reduce((a, b) => a + b) /
+              _availableScholarships.length;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -2156,7 +2096,10 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                   initialValue: _scholarshipFilter,
                   items: const [
                     DropdownMenuItem(value: "All", child: Text("All")),
-                    DropdownMenuItem(value: "None", child: Text("No Scholarship")),
+                    DropdownMenuItem(
+                      value: "None",
+                      child: Text("No Scholarship"),
+                    ),
                     DropdownMenuItem(value: "Merit", child: Text("Merit")),
                     DropdownMenuItem(
                       value: "Athletics",
@@ -2194,8 +2137,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
               itemCount: students.length,
               separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final entry = students[index];
-                final student = entry.value as Map<String, dynamic>;
+                final student = students[index];
                 final hasScholarship = _hasScholarship(student);
                 final scholarshipName = _normalizeScholarshipName(
                   (student['scholarship'] ?? "None").toString(),
@@ -2204,7 +2146,8 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                   (s) => s['name'] == scholarshipName,
                   orElse: () => {},
                 );
-                final scholarshipType = scholarship['type']?.toString() ??
+                final scholarshipType =
+                    scholarship['type']?.toString() ??
                     (hasScholarship ? "Assigned" : "None");
                 final typeColor = _getScholarshipTypeColor(scholarshipType);
 
@@ -2226,7 +2169,9 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                     children: [
                       CircleAvatar(
                         radius: 22,
-                        backgroundColor: const Color(0xFF8B5CF6).withOpacity(0.2),
+                        backgroundColor: const Color(
+                          0xFF8B5CF6,
+                        ).withOpacity(0.2),
                         child: Icon(
                           LucideIcons.user,
                           color: const Color(0xFF8B5CF6),
@@ -2249,7 +2194,10 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                             const SizedBox(height: 4),
                             Text(
                               "${student['id']} • ${student['course']} • ${student['year']}",
-                              style: TextStyle(color: subTextColor, fontSize: 12),
+                              style: TextStyle(
+                                color: subTextColor,
+                                fontSize: 12,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Row(
@@ -2299,9 +2247,9 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                             children: [
                               TextButton(
                                 onPressed: () {
-                                  _selectedStudentId = entry.key;
+                                  _selectedStudentId = student['id'];
                                   _showAssignScholarshipDialog(
-                                    studentId: entry.key,
+                                    studentId: student['id'],
                                   );
                                 },
                                 child: Text(
@@ -2311,7 +2259,9 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                               if (hasScholarship)
                                 TextButton(
                                   onPressed: () =>
-                                      _removeScholarshipFromStudent(entry.key),
+                                      _removeScholarshipFromStudent(
+                                        student['id'],
+                                      ),
                                   child: const Text("Remove"),
                                 ),
                             ],
@@ -2357,10 +2307,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    label,
-                    style: TextStyle(color: color, fontSize: 11),
-                  ),
+                  Text(label, style: TextStyle(color: color, fontSize: 11)),
                   const SizedBox(height: 4),
                   Text(
                     value,
@@ -2397,73 +2344,33 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Payment Config",
+            "Search Student Transaction History",
             style: GoogleFonts.inter(
-              fontWeight: FontWeight.w900,
-              color: textColor,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 20),
-          _fieldLabel("Category"),
-          _simpleDropdown(
-            ["Tuition", "Books", "Miscellaneous"],
-            _selectedCategory,
-            (v) => setState(() {
-              _selectedCategory = v!;
-              _manualAmount = 0;
-              _amountInputController.clear();
-            }),
-          ),
-          const SizedBox(height: 16),
-          if (_selectedCategory == "Tuition") ...[
-            _fieldLabel("Term"),
-            _simpleDropdown(
-              ["Midterm Block A", "Finals Block B"],
-              _selectedTerm,
-              (v) => setState(() => _selectedTerm = v!),
-            ),
-          ] else if (_selectedCategory == "Books") ...[
-            _fieldLabel("Book"),
-            _simpleDropdown(
-              _bookPrices.keys.toList(),
-              _selectedBook ?? _bookPrices.keys.first,
-              (v) => setState(() => _selectedBook = v!),
-            ),
-          ] else ...[
-            _fieldLabel("Type"),
-            _simpleDropdown(
-              ["Library Fine", "ID Replacement", "Graduation Fee"],
-              _miscType,
-              (v) => setState(() => _miscType = v!),
-            ),
-          ],
-          const SizedBox(height: 16),
-          _fieldLabel("Amount (₱)"),
-          TextField(
-            controller: _amountInputController,
-            keyboardType: TextInputType.number,
-            style: TextStyle(
-              color: textColor,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              fontSize: 13,
+              color: textColor,
             ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            style: TextStyle(color: textColor),
             decoration: InputDecoration(
-              prefixIcon: const Icon(
-                LucideIcons.banknote,
-                size: 16,
-                color: Colors.blueGrey,
-              ),
-              hintText: "0.00",
-              filled: true,
-              fillColor: Colors.black.withOpacity(0.05),
+              hintText: "Enter Student ID...",
+              hintStyle: TextStyle(color: subTextColor),
+              prefixIcon: Icon(LucideIcons.search, color: subTextColor),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(12),
               ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
             ),
-            onChanged: (v) => _manualAmount = double.tryParse(v) ?? 0,
+            onChanged: (val) {
+              // Simple search logic: if ID matches exactly, show history
+              if (_accountingService.getStudent(val) != null) {
+                setState(() => _selectedStudentId = val);
+              } else if (val.isEmpty) {
+                setState(() => _selectedStudentId = null);
+              }
+            },
           ),
           const SizedBox(height: 24),
           if (_selectedStudentId == null)
@@ -2480,219 +2387,241 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     );
   }
 
-  Widget _buildCheckoutPanel(
-    Color cardColor,
+  Widget _studentRow(
+    String name,
+    String section,
+    String balance,
+    String status,
+    Color statusColor,
     Color textColor,
     Color subTextColor,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        children: [
-          Text(
-            "Fee Summary",
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.bold,
-              color: textColor,
-              fontSize: 13,
-            ),
-          ),
-          const Divider(height: 16, color: Colors.white10),
-          Expanded(
-            child: _cartItems.isEmpty
-                ? Center(
-                    child: Text(
-                      "Empty",
-                      style: TextStyle(color: subTextColor, fontSize: 12),
-                    ),
-                  )
-                : ListView.separated(
-                    itemCount: _cartItems.length,
-                    separatorBuilder: (_, __) =>
-                        const Divider(height: 1, color: Colors.white10),
-                    itemBuilder: (context, i) => ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        _cartItems[i]['item'],
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            "₱${(_cartItems[i]['amount']).toStringAsFixed(0)}",
-                            style: const TextStyle(
-                              color: success,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              LucideIcons.x,
-                              size: 12,
-                              color: Colors.redAccent,
-                            ),
-                            onPressed: () =>
-                                setState(() => _cartItems.removeAt(i)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-          ),
-          const Divider(color: Colors.white10),
-          _row("TOTAL", "₱${_cartTotal.toStringAsFixed(2)}", success, 14),
-          const SizedBox(height: 16),
-          _fieldLabel("Method"),
-          _simpleDropdown(
-            ["Cash", "G-Cash", "Bank Transfer"],
-            _paymentMethod,
-            (v) => setState(() => _paymentMethod = v!),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 45,
-            child: ElevatedButton(
-              onPressed: _cartItems.isEmpty ? null : _processTransaction,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 11, 76, 45),
-                foregroundColor: pViolet,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text(
-                "FINALIZE E-RECEIPT",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- UI ATOMS ---
-
-  Widget _studentTile(Map<String, dynamic> s, Color t, Color st) {
-    bool isSelected = _selectedStudentId == s['id'];
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      decoration: BoxDecoration(
-        color: isSelected ? aViolet : Colors.white.withOpacity(0.02),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ListTile(
-        onTap: () => setState(() => _selectedStudentId = s['id']),
-        dense: true,
-        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-        leading: CircleAvatar(
-          backgroundColor: isSelected
-              ? Colors.white.withOpacity(0.2)
-              : aViolet.withOpacity(0.1),
-          radius: 12,
-          child: Icon(
-            LucideIcons.user,
-            color: isSelected ? Colors.white : aViolet,
-            size: 10,
-          ),
-        ),
-        title: Text(
-          s['name'],
-          style: TextStyle(
-            color: isSelected ? Colors.white : t,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-        ),
-        subtitle: Text(
-          "${s['id']} • ${s['course']}",
-          style: TextStyle(
-            color: isSelected ? Colors.white70 : st,
-            fontSize: 9,
-          ),
-        ),
-        trailing: _badge(
-          "₱${s['balance']}",
-          isSelected
-              ? Colors.white.withOpacity(0.2)
-              : (s['balance'] > 0 ? Colors.redAccent : success),
-        ),
-      ),
-    );
-  }
-
-  Widget _ledgerEntry(Map<String, dynamic> l, Color t) {
-    bool isCredit = l['credit'] > 0;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          Text(
-            l['date'],
-            style: const TextStyle(color: Colors.white24, fontSize: 10),
+          CircleAvatar(
+            backgroundColor: widget.isDarkMode
+                ? Colors.white10
+                : Colors.grey.shade200,
+            child: Icon(LucideIcons.user, size: 16, color: textColor),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
-            child: Text(
-              l['desc'],
-              style: TextStyle(
-                color: t,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                Text(
+                  section,
+                  style: GoogleFonts.inter(fontSize: 12, color: subTextColor),
+                ),
+              ],
             ),
           ),
-          Text(
-            isCredit ? "+₱${l['credit']}" : "-₱${l['debit']}",
-            style: TextStyle(
-              color: isCredit ? success : Colors.redAccent,
-              fontWeight: FontWeight.w900,
-              fontSize: 12,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                balance,
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+              Text(
+                status,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: statusColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _simpleDropdown(
-    List<String> items,
-    String current,
-    Function(String?) onChanged,
+  void _showStudentSelectionDialog(
+    BuildContext context,
+    Color textColor,
+    Color cardColor,
   ) {
+    final idController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: cardColor,
+        title: Text(
+          "Select Student for Checkout",
+          style: TextStyle(color: textColor),
+        ),
+        content: TextField(
+          controller: idController,
+          decoration: InputDecoration(
+            labelText: "Student ID",
+            hintText: "e.g., 2024-00001",
+            hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
+          ),
+          style: TextStyle(color: textColor),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_accountingService.getStudent(idController.text) != null) {
+                setState(() => _selectedStudentId = idController.text);
+                Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Student ID not found.")),
+                );
+              }
+            },
+            child: const Text("Proceed"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPaymentDialog(
+    BuildContext context,
+    Color textColor,
+    Color cardColor, {
+    double? initialAmount,
+  }) {
+    final idController = TextEditingController();
+    final amountController = TextEditingController(
+      text: initialAmount?.toString(),
+    );
+    String method = "Cash";
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: cardColor,
+        title: Text("New Payment", style: TextStyle(color: textColor)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: idController,
+              decoration: InputDecoration(
+                labelText: "Student ID",
+                hintText: _selectedStudentId,
+              ),
+              style: TextStyle(color: textColor),
+            ),
+            TextField(
+              controller: amountController,
+              decoration: const InputDecoration(labelText: "Amount"),
+              keyboardType: TextInputType.number,
+              style: TextStyle(color: textColor),
+            ),
+            DropdownButton<String>(
+              value: method,
+              dropdownColor: cardColor,
+              items: ["Cash", "Credit Card", "GCash", "PayMaya"]
+                  .map(
+                    (m) => DropdownMenuItem(
+                      value: m,
+                      child: Text(m, style: TextStyle(color: textColor)),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (val) => method = val!,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final targetId = idController.text.isNotEmpty
+                  ? idController.text
+                  : _selectedStudentId;
+              if (targetId != null &&
+                  _accountingService.getStudent(targetId) != null) {
+                _processPayment(
+                  targetId,
+                  double.tryParse(amountController.text) ?? 0.0,
+                  method,
+                );
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Payment Successful! Receipt Generated."),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Student ID not found.")),
+                );
+              }
+            },
+            child: const Text("Process"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLabel(String label, Color textColor) {
+    return Text(
+      label,
+      style: TextStyle(
+        color: textColor.withOpacity(0.7),
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String value,
+    required List<String> items,
+    required Function(String?) onChanged,
+    required Color textColor,
+    required Color cardColor,
+  }) {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white10),
+        color: widget.isDarkMode
+            ? Colors.white.withOpacity(0.05)
+            : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
+        ),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: current,
+          value: value,
           isExpanded: true,
-          dropdownColor: surfaceDark,
-          style: TextStyle(
-            color: widget.isDarkMode ? Colors.white : Colors.black87,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+          dropdownColor: cardColor,
           items: items
-              .map((i) => DropdownMenuItem(value: i, child: Text(i)))
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(e, style: TextStyle(color: textColor)),
+                ),
+              )
               .toList(),
           onChanged: onChanged,
         ),
@@ -2700,51 +2629,76 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     );
   }
 
-  Widget _row(String l, String v, Color c, double s) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Text(
-        l,
-        style: const TextStyle(
-          color: Colors.blueGrey,
-          fontWeight: FontWeight.bold,
-          fontSize: 10,
+  Widget _buildAmountField(
+    Color textColor,
+    Function(String) onChanged, {
+    String? initialValue,
+  }) {
+    return TextField(
+      keyboardType: TextInputType.number,
+      style: TextStyle(color: textColor),
+      decoration: InputDecoration(
+        prefixText: "₱ ",
+        prefixStyle: TextStyle(color: textColor),
+        filled: true,
+        fillColor: widget.isDarkMode
+            ? Colors.white.withOpacity(0.05)
+            : Colors.grey.shade100,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
       ),
-      Text(
-        v,
-        style: GoogleFonts.inter(
-          color: c,
-          fontWeight: FontWeight.w900,
-          fontSize: s,
+      controller: initialValue != null
+          ? TextEditingController(text: initialValue)
+          : null,
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildNumberField(
+    Color textColor,
+    int value,
+    Function(String) onChanged, {
+    String? initialValue,
+  }) {
+    return TextField(
+      keyboardType: TextInputType.number,
+      style: TextStyle(color: textColor),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: widget.isDarkMode
+            ? Colors.white.withOpacity(0.05)
+            : Colors.grey.shade100,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
       ),
-    ],
-  );
+      controller: initialValue != null
+          ? TextEditingController(text: initialValue)
+          : null,
+      onChanged: onChanged,
+    );
+  }
 
   void _processPayment(String id, double amount, String method) {
-    final student = _studentDb[id];
+    final student = _accountingService.getStudent(id);
     if (student == null) return;
 
-    setState(() {
-      student['balance'] -= amount;
-      student['ledger'].add({
-        "date": DateTime.now().toString().split(' ')[0],
-        "desc": "Payment - $method",
-        "debit": 0.0,
-        "credit": amount,
-      });
+    // Use service to record payment
+    _accountingService.recordPayment(
+      id,
+      amount,
+      method,
+      description: "Payment - $method",
+    );
 
-      if (student['balance'] <= 0) {
-        student['balance'] = 0.0;
-        student['status'] = "Cleared";
-        student['cleared'] = true;
-      }
-    });
-
-    _generatePdfReceipt(id, amount, [
+    _generateReceipt(id, amount, method, [
       {"item": "Payment", "amount": amount, "qty": 1},
     ]);
+
+    setState(() {}); // Trigger rebuild
   }
 
   Widget _buildQRCodePaymentSection(
@@ -2755,7 +2709,9 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: widget.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+        color: widget.isDarkMode
+            ? Colors.white.withOpacity(0.05)
+            : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: widget.isDarkMode ? Colors.white10 : Colors.black12,
@@ -2812,7 +2768,8 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: QrImageView(
-                    data: 'PAY_${_selectedStudentId}_${_cartTotal.toStringAsFixed(2)}_${DateTime.now().millisecondsSinceEpoch}',
+                    data:
+                        'PAY_${_selectedStudentId}_${_cartTotal.toStringAsFixed(2)}_${DateTime.now().millisecondsSinceEpoch}',
                     version: QrVersions.auto,
                     size: 160,
                     backgroundColor: Colors.white,
@@ -2831,10 +2788,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
                 const SizedBox(height: 4),
                 Text(
                   "Amount: ₱${_cartTotal.toStringAsFixed(2)}",
-                  style: GoogleFonts.inter(
-                    color: Colors.black54,
-                    fontSize: 11,
-                  ),
+                  style: GoogleFonts.inter(color: Colors.black54, fontSize: 11),
                 ),
               ],
             ),
@@ -2868,7 +2822,11 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
     );
   }
 
-  void _showQRPaymentDialog(BuildContext context, Color cardColor, Color textColor) {
+  void _showQRPaymentDialog(
+    BuildContext context,
+    Color cardColor,
+    Color textColor,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -2888,7 +2846,11 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
         ),
         content: SizedBox(
           width: 350,
-          child: _buildQRCodePaymentSection(cardColor, textColor, textColor.withOpacity(0.7)),
+          child: _buildQRCodePaymentSection(
+            cardColor,
+            textColor,
+            textColor.withOpacity(0.7),
+          ),
         ),
         actions: [
           TextButton(
@@ -2917,41 +2879,35 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
 
   void _processCheckout() {
     if (_selectedStudentId != null && _cartItems.isNotEmpty) {
-      final student = _studentDb[_selectedStudentId!];
+      final student = _accountingService.getStudent(_selectedStudentId!);
       if (student != null) {
         // Save cart items before clearing
         final itemsForReceipt = List<Map<String, dynamic>>.from(_cartItems);
         final totalAmount = _cartTotal;
         final paymentMethod = _paymentMethod;
-        
-        setState(() {
-          student['balance'] -= totalAmount;
-          student['ledger'].add({
-            "date": DateTime.now().toString().split(' ')[0],
-            "desc": "Payment - $paymentMethod",
-            "debit": 0.0,
-            "credit": totalAmount,
-          });
 
-          if (student['balance'] <= 0) {
-            student['balance'] = 0.0;
-            student['status'] = "Cleared";
-            student['cleared'] = true;
-          }
-
-          _cartItems.clear();
-        });
+        // Use service to process checkout
+        _accountingService.checkoutCart(_selectedStudentId!, paymentMethod);
 
         // Generate receipt with saved cart items
-        _generatePdfReceipt(_selectedStudentId!, totalAmount, itemsForReceipt);
-        
+        _generateReceipt(
+          _selectedStudentId!,
+          totalAmount,
+          paymentMethod,
+          itemsForReceipt,
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Payment Successful via $paymentMethod! Receipt Generated."),
+            content: Text(
+              "Payment Successful via $paymentMethod! Receipt Generated.",
+            ),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 3),
           ),
         );
+
+        setState(() {}); // Trigger rebuild
       }
     }
   }
@@ -2995,51 +2951,6 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
           ),
         ],
       ),
-    ),
     );
   }
-
-  Widget _badge(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(text, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
-    );
-  }
-
-  Widget _fieldLabel(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 8.0),
-    child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-  );
-
-  Widget _buildEmptyPrompt(Color t) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(LucideIcons.user, size: 48, color: t.withOpacity(0.05)),
-        const SizedBox(height: 12),
-        Text(
-          "Select a student from the Ledger tab.",
-          style: TextStyle(color: t.withOpacity(0.3), fontSize: 12),
-        ),
-      ],
-    ),
-  );
-  Widget _buildPlaceholder(String t) => Center(
-    child: Text(t, style: const TextStyle(color: Colors.white24, fontSize: 12)),
-  );
-
-  // Added missing method
-  Widget _buildStudentLedgerView(Color c, Color t, Color s) => const Text("Ledger View");
-
-  void _showSnackBar(String m, {bool isError = false}) =>
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(m),
-          backgroundColor: isError ? Colors.redAccent : pViolet,
-        ),
-      );
 }

@@ -47,7 +47,7 @@ class AccountingPanelContent extends StatelessWidget {
       case 2:
         return FinancialReportsPanel(isDarkMode: isDarkMode);
       case 3:
-        return SubjectLoadFeePanel(isDarkMode: isDarkMode);
+        return PayrollPanel(isDarkMode: isDarkMode);
       case 4:
         return PaymentRequestPanel(isDarkMode: isDarkMode);
       case 5:

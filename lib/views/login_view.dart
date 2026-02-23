@@ -304,11 +304,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-<<<<<<< HEAD
-                            accentViolet.withOpacity(_isDarkMode ? 0.2 : 0.1),
-=======
                             accentViolet.withOpacity(0.1),
->>>>>>> ade0bf853b14f953354f82427841c11017197893
                             Colors.transparent,
                           ],
                         ),
@@ -325,13 +321,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-<<<<<<< HEAD
-                            secondaryViolet.withOpacity(
-                              _isDarkMode ? 0.15 : 0.05,
-                            ),
-=======
                             accentViolet.withOpacity(0.15),
->>>>>>> ade0bf853b14f953354f82427841c11017197893
                             Colors.transparent,
                           ],
                         ),
@@ -370,53 +360,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
           // Main Content
           Center(
-<<<<<<< HEAD
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: FadeTransition(
-                opacity: _formOpacity,
-                child: SlideTransition(
-                  position: _formSlide,
-                  child: Container(
-                    width: isDesktop ? 1100 : 450,
-                    constraints: const BoxConstraints(minHeight: 600),
-                    decoration: BoxDecoration(
-                      color: _isDarkMode
-                          ? surfaceDark.withOpacity(0.7)
-                          : Colors.white.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(
-                        color: _isDarkMode
-                            ? Colors.white.withOpacity(0.1)
-                            : Colors.black.withOpacity(0.05),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: accentViolet.withOpacity(
-                            _isDarkMode ? 0.2 : 0.1,
-                          ),
-                          blurRadius: 80,
-                          offset: const Offset(0, 20),
-                        ),
-                      ],
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                      child: isDesktop
-                          ? IntrinsicHeight(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Expanded(child: _buildLeftBanner()),
-                                  Expanded(child: _buildRightForm(isDesktop)),
-                                ],
-                              ),
-                            )
-                          : _buildRightForm(isDesktop),
-                    ),
-=======
             child: FadeTransition(
               opacity: _formOpacity,
               child: SlideTransition(
@@ -427,7 +370,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                   decoration: BoxDecoration(
                     color: _isDarkMode ? surfaceDark : Colors.white,
                     borderRadius: BorderRadius.circular(32),
-                     border: Border.all(
+                    border: Border.all(
                       color: Colors.white.withOpacity(0.1),
                       width: 1,
                     ),
@@ -443,7 +386,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                         offset: const Offset(0, 10),
                       ),
                     ],
->>>>>>> ade0bf853b14f953354f82427841c11017197893
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: isDesktop
@@ -791,11 +733,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   Widget _buildRightForm(bool isDesktop) {
     return Container(
-<<<<<<< HEAD
-      padding: EdgeInsets.all(isDesktop ? 80 : 40),
-=======
       padding: const EdgeInsets.all(30),
->>>>>>> ade0bf853b14f953354f82427841c11017197893
       color: _isDarkMode ? surfaceDark : Colors.white,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -849,7 +787,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
             2,
           ),
 
-          const SizedBox(height: 16),
           _buildAnimatedItem(
             Align(
               alignment: Alignment.centerRight,
@@ -962,12 +899,9 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
               ),
               elevation: 0,
             ).copyWith(
-              // FIX: Use WidgetStatePropertyAll to wrap the Color
-              shadowColor: WidgetStatePropertyAll(
+              shadowColor: WidgetStateProperty.all(
                 accentViolet.withOpacity(0.4),
               ),
-              // If you are on an older Flutter version and WidgetStatePropertyAll is not found,
-              // use: shadowColor: WidgetStateProperty.all(accentViolet.withOpacity(0.4)),
             ),
         child: Ink(
           decoration: BoxDecoration(

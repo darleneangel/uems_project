@@ -235,8 +235,6 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
               ],
             ),
           ),
-<<<<<<< HEAD
-=======
           const Divider(color: Colors.white10),
           _menuItem(
             LucideIcons.logOut,
@@ -246,7 +244,6 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
             onTap: _confirmLogout,
           ),
           const SizedBox(height: 20),
->>>>>>> ade0bf853b14f953354f82427841c11017197893
         ],
       ),
     );

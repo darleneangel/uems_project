@@ -183,8 +183,6 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
               ),
             ),
           ),
-<<<<<<< HEAD
-=======
           const Spacer(),
           IconButton(
             onPressed: _toggleTheme,
@@ -196,13 +194,9 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
           const SizedBox(width: 20),
           IconButton(
             onPressed: _showNotifications,
-            icon: Icon(
-              LucideIcons.bell,
-              color: subTextColor,
-            ),
+            icon: Icon(LucideIcons.bell, color: subTextColor),
           ),
           const SizedBox(width: 24),
->>>>>>> ade0bf853b14f953354f82427841c11017197893
           const VerticalDivider(
             color: Colors.white10,
             indent: 25,
@@ -286,23 +280,6 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
                 _sidebarHeader("FEES"),
                 _menuItem(LucideIcons.fileText, "Fee Management", 1),
                 _menuItem(LucideIcons.clipboardList, "Financial Reports", 2),
-<<<<<<< HEAD
-                _menuItem(LucideIcons.bookOpen, "Subject Load Fee", 3),
-                _sidebarHeader("MESSAGES"),
-                _menuItem(LucideIcons.mail, "Messaging", 4),
-                const Divider(color: Colors.white10),
-                _menuItem(
-                  LucideIcons.logOut,
-                  "Logout System",
-                  8,
-                  isDestructive: true,
-                  onTap: widget.onLogout,
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-=======
                 _menuItem(LucideIcons.shieldCheck, "Payroll", 3),
                 _sidebarHeader("PAYMENTS"),
                 _menuItem(LucideIcons.send, "Payment Request", 4),
@@ -325,7 +302,6 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
             onTap: _confirmLogout,
           ),
           const SizedBox(height: 20),
->>>>>>> ade0bf853b14f953354f82427841c11017197893
         ],
       ),
     );
