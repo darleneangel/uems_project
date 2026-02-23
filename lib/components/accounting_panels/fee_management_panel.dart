@@ -61,11 +61,24 @@ class _FeeManagementPanelState extends State<FeeManagementPanel>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _accountingService.addListener(_onServiceUpdate);
+  }
+
+  @override
+  void dispose() {
+    _accountingService.removeListener(_onServiceUpdate);
+    _tabController.dispose();
+    _searchController.dispose();
+    _scholarshipSearchController.dispose();
+    super.dispose();
+  }
+
+  void _onServiceUpdate() {
+    if (mounted) setState(() {});
   }
 
   void _addToCart(String category, String item, double amount, {int qty = 1}) {
     _accountingService.addToCart(category, item, amount, qty: qty);
-    setState(() {}); // Trigger rebuild
   }
 
   void _addItemToCart() {

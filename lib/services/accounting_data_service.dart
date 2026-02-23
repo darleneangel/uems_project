@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-class AccountingDataService {
+class AccountingDataService extends ChangeNotifier {
   // Singleton pattern for easy access across the module
   static final AccountingDataService _instance =
       AccountingDataService._internal();
@@ -79,6 +79,7 @@ class AccountingDataService {
       'amount': amount,
       'qty': qty,
     });
+    notifyListeners();
   }
 
   void checkoutCart(String studentId, String paymentMethod) {
@@ -93,6 +94,7 @@ class AccountingDataService {
             "Cart Checkout: ${_cartItems.map((e) => e['item']).join(', ')}",
       );
       _cartItems.clear();
+      notifyListeners();
     }
   }
 
@@ -126,6 +128,7 @@ class AccountingDataService {
         'debit': 0.0,
         'credit': amount,
       });
+      notifyListeners();
     }
   }
 
@@ -138,6 +141,7 @@ class AccountingDataService {
 
     if (student != null && scholarship.isNotEmpty) {
       student['scholarship'] = scholarshipName;
+      notifyListeners();
       return true;
     }
     return false;
@@ -147,6 +151,7 @@ class AccountingDataService {
     final student = getStudent(studentId);
     if (student != null) {
       student['scholarship'] = 'None';
+      notifyListeners();
     }
   }
 }
