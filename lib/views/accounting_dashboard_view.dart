@@ -290,6 +290,8 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
                 _menuItem(LucideIcons.barChart3, "Daily Report", 8),
                 _sidebarHeader("MESSAGES"),
                 _menuItem(LucideIcons.mail, "Messaging", 9),
+                _sidebarHeader("DOCUMENTS"),
+                _menuItem(LucideIcons.fileText, "Promissory Note", 10),
               ],
             ),
           ),
