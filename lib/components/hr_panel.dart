@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
-import 'dart:ui';
 
 class HRPanel extends StatefulWidget {
   const HRPanel({super.key, this.isDarkMode = true});

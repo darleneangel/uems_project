@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:uems_project/components/registrar_panel_content.dart';
+import '../components/smart_search_widget.dart';
 
 class RegistrarDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -39,6 +40,33 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
   void _toggleSidebar() =>
       setState(() => _isSidebarExpanded = !_isSidebarExpanded);
   void _toggleTheme() => setState(() => _isDarkMode = !_isDarkMode);
+
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Logout"),
+        content: const Text("Are you sure you want to log out of the system?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("CANCEL"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onLogout();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text("LOG OUT"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +134,27 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
               fontSize: 18,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(width: 24),
+          // Smart Search Widget
+          Expanded(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: SmartSearchWidget(
+                isDarkMode: _isDarkMode,
+                defaultDepartment: 'Registrar',
+                onResultTap: (result) {
+                  // Handle result tap - e.g., navigate to specific panel
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Selected: ${result.title}'),
+                      backgroundColor: aViolet,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
           const Spacer(),
@@ -194,7 +243,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
             "Logout",
             10,
             isDestructive: true,
-            onTap: widget.onLogout,
+            onTap: _confirmLogout,
           ),
           const SizedBox(height: 20),
         ],
@@ -211,6 +260,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
   }) {
     bool isSelected = _selectedIndex == index;
     final activeColor = isDestructive ? Colors.redAccent : aViolet;
+    final inactiveColor = isDestructive ? Colors.redAccent : Colors.blueGrey;
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
@@ -222,14 +272,14 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
         visualDensity: VisualDensity.compact,
         leading: Icon(
           icon,
-          color: isSelected ? activeColor : Colors.blueGrey,
+          color: isSelected ? activeColor : inactiveColor,
           size: 18,
         ),
         title: _isSidebarExpanded
             ? Text(
                 title,
                 style: GoogleFonts.inter(
-                  color: isSelected ? Colors.white : Colors.blueGrey,
+                  color: isSelected ? Colors.white : inactiveColor,
                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                   fontSize: 13,
                 ),

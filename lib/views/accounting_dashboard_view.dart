@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../components/accounting_panel_content.dart';
+import '../components/smart_search_widget.dart';
 
 class AccountingDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -171,15 +172,34 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
             onPressed: _toggleSidebar,
           ),
           const SizedBox(width: 16),
+          Text(
+            "Accounting Office",
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              color: textColor,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(width: 24),
+          // Smart Search Widget
           Expanded(
-            child: Text(
-              "Accounting Office",
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                color: textColor,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: SmartSearchWidget(
+                isDarkMode: _isDarkMode,
+                defaultDepartment: 'Accounting',
+                onResultTap: (result) {
+                  // Handle result tap - e.g., navigate to specific panel
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Selected: ${result.title}'),
+                      backgroundColor: aViolet,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
               ),
             ),
           ),

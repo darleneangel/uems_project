@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'dart:ui';
 import 'dart:math' as math;
 // Import your student dashboard file here
 import 'student_dashboard_view.dart';
@@ -13,6 +12,7 @@ import 'registrar_dashboard_view.dart';
 import '../components/program_chair_dashboard_view.dart';
 import '../components/teacher_dashboard_view.dart';
 import 'hr_dashboard_view.dart';
+import 'forgot_password_view.dart';
 
 class UEMSLoginPage extends StatefulWidget {
   const UEMSLoginPage({super.key});
@@ -791,7 +791,13 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const ForgotPasswordView(),
+                    ),
+                  );
+                },
                 child: Text(
                   "Forgot Password?",
                   style: GoogleFonts.inter(

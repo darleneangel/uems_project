@@ -782,7 +782,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                 ],
               ),
             )
-            .toList(),
+            ,
       ],
     );
   }
@@ -843,7 +843,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                   const SizedBox(height: 20),
                   ...summaryFees.entries
                       .map((e) => _feeRow(e.key, e.value, textColor))
-                      .toList(),
+                      ,
                   const SizedBox(height: 32),
                   Text(
                     "Payment Schedules",

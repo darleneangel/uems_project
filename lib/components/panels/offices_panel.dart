@@ -419,13 +419,14 @@ class _OfficesPanelState extends State<OfficesPanel>
     Color textColor,
     Color subTextColor,
   ) {
-    if (_requests.isEmpty)
+    if (_requests.isEmpty) {
       return Center(
         child: Text(
           "No request history found.",
           style: TextStyle(color: subTextColor),
         ),
       );
+    }
 
     return ListView.builder(
       itemCount: _requests.length,

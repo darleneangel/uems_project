@@ -416,7 +416,7 @@ class _SubjectLoadFeePanelState extends State<SubjectLoadFeePanel> {
                                             ],
                                           ),
                                           const Spacer(),
-                                          Container(
+                                          SizedBox(
                                             width: 150,
                                             child: TextField(
                                               controller: _feeControllers[idx],
