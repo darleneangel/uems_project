@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart' as file_picker;
-import 'package:file_picker/file_picker.dart' show PlatformFile;
+import 'package:file_picker/file_picker.dart';
 import '../services/announcement_service.dart';
 
 class OfficeRequestView extends StatefulWidget {
@@ -50,6 +49,7 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
   final TextEditingController _targetAudience = TextEditingController();
   final TextEditingController _content = TextEditingController();
   List<PlatformFile> _attachments = [];
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -63,44 +63,75 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
   }
 
   Future<void> _pickFiles() async {
-    final result = await file_picker.FilePicker.platform.pickFiles(
-      allowMultiple: true,
-    );
-    if (result != null) {
-      setState(() {
-        _attachments = result.files;
-      });
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+      );
+      if (result != null) {
+        if (!mounted) return;
+        setState(() {
+          _attachments = result.files;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error picking files: $e");
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
     final ref = DateTime.now().millisecondsSinceEpoch.toString().substring(7);
 
-    AnnouncementService().addAnnouncement(
-      office: widget.officeKey,
-      title: _title.text.trim(),
-      content: '${_content.text.trim()}\n\nPosted by: ${_author.text.trim()}',
-      attachments: _attachments.isNotEmpty
-          ? _attachments.map((a) => a.name).toList()
-          : null,
-      department: _department.text.trim().isNotEmpty ? _department.text.trim() : null,
-      priority: _priority.text.trim().isNotEmpty ? _priority.text.trim() : null,
-      targetAudience: _targetAudience.text.trim().isNotEmpty ? _targetAudience.text.trim() : null,
-    );
+    try {
+      // Await the announcement submission as it now hits Supabase directly
+      await AnnouncementService().addAnnouncement(
+        office: widget.officeKey,
+        title: _title.text.trim(),
+        content: '${_content.text.trim()}\n\nPosted by: ${_author.text.trim()}',
+        attachments: _attachments.isNotEmpty
+            ? _attachments.map((a) => a.name).toList()
+            : null,
+        department:
+            _department.text.trim().isNotEmpty ? _department.text.trim() : null,
+        priority:
+            _priority.text.trim().isNotEmpty ? _priority.text.trim() : null,
+        targetAudience: _targetAudience.text.trim().isNotEmpty
+            ? _targetAudience.text.trim()
+            : null,
+      );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Announcement submitted — Ref: ANN-$ref (pending admin verification)')),
-    );
+      if (!mounted) return;
 
-    // Clear form for next announcement
-    _author.clear();
-    _title.clear();
-    _department.clear();
-    _priority.clear();
-    _targetAudience.clear();
-    _content.clear();
-    setState(() => _attachments = []);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Announcement submitted — Ref: ANN-$ref (pending admin verification)'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Clear form for next announcement
+      _author.clear();
+      _title.clear();
+      _department.clear();
+      _priority.clear();
+      _targetAudience.clear();
+      _content.clear();
+      setState(() => _attachments = []);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Failed to submit: $e'),
+            backgroundColor: Colors.redAccent),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -113,14 +144,18 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
           children: [
             TextFormField(
               controller: _author,
-              decoration: const InputDecoration(labelText: 'Author / Office Contact'),
-              validator: (v) => (v == null || v.isEmpty) ? 'Provide a name or contact' : null,
+              decoration:
+                  const InputDecoration(labelText: 'Author / Office Contact'),
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Provide a name or contact' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _title,
-              decoration: const InputDecoration(labelText: 'Announcement Title'),
-              validator: (v) => (v == null || v.isEmpty) ? 'Provide a title' : null,
+              decoration:
+                  const InputDecoration(labelText: 'Announcement Title'),
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Provide a title' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -149,12 +184,14 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _content,
-              decoration: const InputDecoration(labelText: 'Announcement Content'),
+              decoration:
+                  const InputDecoration(labelText: 'Announcement Content'),
               maxLines: 8,
-              validator: (v) => (v == null || v.isEmpty) ? 'Provide announcement content' : null,
+              validator: (v) => (v == null || v.isEmpty)
+                  ? 'Provide announcement content'
+                  : null,
             ),
             const SizedBox(height: 16),
-
             Text(
               'Attachments (images, PDFs)',
               style: TextStyle(color: Colors.grey[700]),
@@ -176,16 +213,22 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
               ),
             ],
             const SizedBox(height: 24),
-
             SizedBox(
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: _submit,
+                onPressed: _isLoading ? null : _submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6B21A8),
                 ),
-                child: const Text('Submit Announcement'),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text('Submit Announcement'),
               ),
             ),
           ],

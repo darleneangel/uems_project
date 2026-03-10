@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../services/supabase_service.dart';
 
 class ProfilePanel extends StatefulWidget {
   final bool isDarkMode;
@@ -21,7 +22,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
 
-  // Controllers
+  // Controllers initialized with empty strings; values will be synced from DB
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
   late TextEditingController _lrnController;
@@ -29,20 +30,22 @@ class _ProfilePanelState extends State<ProfilePanel> {
 
   // State variables
   String _gender = 'Female';
-  final String _studentCategory = 'Continuing Student';
-  final String _course = 'BACHELOR OF SCIENCE IN INFORMATION TECHNOLOGY';
   bool _isEditing = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    // Initialize with data from request
-    _phoneController = TextEditingController(text: "09354355492 / 484-0482");
-    _emailController = TextEditingController(
-      text: "angel.lustre2005@gmail.com",
-    );
-    _lrnController = TextEditingController(text: "109633100054");
-    _birthdateController = TextEditingController(text: "08/09/2005");
+    // Use data passed from parent or fallback to defaults
+    _phoneController =
+        TextEditingController(text: widget.studentData['phone'] ?? "");
+    _emailController =
+        TextEditingController(text: widget.studentData['email'] ?? "");
+    _lrnController =
+        TextEditingController(text: widget.studentData['lrn'] ?? "");
+    _birthdateController =
+        TextEditingController(text: widget.studentData['dob'] ?? "");
+    _gender = widget.studentData['gender'] ?? 'Female';
   }
 
   @override
@@ -52,6 +55,50 @@ class _ProfilePanelState extends State<ProfilePanel> {
     _lrnController.dispose();
     _birthdateController.dispose();
     super.dispose();
+  }
+
+  /// DATABASE SYNC: Persists profile changes to Supabase
+  Future<void> _saveProfileChanges() async {
+    setState(() => _isSaving = true);
+    final client = SupabaseService().client;
+    final String profileId = widget.studentData['id'];
+
+    try {
+      // 1. Update Core Profile (Names/Email/Gender/DOB)
+      await client.from('profiles').update({
+        'email': _emailController.text,
+        'gender': _gender,
+        'dob': _birthdateController.text,
+      }).eq('id', profileId);
+
+      // 2. Update Student Details (Phone/LRN)
+      // Note: LRN might be stored in student_details or user_id_number
+      await client.from('student_details').update({
+        'phone': _phoneController.text,
+        'lrn': _lrnController.text,
+      }).eq('profile_id', profileId);
+
+      if (mounted) {
+        setState(() {
+          _isEditing = false;
+          _isSaving = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Cloud Identity Synchronized Successfully"),
+              backgroundColor: Color(0xFF69F0AE)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text("Sync Error: $e"),
+              backgroundColor: Colors.redAccent),
+        );
+      }
+    }
   }
 
   Future<void> _pickImage() async {
@@ -77,27 +124,25 @@ class _ProfilePanelState extends State<ProfilePanel> {
     if (picked != null) {
       setState(() {
         _birthdateController.text =
-            "${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}/${picked.year}";
+            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color cardColor = widget.isDarkMode
-        ? const Color(0xFF1E1B4B)
-        : Colors.white;
-    final Color textColor = widget.isDarkMode
-        ? Colors.white
-        : const Color(0xFF2E1065);
-    final Color subTextColor = widget.isDarkMode
-        ? Colors.white54
-        : Colors.blueGrey;
+    final Color cardColor =
+        widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
+    final Color textColor =
+        widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
+    final Color subTextColor =
+        widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
     final Color inputFill = widget.isDarkMode
         ? Colors.white.withOpacity(0.05)
         : Colors.grey.shade100;
 
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -112,8 +157,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
               color: cardColor,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: widget.isDarkMode ? Colors.white10 : Colors.black12,
-              ),
+                  color: widget.isDarkMode ? Colors.white10 : Colors.black12),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,31 +166,39 @@ class _ProfilePanelState extends State<ProfilePanel> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Personal Information",
+                      "Personal Identity Ledger",
                       style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: textColor,
-                      ),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: textColor),
                     ),
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _isEditing = !_isEditing;
-                        });
-                      },
-                      icon: Icon(
-                        _isEditing ? LucideIcons.save : LucideIcons.edit3,
-                      ),
-                      color: const Color(0xFF8B5CF6),
-                      tooltip: _isEditing ? "Save Changes" : "Edit Profile",
-                    ),
+                    _isSaving
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : IconButton(
+                            onPressed: () {
+                              if (_isEditing) {
+                                _saveProfileChanges();
+                              } else {
+                                setState(() => _isEditing = true);
+                              }
+                            },
+                            icon: Icon(_isEditing
+                                ? LucideIcons.save
+                                : LucideIcons.edit3),
+                            color: const Color(0xFF8B5CF6),
+                            tooltip: _isEditing
+                                ? "Save to Cloud"
+                                : "Modify Information",
+                          ),
                   ],
                 ),
                 const SizedBox(height: 24),
 
                 // Gender
-                _buildLabel("Gender *", textColor),
+                _buildLabel("Gender Representation *", textColor),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -160,7 +212,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
                 // Birthdate
                 _buildTextField(
                   controller: _birthdateController,
-                  label: "Birthdate (mm/dd/yyyy) *",
+                  label: "Legal Birthdate (YYYY-MM-DD) *",
                   icon: LucideIcons.calendar,
                   textColor: textColor,
                   fillColor: inputFill,
@@ -172,7 +224,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
                 // Mobile/Phone
                 _buildTextField(
                   controller: _phoneController,
-                  label: "Mobile/Phone Number *",
+                  label: "Verified Contact Number *",
                   icon: LucideIcons.phone,
                   textColor: textColor,
                   fillColor: inputFill,
@@ -183,7 +235,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
                 // Email
                 _buildTextField(
                   controller: _emailController,
-                  label: "Email Address *",
+                  label: "Institutional Email Address *",
                   icon: LucideIcons.mail,
                   textColor: textColor,
                   fillColor: inputFill,
@@ -191,60 +243,27 @@ class _ProfilePanelState extends State<ProfilePanel> {
                 ),
                 const SizedBox(height: 20),
 
-                // Student Category
-                _buildLabel("Student Category *", textColor),
+                // Student Category (Read-Only)
+                _buildLabel("Institutional Classification *", textColor),
                 const SizedBox(height: 8),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     color: inputFill,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: widget.isDarkMode
-                          ? Colors.white10
-                          : Colors.transparent,
-                    ),
+                        color: widget.isDarkMode
+                            ? Colors.white10
+                            : Colors.transparent),
                   ),
                   child: Text(
-                    _studentCategory,
+                    widget.studentData['student_type'] ?? "Regular Student",
                     style: GoogleFonts.inter(
-                      color: textColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Applied Course
-                _buildLabel("Applied Course *", textColor),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: inputFill,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: widget.isDarkMode
-                          ? Colors.white10
-                          : Colors.transparent,
-                    ),
-                  ),
-                  child: Text(
-                    _course,
-                    style: GoogleFonts.inter(
-                      color: textColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+                        color: textColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -252,7 +271,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
                 // LRN
                 _buildTextField(
                   controller: _lrnController,
-                  label: "LRN *",
+                  label: "Learner Reference Number (LRN) *",
                   icon: LucideIcons.hash,
                   textColor: textColor,
                   fillColor: inputFill,
@@ -267,10 +286,9 @@ class _ProfilePanelState extends State<ProfilePanel> {
   }
 
   Widget _buildProfileHeader(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
+      Color cardColor, Color textColor, Color subTextColor) {
+    final String fullName =
+        "${widget.studentData['fn'] ?? 'DARLENE'} ${widget.studentData['ln'] ?? 'ANGEL'}";
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -301,13 +319,15 @@ class _ProfilePanelState extends State<ProfilePanel> {
                   backgroundColor: Colors.white24,
                   backgroundImage: _imageFile != null
                       ? FileImage(_imageFile!)
-                      : null,
-                  child: _imageFile == null
-                      ? const Icon(
-                          LucideIcons.user,
-                          color: Colors.white,
-                          size: 40,
-                        )
+                      : (widget.studentData['profile_picture_url'] != null
+                          ? NetworkImage(
+                                  widget.studentData['profile_picture_url'])
+                              as ImageProvider
+                          : null),
+                  child: (_imageFile == null &&
+                          widget.studentData['profile_picture_url'] == null)
+                      ? const Icon(LucideIcons.user,
+                          color: Colors.white, size: 40)
                       : null,
                 ),
                 if (_isEditing)
@@ -317,14 +337,9 @@ class _ProfilePanelState extends State<ProfilePanel> {
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        LucideIcons.camera,
-                        size: 14,
-                        color: Color(0xFF8B5CF6),
-                      ),
+                          color: Colors.white, shape: BoxShape.circle),
+                      child: const Icon(LucideIcons.camera,
+                          size: 14, color: Color(0xFF8B5CF6)),
                     ),
                   ),
               ],
@@ -335,40 +350,35 @@ class _ProfilePanelState extends State<ProfilePanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.studentData['name'] ?? "DARLENE ANGEL",
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 24,
-                  ),
-                ),
+                Text(fullName,
+                    style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 24)),
                 const SizedBox(height: 4),
                 Text(
-                  "${widget.studentData['id']} • ${widget.studentData['program']}",
+                  "${widget.studentData['user_id_number']} • ${widget.studentData['program'] ?? 'BS Computer Science'}",
                   style: GoogleFonts.inter(
-                    color: Colors.white70,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF69F0AE),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                      color: const Color(0xFF69F0AE),
+                      borderRadius: BorderRadius.circular(8)),
                   child: Text(
-                    "ENROLLED",
+                    widget.studentData['enrollment_status']
+                            ?.toString()
+                            .toUpperCase() ??
+                        "ENROLLED",
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF1E1B4B),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                    ),
+                        color: const Color(0xFF1E1B4B),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900),
                   ),
                 ),
               ],
@@ -380,15 +390,12 @@ class _ProfilePanelState extends State<ProfilePanel> {
   }
 
   Widget _buildLabel(String label, Color textColor) {
-    return Text(
-      label.toUpperCase(),
-      style: GoogleFonts.inter(
-        fontSize: 11,
-        fontWeight: FontWeight.w800,
-        color: textColor.withOpacity(0.6),
-        letterSpacing: 0.5,
-      ),
-    );
+    return Text(label.toUpperCase(),
+        style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: textColor.withOpacity(0.6),
+            letterSpacing: 0.5));
   }
 
   Widget _buildTextField({
@@ -409,22 +416,17 @@ class _ProfilePanelState extends State<ProfilePanel> {
           controller: controller,
           readOnly: readOnly,
           onTap: onTap,
-          style: GoogleFonts.inter(
-            color: textColor,
-            fontWeight: FontWeight.w600,
-          ),
+          style:
+              GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600),
           decoration: InputDecoration(
             prefixIcon: Icon(icon, size: 18, color: textColor.withOpacity(0.5)),
             filled: true,
             fillColor: fillColor,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
       ],
@@ -443,74 +445,25 @@ class _ProfilePanelState extends State<ProfilePanel> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: isSelected
-                    ? const Color(0xFF8B5CF6)
-                    : textColor.withOpacity(0.3),
-                width: 2,
-              ),
+                  color: isSelected
+                      ? const Color(0xFF8B5CF6)
+                      : textColor.withOpacity(0.3),
+                  width: 2),
             ),
             child: isSelected
                 ? Center(
                     child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF8B5CF6),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  )
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                            color: Color(0xFF8B5CF6), shape: BoxShape.circle)))
                 : null,
           ),
           const SizedBox(width: 8),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
+          Text(value,
+              style: GoogleFonts.inter(
+                  color: textColor, fontWeight: FontWeight.w600, fontSize: 14)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDropdown({
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?>? onChanged,
-    required Color textColor,
-    required Color fillColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: fillColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          icon: Icon(
-            LucideIcons.chevronDown,
-            size: 18,
-            color: textColor.withOpacity(0.5),
-          ),
-          dropdownColor: widget.isDarkMode
-              ? const Color(0xFF1E1B4B)
-              : Colors.white,
-          style: GoogleFonts.inter(
-            color: textColor,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-          onChanged: onChanged,
-          items: items.map((String item) {
-            return DropdownMenuItem<String>(value: item, child: Text(item));
-          }).toList(),
-        ),
       ),
     );
   }

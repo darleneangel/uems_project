@@ -66,7 +66,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
       'Six',
       'Seven',
       'Eight',
-      'Nine'
+      'Nine',
     ];
     final teens = [
       'Ten',
@@ -78,7 +78,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
       'Sixteen',
       'Seventeen',
       'Eighteen',
-      'Nineteen'
+      'Nineteen',
     ];
     final tens = [
       '',
@@ -90,7 +90,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
       'Sixty',
       'Seventy',
       'Eighty',
-      'Ninety'
+      'Ninety',
     ];
 
     int whole = amount.toInt();
@@ -257,11 +257,12 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
 
                 // Payee Section
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: pw.BoxDecoration(
-                    border: pw.Border(
-                      left: const pw.BorderSide(width: 3),
-                    ),
+                    border: pw.Border(left: const pw.BorderSide(width: 3)),
                   ),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -311,10 +312,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                       pw.Row(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text(
-                            'PHP ',
-                            style: pw.TextStyle(fontSize: 11),
-                          ),
+                          pw.Text('PHP ', style: pw.TextStyle(fontSize: 11)),
                           pw.Expanded(
                             child: pw.Text(
                               _amountController.text,
@@ -542,9 +540,8 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
               color: widget.isDarkMode ? surfaceDark : Colors.white,
               border: Border(
                 bottom: BorderSide(
-                  color: widget.isDarkMode
-                      ? Colors.white12
-                      : Colors.grey.shade200,
+                  color:
+                      widget.isDarkMode ? Colors.white12 : Colors.grey.shade200,
                 ),
               ),
             ),
@@ -590,9 +587,8 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: widget.isDarkMode
-                      ? Colors.white12
-                      : Colors.grey.shade200,
+                  color:
+                      widget.isDarkMode ? Colors.white12 : Colors.grey.shade200,
                 ),
               ),
             ),
@@ -603,13 +599,15 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
               indicatorColor: aViolet,
               tabs: const [
                 Tab(
-                    icon: Icon(LucideIcons.edit),
-                    text: 'Create Note',
-                    height: 50),
+                  icon: Icon(LucideIcons.edit),
+                  text: 'Create Note',
+                  height: 50,
+                ),
                 Tab(
-                    icon: Icon(LucideIcons.eye),
-                    text: 'Preview & Print',
-                    height: 50),
+                  icon: Icon(LucideIcons.eye),
+                  text: 'Preview & Print',
+                  height: 50,
+                ),
               ],
             ),
           ),
@@ -692,8 +690,9 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                   label: 'Amount (PHP) *',
                   controller: _amountController,
                   hint: '0.00',
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   onChanged: (_) => _updateAmountWords(),
                 ),
                 const SizedBox(height: 16),
@@ -739,11 +738,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          LucideIcons.calendar,
-                          size: 18,
-                          color: aViolet,
-                        ),
+                        Icon(LucideIcons.calendar, size: 18, color: aViolet),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -761,8 +756,9 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                               Text(
                                 _issueDate == null
                                     ? 'Select date'
-                                    : DateFormat('MMMM dd, yyyy')
-                                        .format(_issueDate!),
+                                    : DateFormat(
+                                        'MMMM dd, yyyy',
+                                      ).format(_issueDate!),
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: widget.isDarkMode
@@ -802,11 +798,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          LucideIcons.calendar,
-                          size: 18,
-                          color: aViolet,
-                        ),
+                        Icon(LucideIcons.calendar, size: 18, color: aViolet),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -824,8 +816,9 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                               Text(
                                 _dueDate == null
                                     ? 'Select date'
-                                    : DateFormat('MMMM dd, yyyy')
-                                        .format(_dueDate!),
+                                    : DateFormat(
+                                        'MMMM dd, yyyy',
+                                      ).format(_dueDate!),
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: widget.isDarkMode
@@ -869,16 +862,18 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                   label: 'Interest Rate (%) *',
                   controller: _interestRateController,
                   hint: '0.00',
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 _buildDropdown(
                   label: 'Interest Type *',
                   value: _interestType,
                   items: ['Simple Interest', 'Compound Interest'],
-                  onChanged: (value) =>
-                      setState(() => _interestType = value ?? 'Simple Interest'),
+                  onChanged: (value) => setState(
+                    () => _interestType = value ?? 'Simple Interest',
+                  ),
                 ),
               ],
             ),
@@ -954,11 +949,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              LucideIcons.eyeOff,
-              size: 64,
-              color: aViolet.withOpacity(0.5),
-            ),
+            Icon(LucideIcons.eyeOff, size: 64, color: aViolet.withOpacity(0.5)),
             const SizedBox(height: 16),
             Text(
               'No Preview Available',
@@ -972,7 +963,8 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
               'Fill in the form and click "View Preview" to see the promissory note',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: widget.isDarkMode ? Colors.white54 : Colors.grey.shade600,
+                color:
+                    widget.isDarkMode ? Colors.white54 : Colors.grey.shade600,
               ),
             ),
           ],
@@ -1077,14 +1069,12 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
 
                 // Payee Box
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    border: Border(
-                      left: BorderSide(
-                        color: aViolet,
-                        width: 3,
-                      ),
-                    ),
+                    border: Border(left: BorderSide(color: aViolet, width: 3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1138,10 +1128,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'PHP ',
-                            style: TextStyle(fontSize: 11),
-                          ),
+                          const Text('PHP ', style: TextStyle(fontSize: 11)),
                           Expanded(
                             child: Text(
                               _amountController.text.isEmpty
@@ -1327,10 +1314,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
             style: ElevatedButton.styleFrom(
               backgroundColor: success,
               foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 32,
-                vertical: 16,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
             ),
           ),
           const SizedBox(height: 16),
@@ -1415,13 +1399,15 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                color:
+                    widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                color:
+                    widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
               ),
             ),
             focusedBorder: OutlineInputBorder(

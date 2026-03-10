@@ -5,10 +5,12 @@ import 'dart:ui';
 import '../components/shared/student_messaging_panel.dart';
 import '../components/dashboard_panel_template.dart';
 import '../components/student_panel_content.dart';
+import '../services/supabase_service.dart';
 
 class StudentDashboardView extends StatefulWidget {
   final VoidCallback? onLogout;
-  const StudentDashboardView({super.key, this.onLogout});
+  final Map<String, dynamic>? userData;
+  const StudentDashboardView({super.key, this.onLogout, this.userData});
 
   @override
   State<StudentDashboardView> createState() => _StudentDashboardViewState();
@@ -19,6 +21,15 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   bool _isDarkMode = true;
   bool _isSidebarExpanded = true;
   int _selectedIndex = 0;
+
+  // Database Data State
+  List<Map<String, dynamic>> _grades = [];
+  List<Map<String, dynamic>> _assessments = [];
+  List<Map<String, dynamic>> _requests = [];
+  List<Map<String, dynamic>> _announcements = [];
+  Map<String, dynamic>? _nextClass;
+  double _enrollmentProgress = 0.0;
+  bool _isDataLoading = false;
 
   // Panel mapping (0..6 correspond to sidebar items excluding Logout)
   static const List<String> _panelTypes = [
@@ -40,6 +51,87 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   static const Color aViolet = Color(
     0xFF7C3AED,
   ); // Corrected Vivid Violet (No red tint)
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStudentData();
+  }
+
+  Future<void> _loadStudentData() async {
+    if (widget.userData == null) return;
+    setState(() => _isDataLoading = true);
+
+    final client = SupabaseService().client;
+    final studentId = widget.userData!['id'];
+    final now = DateTime.now().toIso8601String();
+
+    try {
+      // Parallel data fetching for performance
+      final results = await Future.wait([
+        client
+            .from('study_loads')
+            .select('*, subjects(*)')
+            .eq('student_id', studentId),
+        client.from('payments').select().eq('student_id', studentId),
+        client.from('office_requests').select().eq('student_id', studentId),
+        client
+            .from('announcements')
+            .select()
+            .order('created_at', ascending: false)
+            .limit(5),
+        client
+            .from('study_loads')
+            .select('*, subjects(*)')
+            .eq('student_id', studentId)
+            .gte('time_start', now)
+            .order('time_start')
+            .limit(1)
+            .maybeSingle(),
+        client
+            .from('student_details')
+            .select('enrollment_status')
+            .eq('profile_id', studentId)
+            .maybeSingle(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _grades = List<Map<String, dynamic>>.from(results[0] as List? ?? []);
+          _assessments =
+              List<Map<String, dynamic>>.from(results[1] as List? ?? []);
+          _requests =
+              List<Map<String, dynamic>>.from(results[2] as List? ?? []);
+          _announcements =
+              List<Map<String, dynamic>>.from(results[3] as List? ?? []);
+          _nextClass = results[4] as Map<String, dynamic>?;
+
+          final status =
+              (results[5] as Map<String, dynamic>?)?['enrollment_status'];
+          _enrollmentProgress = status == 'Enrolled' ? 1.0 : 0.5;
+
+          _isDataLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Sync Error: $e");
+      if (mounted) setState(() => _isDataLoading = false);
+    }
+  }
+
+  Map<String, dynamic> _getCombinedData() {
+    final detailsData = widget.userData?['student_details'];
+    final details = (detailsData is List && detailsData.isNotEmpty)
+        ? detailsData.first
+        : (detailsData is Map ? detailsData : {});
+    return {
+      ...(widget.userData ?? {}),
+      ...details,
+      'grade_book': _grades, // Matches _panelTypes[3]
+      'assessment': _assessments, // Matches _panelTypes[2]
+      'offices': _requests, // Matches _panelTypes[5]
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +174,8 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
         break;
       default:
         panelTitle = 'Dashboard';
-        subtitle = 'Welcome back, DARLENE ANGEL';
+        subtitle =
+            'Welcome to Bright Future Academy, ${widget.userData?['fn'] ?? 'STUDENT'}';
     }
 
     // compute colors (used by dashboard content helper)
@@ -98,13 +191,17 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
       panelContent = _buildPanelContentHome(cardColor, textColor, subTextColor);
     } else if (_selectedIndex == 6) {
       // Handle Messaging panel
-      panelContent = StudentMessagingPanel(isDarkMode: _isDarkMode);
+      panelContent = StudentMessagingPanel(
+        isDarkMode: _isDarkMode,
+        studentId: widget.userData?['id']?.toString(),
+      );
     } else {
       panelContent = StudentPanelContent(
         isDarkMode: _isDarkMode,
         panelType: (_selectedIndex < _panelTypes.length)
             ? _panelTypes[_selectedIndex]
             : 'dashboard',
+        studentData: _getCombinedData(),
       );
     }
 
@@ -138,30 +235,35 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     Color textColor,
     Color subTextColor,
   ) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 800),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 30 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildNextClassCard(cardColor, textColor, subTextColor),
-          const SizedBox(height: 32),
-          _buildQuickStats(cardColor, textColor),
-          const SizedBox(height: 32),
-          _buildEnrollmentTrackSection(cardColor, textColor, subTextColor),
-          const SizedBox(height: 32),
-          _buildAnnouncements(cardColor, textColor, subTextColor),
-        ],
+    return SingleChildScrollView(
+      // Wrap the content in a SingleChildScrollView
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) {
+          return Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, 30 * (1 - value)),
+              child: child,
+            ),
+          );
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildNextClassCard(cardColor, textColor, subTextColor),
+            const SizedBox(height: 32),
+            _buildQuickStats(cardColor, textColor, subTextColor),
+            const SizedBox(height: 32),
+            _buildEnrollmentTrackSection(cardColor, textColor, subTextColor),
+            const SizedBox(height: 32),
+            _buildMVGSection(cardColor, textColor, subTextColor),
+            const SizedBox(height: 32),
+            _buildAnnouncements(cardColor, textColor, subTextColor),
+          ],
+        ),
       ),
     );
   }
@@ -228,7 +330,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      "TODAY, 10:00 AM",
+                      _nextClass != null
+                          ? "TODAY, ${_nextClass!['time_start']}"
+                          : "NO CLASSES REMAINING",
                       style: GoogleFonts.inter(
                         color: Colors.white70,
                         fontSize: 12,
@@ -239,7 +343,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Systems Integration & Architecture",
+                  _nextClass?['subjects']?['name'] ?? "No Upcoming Class",
                   style: GoogleFonts.inter(
                     color: Colors.white,
                     fontSize: 22,
@@ -256,7 +360,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      "Computer Lab 102 • Prof. R. Manalastas",
+                      "${_nextClass?['room_number'] ?? 'N/A'} • ${_nextClass?['professor_id'] ?? 'N/A'}",
                       style: GoogleFonts.inter(
                         color: Colors.white.withOpacity(0.9),
                         fontSize: 14,
@@ -288,34 +392,44 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     );
   }
 
-  Widget _buildQuickStats(Color cardColor, Color textColor) {
+  Widget _buildQuickStats(
+      Color cardColor, Color textColor, Color subTextColor) {
     return Row(
       children: [
-        _statCard(
-          "GWA Standing",
-          "1.25",
-          LucideIcons.trendingUp,
-          Colors.blueAccent,
-          cardColor,
-          textColor,
+        _buildAnimatedCard(
+          index: 0,
+          child: _statCard(
+            "GWA Standing",
+            _getCombinedData()['current_gwa']?.toString() ?? "0.00",
+            LucideIcons.trendingUp,
+            Colors.blueAccent,
+            cardColor,
+            textColor,
+          ),
         ),
         const SizedBox(width: 16),
-        _statCard(
-          "Units Enrolled",
-          "21.0",
-          LucideIcons.layers,
-          const Color.fromARGB(255, 242, 64, 255),
-          cardColor,
-          textColor,
+        _buildAnimatedCard(
+          index: 1,
+          child: _statCard(
+            "Units Enrolled",
+            _getCombinedData()['enrolled_units']?.toString() ?? "0.0",
+            LucideIcons.layers,
+            const Color.fromARGB(255, 242, 64, 255),
+            cardColor,
+            textColor,
+          ),
         ),
         const SizedBox(width: 16),
-        _statCard(
-          "Account Balance",
-          "₱0.00",
-          LucideIcons.wallet,
-          successColor,
-          cardColor,
-          textColor,
+        _buildAnimatedCard(
+          index: 2,
+          child: _statCard(
+            "Account Balance",
+            "₱${_getCombinedData()['account_balance'] ?? '0.00'}",
+            LucideIcons.wallet,
+            successColor,
+            cardColor,
+            textColor,
+          ),
         ),
       ],
     );
@@ -329,7 +443,8 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     Color cardColor,
     Color textColor,
   ) {
-    return Expanded(
+    return SizedBox(
+      width: double.infinity,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
@@ -447,7 +562,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
                 ),
               ),
               FractionallySizedBox(
-                widthFactor: 0.85,
+                widthFactor: _enrollmentProgress,
                 child: Container(
                   height: 12,
                   decoration: BoxDecoration(
@@ -543,14 +658,24 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
           ),
         ),
         const SizedBox(height: 20),
-        _announcementItem(
-          "San Sebastian College - Recoletos de Cavite",
-          "03/26/2026",
-          "Grades for the 2nd Semester are now available for viewing. Check your Grade Book.",
-          cardColor,
-          textColor,
-          subTextColor,
-        ),
+        if (_announcements.isEmpty && !_isDataLoading)
+          _announcementItem(
+            "Bright Future Academy",
+            "System",
+            "No new announcements at this time.",
+            cardColor,
+            textColor,
+            subTextColor,
+          )
+        else
+          ..._announcements.map((ann) => _announcementItem(
+                ann['author'] ?? "Bright Future Academy",
+                ann['created_at']?.toString().split('T')[0] ?? "",
+                ann['content'] ?? "",
+                cardColor,
+                textColor,
+                subTextColor,
+              )),
       ],
     );
   }
@@ -621,6 +746,109 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMVGSection(
+    Color cardColor,
+    Color textColor,
+    Color subTextColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: _isDarkMode ? Colors.white10 : Colors.black12,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Bright Future Academy Identity",
+            style: GoogleFonts.inter(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          _mvgItem(
+            "Mission",
+            "To provide holistic education that empowers students to become globally competitive leaders through innovation and character formation.",
+            LucideIcons.target,
+            Colors.blueAccent,
+          ),
+          const SizedBox(height: 16),
+          _mvgItem(
+            "Vision",
+            "A premier institution recognized for academic excellence, research innovation, and community-driven transformation.",
+            LucideIcons.eye,
+            Colors.orangeAccent,
+          ),
+          const SizedBox(height: 16),
+          _mvgItem(
+            "Goals",
+            "• Foster Academic Rigor\n• Promote Holistic Development\n• Strengthen Community Engagement",
+            LucideIcons.flag,
+            Colors.greenAccent,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _mvgItem(String title, String content, IconData icon, Color color) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold, color: color, fontSize: 16)),
+              const SizedBox(height: 4),
+              Text(content,
+                  style: GoogleFonts.inter(
+                      color: _isDarkMode ? Colors.white70 : Colors.blueGrey,
+                      fontSize: 14)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnimatedCard({required Widget child, required int index}) {
+    return Expanded(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: Duration(milliseconds: 400 + (index * 150)),
+        curve: Curves.easeOutBack,
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: value,
+            child: Opacity(
+              opacity: value,
+              child: child,
+            ),
+          );
+        },
+        child: child,
       ),
     );
   }

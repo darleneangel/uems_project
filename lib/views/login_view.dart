@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:async';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'dart:ui';
 import 'dart:math' as math;
-// Import your student dashboard file here
+
+// Dashboard Imports
 import 'student_dashboard_view.dart';
 import 'admin_dashboard_view.dart';
 import 'accounting_dashboard_view.dart';
 import 'admission_dashboard_view.dart';
 import 'registrar_dashboard_view.dart';
-import '../components/program_chair_dashboard_view.dart';
-import '../components/teacher_dashboard_view.dart';
 import 'hr_dashboard_view.dart';
+import '../components/program_chair_dashboard_view.dart';
+import 'teacher_dashboard_view.dart';
+import '../services/supabase_service.dart';
 
 class UEMSLoginPage extends StatefulWidget {
   const UEMSLoginPage({super.key});
@@ -23,914 +27,625 @@ class UEMSLoginPage extends StatefulWidget {
 
 class _UEMSLoginPageState extends State<UEMSLoginPage>
     with TickerProviderStateMixin {
-  // Navigation State: 'login', 'admin_dashboard', or 'student_portal'
   String _currentView = 'login';
-  String _targetView = ''; // Stores destination after welcome animation
-  bool _isDarkMode = true; // Global theme state
-
-  // Standardized Violet Theme Palette
-  static const Color primaryViolet = Color(0xFF2E1065);
-  static const Color secondaryViolet = Color(0xFF4C1D95);
-  static const Color tertiaryDark = Color(0xFF0F071D);
-  static const Color accentViolet = Color(0xFF8B5CF6);
-  static const Color surfaceDark = Color(0xFF1E1B4B);
-  static const Color successColor = Color(0xFF69F0AE);
-
-  late AnimationController _bgController;
-  late Animation<Color?> _bgAnimation;
-
-  late AnimationController _entranceController;
-  late Animation<double> _formOpacity;
-  late Animation<Offset> _formSlide;
-
-  // Welcome Animation Controllers
-  late AnimationController _welcomeController;
-  late Animation<double> _welcomeScale;
-  late Animation<double> _welcomeOpacity;
+  String _targetView = '';
+  bool _isDarkMode = true;
+  bool _isLoading = false;
+  bool _rememberMe = false;
+  bool _isPasswordVisible = false;
+  Map<String, dynamic>? _loggedInUserData;
 
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _isLoading = false;
-  bool _isPasswordVisible = false;
+
+  // Animation Controllers
+  late AnimationController _formController;
+  late AnimationController _welcomeController;
+  late Animation<double> _pulseAnimation;
+  late Animation<double> _welcomeOpacity;
+  late List<Animation<double>> _formElementAnimations;
+
+  // Violet Theme Palette (High Fidelity)
+  static const Color pViolet = Color(0xFF1E1033); // Midnight Deep
+  static const Color sViolet = Color(0xFF2E1065); // Core Violet
+  static const Color aViolet = Color(0xFF8B5CF6); // Neon Accent
+  static const Color tDark = Color(0xFF0F071D); // Deep Space
+  static const Color glassWhite = Colors.white10;
+  static const Color success = Color(0xFF69F0AE); // Bio-Green
+  static const Color error = Color(0xFFFF5252); // Alert Red
 
   @override
   void initState() {
     super.initState();
 
-    _bgController = AnimationController(
-      duration: const Duration(seconds: 15),
-      vsync: this,
-    )..repeat(reverse: true);
+    // Entrance animations for form elements (Staggered)
+    _formController = AnimationController(
+        duration: const Duration(milliseconds: 1200), vsync: this);
+    _formElementAnimations = List.generate(6, (i) {
+      return CurvedAnimation(
+        parent: _formController,
+        curve: Interval(0.1 + (i * 0.1), 1.0, curve: Curves.easeOutQuart),
+      );
+    });
 
-    _updateBgAnimation();
-
-    _entranceController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
+    // Success Screen Animations
+    _welcomeController =
+        AnimationController(duration: const Duration(seconds: 2), vsync: this);
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _welcomeController, curve: Curves.easeInOutSine),
     );
-
-    _formOpacity = CurvedAnimation(
-      parent: _entranceController,
-      curve: const Interval(0.2, 1.0, curve: Curves.easeIn),
-    );
-
-    _formSlide = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
-        .animate(
-          CurvedAnimation(
-            parent: _entranceController,
-            curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-          ),
-        );
-
-    _welcomeController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-
-    _welcomeScale = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _welcomeController, curve: Curves.easeOutBack),
-    );
-
     _welcomeOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _welcomeController,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
-      ),
+          parent: _welcomeController, curve: const Interval(0.0, 0.4)),
     );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _entranceController.forward();
-        // Ensure full screen mode is triggered after the first frame (Mobile)
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-      }
-    });
-  }
-
-  void _updateBgAnimation() {
-    _bgAnimation = ColorTween(
-      begin: _isDarkMode ? primaryViolet : const Color(0xFFEDE9FE),
-      end: _isDarkMode ? surfaceDark : Colors.white,
-    ).animate(CurvedAnimation(parent: _bgController, curve: Curves.easeInOut));
-  }
-
-  void _toggleTheme() {
-    setState(() {
-      _isDarkMode = !_isDarkMode;
-      _updateBgAnimation();
-    });
+    _formController.forward();
   }
 
   @override
   void dispose() {
-    // Restore system overlays when the login view is disposed
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-
-    _bgController.dispose();
-    _entranceController.dispose();
+    _formController.dispose();
     _welcomeController.dispose();
     _idController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  // --- LOGIC (KEEPING UNTOUCHED AS REQUESTED) ---
+
   void _handleLogin() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
+    final id = _idController.text.trim();
+    final pass = _passwordController.text.trim();
 
-    final id = _idController.text;
-    final pass = _passwordController.text;
-
-    // CENTRALIZED ROUTING LOGIC
-    String destination = '';
-    if (id == '123' && pass == '123') {
-      destination = 'student_portal';
-    } else if (id == '456' && pass == '456') {
-      destination = 'admin_dashboard';
-    } else if (id == '789' && pass == '789') {
-      destination = 'admission_dashboard';
-    } else if (id == '321' && pass == '321') {
-      destination = 'accounting_dashboard';
-    } else if (id == '910' && pass == '910' || id == '111' && pass == '111') {
-      destination = 'registrar_dashboard';
-    } else if (id == '222' && pass == '222') {
-      destination = 'program_chair_dashboard';
-    } else if (id == '333' && pass == '333') {
-      destination = 'teacher_dashboard';
-    } else if (id == '444' && pass == '444') {
-      destination = 'hr_dashboard';
+    if (id.isEmpty || pass.isEmpty) {
+      _showError("Identity Credentials Required");
+      return;
     }
 
-    setState(() => _isLoading = false);
+    setState(() => _isLoading = true);
 
-    if (destination.isNotEmpty) {
-      setState(() {
-        _targetView = destination;
-        _currentView = 'welcome_animation';
-      });
+    try {
+      final client = SupabaseService().client;
+      final results = await client
+          .from('profiles')
+          .select('*, student_details(*), employee_details(*)')
+          .ilike('user_id_number', id)
+          .eq('password_hash', pass);
 
-      // Start the welcome sequence
-      _welcomeController.forward().then((_) async {
-        await Future.delayed(const Duration(seconds: 2));
-        if (mounted) {
-          setState(() {
-            _currentView = _targetView;
-            _welcomeController.reset();
-          });
-        }
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Invalid Credentials"),
-          backgroundColor: Colors.redAccent,
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (results.isNotEmpty) {
+        final userData = results.first;
+        _loggedInUserData = userData;
+        final String role = (userData['role'] as String).toLowerCase();
+        _routeToDashboard(role);
+      } else {
+        _showError("Identity Mismatch. Please check your credentials.");
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+      _showError("Sync Error: Unable to reach academic core.");
+    }
+  }
+
+  void _routeToDashboard(String role) {
+    String destination = '';
+    switch (role) {
+      case 'student':
+        destination = 'student_portal';
+        break;
+      case 'admin':
+        destination = 'admin_dashboard';
+        break;
+      case 'registrar':
+        destination = 'registrar_dashboard';
+        break;
+      case 'admission':
+        destination = 'admission_dashboard';
+        break;
+      case 'accounting':
+        destination = 'accounting_dashboard';
+        break;
+      case 'professor':
+        destination = 'teacher_dashboard';
+        break;
+      case 'hr':
+        destination = 'hr_dashboard';
+        break;
+      case 'pchair':
+        destination = 'program_chair_dashboard';
+        break;
+      default:
+        _showError("Role '$role' not provisioned in this terminal.");
+        return;
+    }
+
+    setState(() {
+      _targetView = destination;
+      _currentView = 'welcome_uemssp';
+    });
+
+    _welcomeController.repeat(reverse: true);
+    Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        _welcomeController.stop();
+        setState(() => _currentView = _targetView);
+      }
+    });
+  }
+
+  void _showError(String m) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(m, style: const TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: error,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(24),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       );
-    }
-    _idController.clear();
-    _passwordController.clear();
-  }
 
-  Widget _buildAnimatedItem(Widget child, int index) {
-    final double start = 0.4 + (index * 0.05);
-    final double end = (start + 0.4).clamp(0.0, 1.0);
-
-    final animation = CurvedAnimation(
-      parent: _entranceController,
-      curve: Interval(start, end, curve: Curves.easeOutBack),
-    );
-
-    return SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(0, 0.2),
-        end: Offset.zero,
-      ).animate(animation),
-      child: FadeTransition(opacity: animation, child: child),
-    );
-  }
+  // --- UI BUILDING (MODERNIZED) ---
 
   @override
   Widget build(BuildContext context) {
-    // ROUTING SWITCH - Directs to your separate files
-    switch (_currentView) {
-      case 'student_portal':
-        return StudentDashboardView(
-          onLogout: () => setState(() => _currentView = 'login'),
-        );
-      case 'admin_dashboard':
-        return AdminDashboardView(
-          onLogout: () => setState(() => _currentView = 'login'),
-        );
-      case 'admission_dashboard':
-        return AdmissionDashboardView(
-          onLogout: () => setState(() => _currentView = 'login'),
-        );
-      case 'accounting_dashboard':
-        return AccountingDashboardView(
-          onLogout: () => setState(() => _currentView = 'login'),
-        );
-      case 'registrar_dashboard':
-        return RegistrarDashboardView(
-          onLogout: () => setState(() => _currentView = 'login'),
-        );
-      case 'program_chair_dashboard':
-        return ProgramChairDashboardView(
-          onLogout: () => setState(() => _currentView = 'login'),
-        );
-      case 'teacher_dashboard':
-        return TeacherDashboardView(
-          onLogout: () => setState(() => _currentView = 'login'),
-        );
-      case 'hr_dashboard':
-        return HrDashboardView(
-          onLogout: () => setState(() => _currentView = 'login'),
-        );
-      case 'welcome_animation':
-        return _buildWelcomeView();
-      case 'login':
-      default:
-        return _buildLoginView();
-    }
-  }
-
-  Widget _buildLoginView() {
-    final size = MediaQuery.of(context).size;
-    final isDesktop = size.width > 900;
-
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Background Layer
-          AnimatedBuilder(
-            animation: _bgAnimation,
-            builder: (context, child) => Container(
-              color:
-                  _bgAnimation.value ??
-                  (_isDarkMode
-                      ? const Color(0xFF0F071D)
-                      : const Color(0xFFF1F5F9)),
-            ),
-          ),
-
-          // Ambient Background Elements
-          AnimatedBuilder(
-            animation: _bgController,
-            builder: (context, child) {
-              final t = _bgController.value;
-              final offset1 = Offset(
-                100 * math.sin(t * 2 * math.pi),
-                100 * math.cos(t * 2 * math.pi),
-              );
-              final offset2 = Offset(
-                80 * math.sin((t + 0.3) * 2 * math.pi),
-                80 * math.cos((t + 0.3) * 2 * math.pi),
-              );
-              final offset3 = Offset(
-                120 * math.cos((t + 0.7) * 2 * math.pi),
-                120 * math.sin((t + 0.7) * 2 * math.pi),
-              );
-
-              return Stack(
-                children: [
-                  // Ambient Orbs
-                  Positioned(
-                    top: -100 + offset1.dy,
-                    left: -100 + offset1.dx,
-                    child: Container(
-                      width: 500,
-                      height: 500,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            accentViolet.withOpacity(0.1),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: -100 + offset2.dy,
-                    right: -100 + offset2.dx,
-                    child: Container(
-                      width: 600,
-                      height: 600,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            accentViolet.withOpacity(0.15),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                      child: const Icon(
-                        LucideIcons.graduationCap,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: size.height * 0.4 + offset3.dy,
-                    left: size.width * 0.3 + offset3.dx,
-                    child: Container(
-                      width: 400,
-                      height: 400,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            successColor.withOpacity(_isDarkMode ? 0.05 : 0.02),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Floating Books
-                  ..._buildFloatingBooks(size, t),
-                ],
-              );
-            },
-          ),
-
-          // Main Content
-          Center(
-            child: FadeTransition(
-              opacity: _formOpacity,
-              child: SlideTransition(
-                position: _formSlide,
-                child: Container(
-                  width: isDesktop ? 900 : 400,
-                  margin: const EdgeInsets.symmetric(vertical: 40),
-                  decoration: BoxDecoration(
-                    color: _isDarkMode ? surfaceDark : Colors.white,
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.1),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: accentViolet.withOpacity(0.15),
-                        blurRadius: 80,
-                        offset: const Offset(0, 20),
-                      ),
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 30,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: isDesktop
-                      ? Row(
-                          children: [
-                            Expanded(child: _buildLeftBanner()),
-                            Expanded(child: _buildRightForm(isDesktop)),
-                          ],
-                        )
-                      : _buildRightForm(isDesktop),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 800),
+      switchInCurve: Curves.easeInOutQuart,
+      switchOutCurve: Curves.easeInOutQuart,
+      child: _buildCurrentView(),
     );
   }
 
-  Widget _buildWelcomeView() {
+  Widget _buildCurrentView() {
+    switch (_currentView) {
+      case 'student_portal':
+        return StudentDashboardView(
+            userData: _loggedInUserData!, onLogout: _resetToLogin);
+      case 'admin_dashboard':
+        return AdminDashboardView(onLogout: _resetToLogin);
+      case 'admission_dashboard':
+        return AdmissionDashboardView(onLogout: _resetToLogin);
+      case 'registrar_dashboard':
+        return RegistrarDashboardView(onLogout: _resetToLogin);
+      case 'hr_dashboard':
+        return HrDashboardView(onLogout: _resetToLogin);
+      case 'accounting_dashboard':
+        return AccountingDashboardView(onLogout: _resetToLogin);
+      case 'teacher_dashboard':
+        return TeacherDashboardView(onLogout: _resetToLogin);
+      case 'program_chair_dashboard':
+        return ProgramChairDashboardView(onLogout: _resetToLogin);
+      case 'welcome_uemssp':
+        return _buildWelcomeLoading();
+      default:
+        return _buildSplitLogin();
+    }
+  }
+
+  void _resetToLogin() => setState(() {
+        _currentView = 'login';
+        _idController.clear();
+        _passwordController.clear();
+        _formController.forward(from: 0.0);
+      });
+
+  Widget _buildSplitLogin() {
+    final bgColor = _isDarkMode ? tDark : const Color(0xFFF1F5F9);
+    final cardColor = _isDarkMode ? const Color(0xFF160D2B) : Colors.white;
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+
     return Scaffold(
-      body: Stack(
-        children: [
-          // Reuse the animated background for continuity
-          AnimatedBuilder(
-            animation: _bgAnimation,
-            builder: (context, child) => Container(color: _bgAnimation.value),
-          ),
-          AnimatedBuilder(
-            animation: _bgController,
-            builder: (context, child) => Stack(
-              children: [
-                ..._buildFloatingBooks(
-                  MediaQuery.of(context).size,
-                  _bgController.value,
-                ),
+      backgroundColor: bgColor,
+      body: Center(
+        child: SingleChildScrollView(
+          // Prevents parent overflow on small viewports
+          padding: const EdgeInsets.all(24),
+          child: Container(
+            width: 1200,
+            constraints: const BoxConstraints(
+                minHeight: 600,
+                maxHeight: 850), // Flex height instead of fixed 800
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(56),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 80,
+                    offset: const Offset(0, 40)),
               ],
             ),
-          ),
-          Center(
-            child: AnimatedBuilder(
-              animation: _welcomeController,
-              builder: (context, child) {
-                return FadeTransition(
-                  opacity: _welcomeOpacity,
-                  child: ScaleTransition(
-                    scale: _welcomeScale,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+            child: Row(
+              children: [
+                // --- LEFT SIDE: THE BRANDING NODE ---
+                Expanded(
+                  flex: 5,
+                  child: Container(
+                    padding: const EdgeInsets.all(60),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [pViolet, sViolet, aViolet],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Stack(
                       children: [
-                        // Animated Icon with Glow
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: accentViolet.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: accentViolet.withOpacity(0.2),
-                                blurRadius: 40,
-                                spreadRadius: 10,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            LucideIcons.graduationCap,
-                            color: Colors.white,
-                            size: 80,
-                          ),
+                        Positioned(
+                          top: -50,
+                          right: -50,
+                          child: _buildBlurNode(
+                              200, Colors.white.withOpacity(0.08)),
                         ),
-                        const SizedBox(height: 40),
-                        // Primary Welcome Text
-                        Text(
-                          "Welcome to the UEMSSP System",
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5,
-                          ),
+                        Positioned(
+                          bottom: 100,
+                          left: -100,
+                          child: _buildBlurNode(300, aViolet.withOpacity(0.15)),
                         ),
-                        const SizedBox(height: 16),
-                        // Subtitle / Status
-                        Text(
-                          "Preparing your personalized workspace...",
-                          style: GoogleFonts.inter(
-                            color: Colors.white70,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 48),
-                        // Minimalist Loading Indicator
-                        SizedBox(
-                          width: 200,
-                          child: LinearProgressIndicator(
-                            backgroundColor: Colors.white10,
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              accentViolet,
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _animateEntrance(
+                                0,
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(24),
+                                      border:
+                                          Border.all(color: Colors.white24)),
+                                  child: const Icon(LucideIcons.school,
+                                      color: Colors.white, size: 48),
+                                )),
+                            const Spacer(),
+                            _animateEntrance(
+                                1,
+                                Text(
+                                  "EXPLORE.\nLEARN.\nGROW.",
+                                  style: GoogleFonts.inter(
+                                      fontSize: 60,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      height: 0.95,
+                                      letterSpacing: -3),
+                                )),
+                            const SizedBox(height: 32),
+                            _animateEntrance(
+                                2,
+                                Text(
+                                  "UEMS: The Intelligent Core for Academic Excellence at SSCR-Cavite.",
+                                  style: TextStyle(
+                                      color: Colors.white.withOpacity(0.7),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w400,
+                                      height: 1.5),
+                                )),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+                ),
 
-  List<Widget> _buildFloatingBooks(Size size, double t) {
-    final List<Map<String, dynamic>> books = [
-      {
-        'icon': LucideIcons.book,
-        'size': 40.0,
-        'top': 0.1,
-        'left': 0.1,
-        'speed': 1.0,
-      },
-      {
-        'icon': LucideIcons.bookOpen,
-        'size': 30.0,
-        'top': 0.7,
-        'left': 0.8,
-        'speed': 1.5,
-      },
-      {
-        'icon': LucideIcons.book,
-        'size': 50.0,
-        'top': 0.4,
-        'left': 0.05,
-        'speed': 0.8,
-      },
-      {
-        'icon': LucideIcons.bookOpen,
-        'size': 35.0,
-        'top': 0.8,
-        'left': 0.2,
-        'speed': 1.2,
-      },
-      {
-        'icon': LucideIcons.book,
-        'size': 25.0,
-        'top': 0.2,
-        'left': 0.9,
-        'speed': 2.0,
-      },
-    ];
-
-    return books.map((book) {
-      final double speed = book['speed'];
-      final double xOffset = 30 * math.sin((t * speed) * 2 * math.pi);
-      final double yOffset = 50 * math.cos((t * speed) * 2 * math.pi);
-      final double rotation = math.sin((t * speed) * math.pi) * 0.2;
-
-      return Positioned(
-        top: size.height * book['top'] + yOffset,
-        left: size.width * book['left'] + xOffset,
-        child: Opacity(
-          opacity: _isDarkMode ? 0.15 : 0.08,
-          child: Transform.rotate(
-            angle: rotation,
-            child: Icon(
-              book['icon'],
-              size: book['size'],
-              color: _isDarkMode ? Colors.white : primaryViolet,
-            ),
-          ),
-        ),
-      );
-    }).toList();
-  }
-
-  Widget _buildLeftBanner() {
-    return Container(
-      padding: const EdgeInsets.all(30),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: _isDarkMode
-              ? [primaryViolet, secondaryViolet]
-              : [secondaryViolet, accentViolet],
-        ),
-        image: DecorationImage(
-          image: const NetworkImage(
-            "https://www.transparenttextures.com/patterns/cubes.png",
-          ),
-          repeat: ImageRepeat.repeat,
-          colorFilter: ColorFilter.mode(
-            Colors.black.withOpacity(0.1),
-            BlendMode.dstATop,
-          ),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Logo Area (Animated)
-          _buildAnimatedItem(
-            AnimatedBuilder(
-              animation: _bgController,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(
-                    0,
-                    5 * math.sin(_bgController.value * 2 * math.pi),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.1),
+                // --- RIGHT SIDE: THE ACCESS PORTAL ---
+                Expanded(
+                  flex: 7,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 60,
+                        vertical:
+                            40), // Reduced from 100 to prevent internal overflow
+                    child: SingleChildScrollView(
+                      // Allow the form to scroll internally if height is small
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _animateEntrance(
+                                  0,
+                                  const Icon(LucideIcons.graduationCap,
+                                      color: aViolet, size: 40)),
+                              _animateEntrance(0, _buildThemeToggle()),
+                            ],
                           ),
-                        ),
-                        child: const Icon(
-                          LucideIcons.graduationCap,
-                          color: Colors.white,
-                          size: 28,
-                        ),
+                          const SizedBox(height: 40),
+                          _animateEntrance(
+                              1,
+                              Text("WELCOME BACK",
+                                  style: GoogleFonts.inter(
+                                      fontSize: 34,
+                                      fontWeight: FontWeight.w900,
+                                      color: textColor,
+                                      letterSpacing: -2))),
+                          _animateEntrance(
+                              1,
+                              Text(
+                                  "Initialize your secure institutional session.",
+                                  style: TextStyle(
+                                      color: Colors.blueGrey.withOpacity(0.7),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500))),
+                          const SizedBox(height: 40),
+                          _animateEntrance(
+                              2, _buildLabel("Identity Identifier")),
+                          _animateEntrance(
+                              2,
+                              _buildTextField(_idController, "e.g., 202350031",
+                                  LucideIcons.user)),
+                          const SizedBox(height: 24),
+                          _animateEntrance(3, _buildLabel("Security Key")),
+                          _animateEntrance(
+                              3,
+                              _buildTextField(_passwordController, "••••••••",
+                                  LucideIcons.lock,
+                                  obscure: !_isPasswordVisible,
+                                  suffix: IconButton(
+                                    icon: Icon(
+                                        _isPasswordVisible
+                                            ? LucideIcons.eye
+                                            : LucideIcons.eyeOff,
+                                        color: aViolet,
+                                        size: 20),
+                                    onPressed: () => setState(() =>
+                                        _isPasswordVisible =
+                                            !_isPasswordVisible),
+                                  ))),
+                          const SizedBox(height: 24),
+                          _animateEntrance(
+                              4,
+                              Row(
+                                children: [
+                                  Checkbox(
+                                    value: _rememberMe,
+                                    activeColor: aViolet,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(6)),
+                                    onChanged: (v) =>
+                                        setState(() => _rememberMe = v!),
+                                  ),
+                                  Text("Trust this device",
+                                      style: TextStyle(
+                                          color: textColor.withOpacity(0.5),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600)),
+                                  const Spacer(),
+                                  TextButton(
+                                      onPressed: () {},
+                                      child: const Text("Recovery Logic",
+                                          style: TextStyle(
+                                              color: aViolet,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w900))),
+                                ],
+                              )),
+                          const SizedBox(height: 40),
+                          _animateEntrance(
+                              5,
+                              SizedBox(
+                                width: double.infinity,
+                                height: 65,
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _handleLogin,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: sViolet,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(24)),
+                                    elevation: 0,
+                                    shadowColor: aViolet.withOpacity(0.4),
+                                  ),
+                                  child: _isLoading
+                                      ? const CircularProgressIndicator(
+                                          color: Colors.white, strokeWidth: 3)
+                                      : Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Text("SYNCHRONIZE SESSION",
+                                                style: GoogleFonts.inter(
+                                                    fontWeight: FontWeight.w900,
+                                                    letterSpacing: 1.5,
+                                                    fontSize: 14)),
+                                            const SizedBox(width: 16),
+                                            const Icon(LucideIcons.arrowRight,
+                                                size: 20),
+                                          ],
+                                        ),
+                                ),
+                              )),
+                        ],
                       ),
-                      const SizedBox(width: 16),
-                      Text(
-                        "UEMSSP",
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            0,
-          ),
-          const Spacer(),
-          _buildAnimatedItem(
-            Text(
-              "Welcome!",
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 48,
-                fontWeight: FontWeight.w900,
-                height: 1.1,
-              ),
-            ),
-            1,
-          ),
-          const SizedBox(height: 24),
-          _buildAnimatedItem(
-            Text(
-              "One Portal. One System. One School. Streamlining education, empowering connection.",
-              style: GoogleFonts.inter(
-                color: Colors.white.withOpacity(0.8),
-                fontSize: 16,
-                height: 1.5,
-              ),
-            ),
-            2,
-          ),
-          const SizedBox(height: 32),
-          _buildAnimatedItem(
-            OutlinedButton(
-              onPressed: () {},
-              style: ButtonStyle(
-                foregroundColor: WidgetStateProperty.all(Colors.white),
-                side: WidgetStateProperty.all(
-                  const BorderSide(color: Colors.white24),
-                ),
-                shape: WidgetStateProperty.all(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                padding: WidgetStateProperty.all(
-                  const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                ),
-                overlayColor: WidgetStateProperty.all(
-                  Colors.white.withOpacity(0.1),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "Learn More",
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(LucideIcons.arrowRight, size: 16),
-                ],
-              ),
-            ),
-            3,
-          ),
-          const Spacer(),
-          // Security Badge
-          _buildAnimatedItem(
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    LucideIcons.shieldCheck,
-                    color: successColor,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    "Secure Environment",
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ],
-              ),
-            ),
-            4,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRightForm(bool isDesktop) {
-    return Container(
-      padding: const EdgeInsets.all(30),
-      color: _isDarkMode ? surfaceDark : Colors.white,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildAnimatedItem(
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Sign in",
-                  style: GoogleFonts.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: _isDarkMode ? Colors.white : const Color(0xFF1E293B),
-                  ),
-                ),
-                IconButton(
-                  onPressed: _toggleTheme,
-                  icon: Icon(
-                    _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
-                    color: _isDarkMode ? Colors.white54 : Colors.grey,
-                  ),
-                  tooltip: "Toggle Theme",
                 ),
               ],
             ),
-            0,
           ),
-
-          const SizedBox(height: 48),
-
-          _buildAnimatedItem(
-            _buildInputField(
-              controller: _idController,
-              label: "User ID",
-              hint: "Enter User ID",
-              icon: LucideIcons.user,
-            ),
-            1,
-          ),
-          const SizedBox(height: 24),
-          _buildAnimatedItem(
-            _buildInputField(
-              controller: _passwordController,
-              label: "Password",
-              hint: "Enter your password",
-              icon: LucideIcons.lock,
-              isPassword: true,
-            ),
-            2,
-          ),
-
-          _buildAnimatedItem(
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {},
-                child: Text(
-                  "Forgot Password?",
-                  style: GoogleFonts.inter(
-                    color: accentViolet,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            2,
-          ),
-
-          const SizedBox(height: 32),
-          _buildAnimatedItem(_buildLoginButton(), 3),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    bool isPassword = false,
-  }) {
-    final textColor = _isDarkMode ? Colors.white : const Color(0xFF1E293B);
-    final hintColor = _isDarkMode ? Colors.white38 : Colors.grey[400];
-    final fillColor = _isDarkMode
-        ? Colors.white.withOpacity(0.05)
-        : Colors.grey.shade100;
-    final borderColor = _isDarkMode ? Colors.white10 : Colors.grey[200]!;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: _isDarkMode ? Colors.white70 : Colors.grey[700],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          height: 56,
-          decoration: BoxDecoration(
-            color: fillColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: borderColor, width: 1.5),
-          ),
-          child: TextField(
-            controller: controller,
-            obscureText: isPassword && !_isPasswordVisible,
-            style: GoogleFonts.inter(
-              color: textColor,
-              fontWeight: FontWeight.w500,
-            ),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: GoogleFonts.inter(color: hintColor),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(vertical: 16),
-              prefixIcon: Icon(
-                icon,
-                color: _isDarkMode ? Colors.white30 : Colors.grey[400],
-                size: 20,
+  Widget _buildWelcomeLoading() {
+    return Scaffold(
+      backgroundColor: tDark,
+      body: Center(
+        child: FadeTransition(
+          opacity: _welcomeOpacity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // The Academic Core Pulse
+              ScaleTransition(
+                scale: _pulseAnimation,
+                child: Container(
+                  width: 180,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                          color: aViolet.withOpacity(0.5),
+                          blurRadius: 80,
+                          spreadRadius: 5),
+                      BoxShadow(
+                          color: sViolet.withOpacity(0.3),
+                          blurRadius: 40,
+                          spreadRadius: 2),
+                    ],
+                    gradient: const RadialGradient(
+                      colors: [aViolet, sViolet, pViolet],
+                      stops: [0.3, 0.7, 1.0],
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: const Icon(LucideIcons.shieldCheck,
+                          color: Colors.white, size: 80),
+                    ),
+                  ),
+                ),
               ),
-              suffixIcon: isPassword
-                  ? IconButton(
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? LucideIcons.eye
-                            : LucideIcons.eyeOff,
-                        color: _isDarkMode ? Colors.white30 : Colors.grey[400],
-                        size: 20,
+              const SizedBox(height: 80),
+              Text("Welcome to UEMSSP",
+                  style: GoogleFonts.inter(
+                      fontSize: 42,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -2)),
+              const SizedBox(height: 16),
+              Text(
+                  "VERIFIED: Access granted to ${_loggedInUserData?['fn'] ?? 'Academic Node'}",
+                  style: const TextStyle(
+                      color: success,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 3)),
+              const SizedBox(height: 70),
+              SizedBox(
+                width: 300,
+                child: Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: LinearProgressIndicator(
+                        color: aViolet,
+                        backgroundColor: Colors.white.withOpacity(0.05),
+                        minHeight: 8,
                       ),
-                      onPressed: () => setState(
-                        () => _isPasswordVisible = !_isPasswordVisible,
-                      ),
-                    )
-                  : null,
-            ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text("Synchronizing encrypted academic pipeline...",
+                        style: TextStyle(
+                            color: Colors.blueGrey,
+                            fontSize: 13,
+                            letterSpacing: 1)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildLoginButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : _handleLogin,
-        style:
-            ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 0,
-            ).copyWith(
-              shadowColor: WidgetStateProperty.all(
-                accentViolet.withOpacity(0.4),
-              ),
-            ),
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [accentViolet, secondaryViolet],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
+  // --- UI ATOMS (UPGRADED) ---
+
+  Widget _animateEntrance(int index, Widget child) {
+    return FadeTransition(
+      opacity: _formElementAnimations[index],
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
+            .animate(_formElementAnimations[index]),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildBlurNode(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+    );
+  }
+
+  Widget _buildThemeToggle() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _isDarkMode
+            ? Colors.white.withOpacity(0.05)
+            : Colors.black.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(16),
+        border:
+            Border.all(color: _isDarkMode ? Colors.white12 : Colors.black12),
+      ),
+      child: IconButton(
+        icon: Icon(_isDarkMode ? LucideIcons.sun : LucideIcons.moon,
+            color: aViolet, size: 22),
+        onPressed: () => setState(() => _isDarkMode = !_isDarkMode),
+      ),
+    );
+  }
+
+  Widget _buildLabel(String t) => Padding(
+        padding: const EdgeInsets.only(bottom: 12, left: 6),
+        child: Text(t.toUpperCase(),
+            style: const TextStyle(
+                color: Colors.blueGrey,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 2.5)),
+      );
+
+  Widget _buildTextField(TextEditingController c, String h, IconData i,
+      {bool obscure = false, Widget? suffix}) {
+    final fieldColor = _isDarkMode
+        ? Colors.white.withOpacity(0.04)
+        : Colors.black.withOpacity(0.02);
+    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: fieldColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: borderColor),
+      ),
+      child: TextField(
+        controller: c,
+        obscureText: obscure,
+        cursorColor: aViolet,
+        style: TextStyle(
+            color: _isDarkMode ? Colors.white : pViolet,
+            fontWeight: FontWeight.w600,
+            fontSize: 16),
+        decoration: InputDecoration(
+          hintText: h,
+          hintStyle: const TextStyle(
+              color: Colors.blueGrey,
+              fontSize: 15,
+              fontWeight: FontWeight.w400),
+          prefixIcon: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Icon(i, color: aViolet, size: 24),
           ),
-          child: Container(
-            alignment: Alignment.center,
-            child: _isLoading
-                ? const SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2.5,
-                    ),
-                  )
-                : Text(
-                    "Sign In",
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+          suffixIcon: Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: suffix,
           ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 24),
         ),
       ),
     );

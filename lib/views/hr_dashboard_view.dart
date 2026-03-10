@@ -1092,7 +1092,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
                   style: GoogleFonts.inter(
                     color: textColor,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 16,
                   ),
                 ),
               ),

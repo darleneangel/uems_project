@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'supabase_service.dart';
 
 class Announcement {
   Announcement({
@@ -79,7 +81,8 @@ class AnnouncementService {
     ];
   }
 
-  void addAnnouncement({
+  /// Adds a new announcement to Supabase
+  Future<void> addAnnouncement({
     required String office,
     required String title,
     required String content,
@@ -87,7 +90,21 @@ class AnnouncementService {
     String? department,
     String? priority,
     String? targetAudience,
-  }) {
+  }) async {
+    final client = SupabaseService().client;
+
+    // 1. Insert into Supabase
+    await client.from('announcements').insert({
+      'office': office,
+      'title': title,
+      'content': content,
+      'attachments': attachments,
+      'department': department,
+      'priority': priority,
+      'target_audience': targetAudience,
+    });
+
+    // 2. Update local notifier for immediate UI feedback
     final a = Announcement(
       id: _nextId++,
       office: office,

@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
+import '../../services/supabase_service.dart';
 
 class DocumentVerificationPanel extends StatefulWidget {
   final bool isDarkMode;
@@ -18,71 +19,71 @@ class DocumentVerificationPanel extends StatefulWidget {
 }
 
 class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
-  // Modern Tonal Palette
+  // Theme Palette
   static const Color pViolet = Color(0xFF2E1065);
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color surfaceDark = Color(0xFF1E1B4B);
   static const Color success = Color(0xFF69F0AE);
 
-  // --- INTERNAL STATE ---
-  final List<Map<String, dynamic>> _queue = [
-    {
-      "name": "JOHN GIL JAVIER",
-      "id": "APL-2026-004",
-      "course": "BS Information Technology",
-      "isApproved": false,
-      "docs": [
-        {"name": "PSA Birth Certificate", "status": true},
-        {"name": "Form 138 (Report Card)", "status": true},
-        {"name": "Certificate of Good Moral", "status": true},
-        {"name": "Medical Certificate", "status": false},
-        {"name": "Entrance Exam Results", "status": true},
-      ],
-    },
-    {
-      "name": "JAYRONE GINES",
-      "id": "APL-2026-001",
-      "course": "BS Computer Science",
-      "isApproved": false,
-      "docs": [
-        {"name": "PSA Birth Certificate", "status": true},
+  final Map<String, List<Map<String, dynamic>>> _localDocState = {};
+
+  List<Map<String, dynamic>> _getDefaultDocs() => [
+        {"name": "PSA Birth Certificate", "status": false},
         {"name": "Form 138 (Report Card)", "status": false},
         {"name": "Certificate of Good Moral", "status": false},
         {"name": "Medical Certificate", "status": false},
-        {"name": "Entrance Exam Results", "status": true},
-      ],
-    },
-  ];
+        {"name": "Entrance Exam Results", "status": false},
+      ];
 
-  // Transaction History List (Archived)
-  final List<Map<String, dynamic>> _history = [];
-
-  // Logic to calculate progress percentage
-  double _calculateProgress(List<dynamic> docs) {
+  double _calculateProgress(String applicantId) {
+    final docs = _localDocState[applicantId] ?? _getDefaultDocs();
     int verified = docs.where((d) => d['status'] == true).length;
     return verified / docs.length;
   }
 
-  // --- ACTIONS ---
-
-  void _toggleDoc(int studentIndex, int docIndex) {
+  void _toggleDoc(String applicantId, int docIndex) {
     setState(() {
-      _queue[studentIndex]['docs'][docIndex]['status'] =
-          !_queue[studentIndex]['docs'][docIndex]['status'];
+      if (!_localDocState.containsKey(applicantId)) {
+        _localDocState[applicantId] = _getDefaultDocs();
+      }
+      _localDocState[applicantId]![docIndex]['status'] =
+          !_localDocState[applicantId]![docIndex]['status'];
     });
   }
 
-  // --- MODERNIZED PDF GENERATION ENGINE ---
-  Future<void> _finalizeAndTransfer(
-    int index, {
-    bool isHistoryItem = false,
-  }) async {
-    final student = isHistoryItem ? _history[index] : _queue[index];
+  // --- DATABASE ACTIONS ---
+
+  /// ACTION: Verification Approved -> Redirect to Accounting
+  Future<void> _finalizeVerification(Map<String, dynamic> applicant) async {
+    try {
+      await SupabaseService()
+          .client
+          .from('applicants')
+          .update({'status': 'For Payment'}).eq('id', applicant['id']);
+
+      await _generateAdmissionSlip(applicant);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              backgroundColor: success,
+              content: Text(
+                  "Approved. Student directed to Accounting for Payment.")),
+        );
+      }
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: Colors.redAccent, content: Text("Error: $e")));
+    }
+  }
+
+  // --- PDF ENGINE ---
+  Future<void> _generateAdmissionSlip(Map<String, dynamic> applicant) async {
     final pdf = pw.Document();
     final String timestamp = DateTime.now().toString().split('.')[0];
     final PdfColor brandViolet = PdfColor.fromInt(0xFF7C3AED);
 
-    // LOGO LOADING LOGIC
     pw.ImageProvider? logoImage;
     try {
       final ByteData data = await rootBundle.load('assets/image/logo (2).png');
@@ -99,215 +100,81 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // 1. MODERN BRANDED HEADER (UEMS)
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Row(
-                    children: [
-                      if (logoImage != null)
-                        pw.Container(
-                          width: 40,
-                          height: 40,
-                          child: pw.Image(logoImage),
-                        )
-                      else
-                        pw.Container(
-                          width: 35,
-                          height: 35,
-                          decoration: pw.BoxDecoration(
-                            color: brandViolet,
-                            borderRadius: pw.BorderRadius.circular(8),
-                          ),
-                          child: pw.Center(
-                            child: pw.Text(
-                              "U",
-                              style: pw.TextStyle(
-                                color: PdfColors.white,
-                                fontWeight: pw.FontWeight.bold,
-                                fontSize: 20,
-                              ),
-                            ),
-                          ),
-                        ),
-                      pw.SizedBox(width: 12),
-                      pw.Column(
+                  pw.Row(children: [
+                    if (logoImage != null)
+                      pw.Container(
+                          width: 40, height: 40, child: pw.Image(logoImage)),
+                    pw.SizedBox(width: 12),
+                    pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text(
-                            "UEMSSP",
-                            style: pw.TextStyle(
-                              fontWeight: pw.FontWeight.bold,
-                              fontSize: 22,
-                              color: brandViolet,
-                            ),
-                          ),
-                          pw.Text(
-                            "UNIFIED EDUCATION MANAGEMENT SYSTEM AND STUDENT PORTAL",
-                            style: pw.TextStyle(
-                              fontSize: 8,
-                              color: PdfColors.grey700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                          pw.Text("UEMSSP",
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 22,
+                                  color: brandViolet)),
+                          pw.Text("OFFICE OF ADMISSIONS",
+                              style: pw.TextStyle(
+                                  fontSize: 8, color: PdfColors.grey700)),
+                        ]),
+                  ]),
                   pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.end,
-                    children: [
-                      pw.Text(
-                        "OFFICIAL DOCUMENT",
-                        style: pw.TextStyle(
-                          fontSize: 8,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.grey500,
-                        ),
-                      ),
-                      pw.Text(
-                        "ADMISSION SLIP",
-                        style: pw.TextStyle(
-                          fontSize: 10,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text("OFFICIAL DOCUMENT",
+                            style: pw.TextStyle(
+                                fontSize: 8,
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColors.grey500)),
+                        pw.Text("ADMISSION SLIP",
+                            style: pw.TextStyle(
+                                fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                      ]),
                 ],
               ),
               pw.SizedBox(height: 20),
               pw.Divider(color: brandViolet, thickness: 1.5),
               pw.SizedBox(height: 25),
-
-              // 2. STUDENT METADATA GRID
               pw.Container(
                 padding: const pw.EdgeInsets.all(12),
                 decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey300),
-                  borderRadius: pw.BorderRadius.circular(8),
-                ),
-                child: pw.Column(
-                  children: [
-                    pw.Row(
-                      children: [
-                        pw.Expanded(
-                          child: _pdfMetaItem("STUDENT NAME", student['name']),
-                        ),
-                        pw.Expanded(
-                          child: _pdfMetaItem("APPLICATION ID", student['id']),
-                        ),
-                      ],
-                    ),
-                    pw.SizedBox(height: 10),
-                    pw.Row(
-                      children: [
-                        pw.Expanded(
-                          child: _pdfMetaItem("PROGRAM", student['course']),
-                        ),
-                        pw.Expanded(
-                          child: _pdfMetaItem("VERIFICATION DATE", timestamp),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                    border: pw.Border.all(color: PdfColors.grey300),
+                    borderRadius: pw.BorderRadius.circular(8)),
+                child: pw.Column(children: [
+                  pw.Row(children: [
+                    pw.Expanded(
+                        child: _pdfMetaItem(
+                            "STUDENT NAME", applicant['full_name'])),
+                    pw.Expanded(
+                        child: _pdfMetaItem(
+                            "APPLICATION ID", applicant['application_no'])),
+                  ]),
+                ]),
               ),
-              pw.SizedBox(height: 35),
-
-              // 3. ADMISSION STATUS CONTENT
-              pw.Text(
-                "DOCUMENTATION STATUS: CLEARANCE OBTAINED",
-                style: pw.TextStyle(
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.green700,
-                  fontSize: 12,
-                ),
-              ),
+              pw.SizedBox(height: 40),
+              pw.Text("DOCUMENTATION STATUS: CLEARANCE OBTAINED",
+                  style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.green700,
+                      fontSize: 12)),
               pw.SizedBox(height: 12),
               pw.Text(
-                "The applicant has successfully submitted and verified the following requirements as part of the official admissions package:",
-                style: pw.TextStyle(fontSize: 10, color: PdfColors.grey900),
-              ),
-              pw.SizedBox(height: 20),
-
-              // Checklist
-              ...student['docs']
-                  .where((d) => d['status'] == true)
-                  .map(
-                    (doc) => pw.Padding(
-                      padding: const pw.EdgeInsets.only(bottom: 6),
-                      child: pw.Row(
-                        children: [
-                          pw.Container(
-                            width: 4,
-                            height: 4,
-                            decoration: pw.BoxDecoration(
-                              color: brandViolet,
-                              shape: pw.BoxShape.circle,
-                            ),
-                          ),
-                          pw.SizedBox(width: 10),
-                          pw.Text(
-                            doc['name'],
-                            style: pw.TextStyle(fontSize: 10),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
+                  "The applicant is cleared for final institutional enrollment steps.",
+                  style: pw.TextStyle(fontSize: 10)),
               pw.Spacer(),
-
-              // 4. MODERN FOOTER
               pw.Divider(color: PdfColors.grey300),
               pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        "AUTHENTICATED BY ADMISSIONS CORE",
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text("AUTHENTICATED BY ADMISSIONS CORE",
                         style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          fontSize: 8,
-                          color: PdfColors.grey700,
-                        ),
-                      ),
-                      pw.Text(
-                        "Computer Generated Document - Manual signature not required.",
-                        style: pw.TextStyle(
-                          fontSize: 7,
-                          color: PdfColors.grey600,
-                        ),
-                      ),
-                      pw.Text(
-                        "Reference: $timestamp",
-                        style: pw.TextStyle(
-                          fontSize: 7,
-                          color: PdfColors.grey600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  pw.Container(
-                    width: 50,
-                    height: 50,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.grey300),
-                    ),
-                    child: pw.Center(
-                      child: pw.Text(
-                        "QR TICKET",
-                        style: pw.TextStyle(
-                          fontSize: 6,
-                          color: PdfColors.grey400,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                            fontWeight: pw.FontWeight.bold, fontSize: 8)),
+                    pw.Text("Ref: $timestamp",
+                        style: pw.TextStyle(fontSize: 7)),
+                  ]),
             ],
           );
         },
@@ -316,64 +183,30 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
 
     try {
       final dir = await getTemporaryDirectory();
-      final file = File("${dir.path}/Admission_Slip_${student['id']}.pdf");
+      final file =
+          File("${dir.path}/Admission_Slip_${applicant['application_no']}.pdf");
       await file.writeAsBytes(await pdf.save());
       await OpenFile.open(file.path);
-
-      if (!isHistoryItem) {
-        setState(() {
-          final completedStudent = _queue.removeAt(index);
-          completedStudent['isApproved'] = true;
-          completedStudent['transferDate'] = timestamp;
-          _history.insert(0, completedStudent);
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: success,
-            content: Text(
-              "Admissions Package Generated for ${student['name']}. Moved to Transaction History.",
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.redAccent,
-          content: Text("Error processing document: $e"),
-        ),
-      );
-    }
+    } catch (_) {}
   }
 
-  pw.Widget _pdfMetaItem(String label, String val) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(
-          label,
-          style: pw.TextStyle(
-            fontSize: 7,
-            color: PdfColors.grey600,
-            fontWeight: pw.FontWeight.bold,
-          ),
-        ),
-        pw.Text(
-          val,
-          style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
-        ),
-      ],
-    );
-  }
+  pw.Widget _pdfMetaItem(String label, String val) =>
+      pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+        pw.Text(label,
+            style: pw.TextStyle(
+                fontSize: 7,
+                color: PdfColors.grey600,
+                fontWeight: pw.FontWeight.bold)),
+        pw.Text(val,
+            style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold))
+      ]);
 
   @override
   Widget build(BuildContext context) {
     final Color textColor = widget.isDarkMode ? Colors.white : pViolet;
     final Color cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
-    final Color subTextColor = widget.isDarkMode
-        ? Colors.white54
-        : Colors.blueGrey;
+    final Color subTextColor =
+        widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
     return DefaultTabController(
       length: 2,
@@ -382,61 +215,26 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(textColor),
+            Text("Verification Hub",
+                style: GoogleFonts.inter(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: textColor,
+                    letterSpacing: -1)),
+            const Text(
+                "Audit applicant requirements before handover to Accounting.",
+                style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
             const SizedBox(height: 24),
-            _buildTabBar(textColor),
+            _buildTabBar(),
             const SizedBox(height: 32),
-            Expanded(
+            SizedBox(
+              height: 700,
               child: TabBarView(
                 children: [
-                  // TAB 1: ACTIVE QUEUE
-                  _queue.isEmpty
-                      ? _buildEmptyState(
-                          "No active applicants in queue.",
-                          subTextColor,
-                        )
-                      : ListView.builder(
-                          itemCount: _queue.length,
-                          itemBuilder: (context, index) {
-                            final student = _queue[index];
-                            final progress = _calculateProgress(
-                              student['docs'],
-                            );
-                            return _buildVerificationCard(
-                              index,
-                              student,
-                              progress,
-                              cardColor,
-                              textColor,
-                              subTextColor,
-                              false,
-                            );
-                          },
-                        ),
-                  // TAB 2: TRANSACTION HISTORY
-                  _history.isEmpty
-                      ? _buildEmptyState(
-                          "No completed transactions yet.",
-                          subTextColor,
-                        )
-                      : ListView.builder(
-                          itemCount: _history.length,
-                          itemBuilder: (context, index) {
-                            final student = _history[index];
-                            final progress = _calculateProgress(
-                              student['docs'],
-                            );
-                            return _buildVerificationCard(
-                              index,
-                              student,
-                              progress,
-                              cardColor,
-                              textColor,
-                              subTextColor,
-                              true,
-                            );
-                          },
-                        ),
+                  _buildQueueStream(
+                      cardColor, textColor, subTextColor, 'Pending'),
+                  _buildQueueStream(
+                      cardColor, textColor, subTextColor, 'For Payment'),
                 ],
               ),
             ),
@@ -446,341 +244,151 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
     );
   }
 
-  Widget _buildHeader(Color textColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Document Verification",
-          style: GoogleFonts.inter(
-            fontSize: 28,
-            fontWeight: FontWeight.w900,
-            color: textColor,
-            letterSpacing: -1,
-          ),
+  Widget _buildTabBar() => Container(
+        height: 50,
+        decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12)),
+        child: TabBar(
+          indicator: BoxDecoration(
+              borderRadius: BorderRadius.circular(10), color: aViolet),
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.blueGrey,
+          labelStyle:
+              GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11),
+          tabs: const [
+            Tab(text: "1. VERIFICATION QUEUE"),
+            Tab(text: "2. SENT TO ACCOUNTING")
+          ],
         ),
-        const Text(
-          "Verify requirements and archive cleared applicants into the system ledger.",
-          style: TextStyle(color: Colors.blueGrey, fontSize: 14),
-        ),
-      ],
+      );
+
+  Widget _buildQueueStream(
+      Color cardBg, Color text, Color subText, String status) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: SupabaseService()
+          .client
+          .from('applicants')
+          .stream(primaryKey: ['id']).eq('status', status),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator(color: aViolet));
+        final list = snapshot.data!;
+        if (list.isEmpty) return _emptyState(subText);
+
+        return ListView.builder(
+          shrinkWrap: true,
+          itemCount: list.length,
+          itemBuilder: (context, index) {
+            final applicant = list[index];
+            final progress = _calculateProgress(applicant['id']);
+            return _buildVerificationCard(applicant, progress, cardBg, text,
+                subText, status == 'For Payment');
+          },
+        );
+      },
     );
   }
 
-  Widget _buildTabBar(Color textColor) {
-    return Container(
-      height: 50,
-      decoration: BoxDecoration(
-        color: widget.isDarkMode
-            ? Colors.white.withOpacity(0.05)
-            : Colors.black.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TabBar(
-        indicator: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: aViolet,
-        ),
-        labelColor: Colors.white,
-        unselectedLabelColor: Colors.blueGrey,
-        labelStyle: GoogleFonts.inter(
-          fontWeight: FontWeight.bold,
-          fontSize: 13,
-        ),
-        tabs: const [
-          Tab(text: "VERIFICATION QUEUE"),
-          Tab(text: "TRANSACTION HISTORY"),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(String message, Color subTextColor) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            LucideIcons.inbox,
-            size: 48,
-            color: subTextColor.withOpacity(0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(message, style: TextStyle(color: subTextColor)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVerificationCard(
-    int sIndex,
-    Map<String, dynamic> student,
-    double progress,
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-    bool isHistory,
-  ) {
+  Widget _buildVerificationCard(Map<String, dynamic> applicant, double progress,
+      Color cardBg, Color text, Color subText, bool isAccounting) {
     bool isComplete = progress == 1.0;
-    bool isApproved = student['isApproved'];
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: widget.isDarkMode
-              ? Colors.white.withOpacity(0.05)
-              : Colors.black.withOpacity(0.05),
-        ),
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          leading: Stack(
-            alignment: Alignment.center,
-            children: [
-              CircularProgressIndicator(
-                value: progress,
-                backgroundColor: widget.isDarkMode
-                    ? Colors.white10
-                    : Colors.grey[200],
-                color: isComplete ? success : aViolet,
-                strokeWidth: 6,
-              ),
-              if (isComplete)
-                const Icon(LucideIcons.check, size: 16, color: success),
-            ],
-          ),
-          title: Text(
-            student['name'],
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.w800,
-              color: textColor,
-              fontSize: 16,
-            ),
-          ),
-          subtitle: Text(
-            "${student['id']} • ${student['course']}",
-            style: TextStyle(color: subTextColor, fontSize: 12),
-          ),
-          trailing: isHistory
-              ? _badge("ARCHIVED", success)
-              : (isComplete
-                    ? _badge("READY", aViolet)
-                    : _badge(
-                        "${(progress * 100).toInt()}% COMPLETE",
-                        Colors.blueGrey,
-                      )),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Divider(height: 32, color: Colors.white10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "REQUIREMENT CHECKLIST",
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.blueGrey,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      if (isHistory)
-                        Text(
-                          "Transferred: ${student['transferDate']}",
-                          style: const TextStyle(
-                            color: Colors.blueGrey,
-                            fontSize: 10,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ...List.generate(student['docs'].length, (dIndex) {
-                    final doc = student['docs'][dIndex];
-                    return _buildDocToggle(
-                      sIndex,
-                      dIndex,
-                      doc,
-                      textColor,
-                      isHistory,
-                    );
-                  }),
-                  const SizedBox(height: 32),
-                  if (isComplete && !isApproved && !isHistory)
-                    _buildApprovalAction(sIndex),
-                  if (isHistory) _buildPostApprovalUI(sIndex),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDocToggle(
-    int sIndex,
-    int dIndex,
-    Map<String, dynamic> doc,
-    Color textColor,
-    bool isHistory,
-  ) {
-    bool isVerified = doc['status'];
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: InkWell(
-        onTap: isHistory ? null : () => _toggleDoc(sIndex, dIndex),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isVerified ? success.withOpacity(0.05) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isVerified ? success.withOpacity(0.2) : Colors.white10,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                isVerified ? LucideIcons.checkCircle : LucideIcons.circle,
-                color: isVerified ? success : Colors.blueGrey,
-                size: 20,
-              ),
-              const SizedBox(width: 16),
-              Text(
-                doc['name'],
-                style: TextStyle(
-                  color: isVerified ? textColor : Colors.blueGrey,
-                  fontWeight: isVerified ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                isVerified ? "VERIFIED" : "PENDING",
-                style: TextStyle(
-                  color: isVerified ? success : Colors.blueGrey,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildApprovalAction(int index) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: aViolet.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: aViolet.withOpacity(0.2)),
-      ),
-      child: Row(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white10)),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        leading: Stack(alignment: Alignment.center, children: [
+          CircularProgressIndicator(
+              value: isAccounting ? 1.0 : progress,
+              backgroundColor: Colors.white10,
+              color: (isAccounting || isComplete) ? success : aViolet),
+          if (isAccounting || isComplete)
+            const Icon(LucideIcons.check, size: 16, color: success),
+        ]),
+        title: Text(applicant['full_name'],
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: text)),
+        subtitle: Text(
+            "${applicant['application_no']} • ${applicant['applicant_type']}",
+            style: TextStyle(color: subText, fontSize: 12)),
+        trailing: isAccounting
+            ? _badge("IN ACCOUNTING", success)
+            : _badge("${(progress * 100).toInt()}%", Colors.blueGrey),
         children: [
-          const Icon(LucideIcons.shieldCheck, color: aViolet, size: 32),
-          const SizedBox(width: 20),
-          const Expanded(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Verification Finalized",
-                  style: TextStyle(fontWeight: FontWeight.bold, color: aViolet),
-                ),
-                Text(
-                  "Process transfer to move this record to the system history.",
-                  style: TextStyle(fontSize: 12, color: Colors.blueGrey),
-                ),
+                const Divider(height: 32, color: Colors.white10),
+                const Text("REQUIREMENT CHECKLIST",
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueGrey,
+                        letterSpacing: 1)),
+                const SizedBox(height: 16),
+                ...List.generate(
+                    5,
+                    (i) => _buildDocRow(
+                        applicant['id'],
+                        i,
+                        (_localDocState[applicant['id']] ??
+                            _getDefaultDocs())[i],
+                        text,
+                        isAccounting)),
+                if (isComplete && !isAccounting) ...[
+                  const SizedBox(height: 24),
+                  SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                          onPressed: () => _finalizeVerification(applicant),
+                          icon: const Icon(LucideIcons.shieldCheck),
+                          label: const Text("APPROVE & DIRECT TO ACCOUNTING"),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: aViolet))),
+                ],
               ],
             ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => _finalizeAndTransfer(index),
-            icon: const Icon(LucideIcons.database, size: 18),
-            label: const Text("TRANSFER & ARCHIVE"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: aViolet,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
+          )
         ],
       ),
     );
   }
 
-  Widget _buildPostApprovalUI(int index) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: success.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(LucideIcons.history, color: success, size: 20),
+  Widget _buildDocRow(
+      String appId, int i, Map<String, dynamic> doc, Color t, bool readOnly) {
+    bool done = readOnly || doc['status'];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: InkWell(
+        onTap: readOnly ? null : () => _toggleDoc(appId, i),
+        child: Row(children: [
+          Icon(done ? LucideIcons.checkCircle : LucideIcons.circle,
+              color: done ? success : Colors.blueGrey, size: 18),
           const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              "TRANSACTION LOGGED IN REGISTRAR SYSTEM",
-              style: TextStyle(
-                color: success,
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-            ),
-          ),
-          TextButton.icon(
-            onPressed: () => _finalizeAndTransfer(index, isHistoryItem: true),
-            icon: const Icon(LucideIcons.printer, size: 14, color: success),
-            label: const Text(
-              "RE-PRINT SLIP",
-              style: TextStyle(
-                color: success,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ],
+          Text(doc['name'],
+              style: TextStyle(color: done ? t : Colors.blueGrey, fontSize: 13))
+        ]),
       ),
     );
   }
 
-  Widget _badge(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+  Widget _emptyState(Color sub) => Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(LucideIcons.inbox, size: 48, color: sub.withOpacity(0.2)),
+        const SizedBox(height: 16),
+        Text("Queue is clear.", style: TextStyle(color: sub))
+      ]));
+  Widget _badge(String t, Color c) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
+          color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+      child: Text(t,
+          style:
+              TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold)));
 }

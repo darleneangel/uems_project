@@ -68,15 +68,12 @@ class _EnrollmentVerificationPanelState
 
   @override
   Widget build(BuildContext context) {
-    final Color textColor = widget.isDarkMode
-        ? Colors.white
-        : const Color(0xFF2E1065);
-    final Color cardColor = widget.isDarkMode
-        ? const Color(0xFF1E1B4B)
-        : Colors.white;
-    final Color subTextColor = widget.isDarkMode
-        ? Colors.white54
-        : Colors.blueGrey;
+    final Color textColor =
+        widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
+    final Color cardColor =
+        widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
+    final Color subTextColor =
+        widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
     return Padding(
       padding: const EdgeInsets.all(40),

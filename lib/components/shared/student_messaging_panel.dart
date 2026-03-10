@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../services/supabase_service.dart';
 
 class StudentMessagingPanel extends StatefulWidget {
   final bool isDarkMode;
-  const StudentMessagingPanel({super.key, required this.isDarkMode});
+  final String? studentId;
+  const StudentMessagingPanel(
+      {super.key, required this.isDarkMode, this.studentId});
 
   @override
   State<StudentMessagingPanel> createState() => _StudentMessagingPanelState();
@@ -13,100 +16,54 @@ class StudentMessagingPanel extends StatefulWidget {
 class _StudentMessagingPanelState extends State<StudentMessagingPanel> {
   int _selectedThreadIndex = 0;
   final TextEditingController _msgController = TextEditingController();
+  List<Map<String, dynamic>> _threads = [];
+  final Map<String, Map<String, dynamic>> _profileCache = {};
 
   // Modern Tonal Palette
   static const Color pViolet = Color(0xFF2E1065);
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color surfaceDark = Color(0xFF1E1B4B);
 
-  // --- MOCK DATA: THREADS (OFFICES) & MESSAGES ---
-  final List<Map<String, dynamic>> _threads = [
-    {
-      "name": "Admissions Office",
-      "department": "Undergraduate Admissions",
-      "status": "Online",
-      "lastMsg": "Your document review is complete.",
-      "time": "5m ago",
-      "unread": true,
-      "messages": [
-        {
-          "sender": "Student",
-          "text": "Hello, I would like to follow up on my application status.",
-          "time": "Yesterday",
-        },
-        {
-          "sender": "Office",
-          "text":
-              "Good day! Your document review is complete. Please check your portal.",
-          "time": "10:30 AM",
-        },
-      ],
-    },
-    {
-      "name": "Registrar's Office",
-      "department": "Records & Registration",
-      "status": "Away",
-      "lastMsg": "Transcript request processed.",
-      "time": "2h ago",
-      "unread": false,
-      "messages": [
-        {
-          "sender": "Student",
-          "text": "Can I request a copy of my grades?",
-          "time": "09:00 AM",
-        },
-        {
-          "sender": "Office",
-          "text":
-              "Transcript request processed. You may pick it up at Window 2.",
-          "time": "11:15 AM",
-        },
-      ],
-    },
-    {
-      "name": "Accounting Office",
-      "department": "Student Accounts",
-      "status": "Online",
-      "lastMsg": "Payment confirmed.",
-      "time": "1d ago",
-      "unread": false,
-      "messages": [
-        {
-          "sender": "Student",
-          "text": "I've sent the proof of payment for my tuition.",
-          "time": "Monday",
-        },
-        {
-          "sender": "Office",
-          "text": "Payment confirmed. Your balance is now updated.",
-          "time": "Tuesday",
-        },
-      ],
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _setupMessageStream();
+  }
 
-  void _sendMessage() {
+  void _setupMessageStream() {
+    if (widget.studentId == null) return;
+    SupabaseService()
+        .client
+        .from('messages')
+        .stream(primaryKey: ['id'])
+        .order('created_at')
+        .listen((data) async {
+          if (mounted) {
+            final grouped = await _groupMessagesIntoThreads(data);
+            if (mounted) setState(() => _threads = grouped);
+          }
+        });
+  }
+
+  void _sendMessage() async {
     final text = _msgController.text;
     if (text.isEmpty) return;
 
-    setState(() {
-      _threads[_selectedThreadIndex]['messages'].add({
-        "sender": "Student",
-        "text": text,
-        "time": "Just now",
-      });
-      _threads[_selectedThreadIndex]['lastMsg'] = text;
-      _msgController.clear();
+    await SupabaseService().sendMessage({
+      'sender_id': widget.studentId,
+      'receiver_id': _threads[_selectedThreadIndex]['id'],
+      'content': text,
+      'created_at': DateTime.now().toIso8601String(),
     });
+    _msgController.clear();
   }
 
   @override
   Widget build(BuildContext context) {
     final Color textColor = widget.isDarkMode ? Colors.white : pViolet;
     final Color cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
-    final Color subTextColor = widget.isDarkMode
-        ? Colors.white54
-        : Colors.blueGrey;
+    final Color subTextColor =
+        widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,6 +75,56 @@ class _StudentMessagingPanelState extends State<StudentMessagingPanel> {
         Expanded(child: _buildChatConsole(cardColor, textColor, subTextColor)),
       ],
     );
+  }
+
+  List<Map<String, dynamic>> _groupMessagesIntoThreads(
+      List<Map<String, dynamic>> data) {
+    if (data.isEmpty) return [];
+
+    final myId = widget.studentId;
+    Map<String, Map<String, dynamic>> threads = {};
+
+    for (var msg in data) {
+      // A thread is identified by the person who is NOT me
+      final otherId =
+          msg['sender_id'] == myId ? msg['receiver_id'] : msg['sender_id'];
+
+      if (otherId == null) continue;
+
+      if (!threads.containsKey(otherId)) {
+        threads[otherId] = {
+          'id': otherId,
+          'name':
+              'User ${otherId.toString().substring(0, 8)}', // Placeholder until profile fetch
+          'department': 'Direct Message',
+          'status': 'Online',
+          'unread': !(msg['is_read'] ?? true),
+          'lastMsg': msg['content'],
+          'time': msg['created_at'] != null
+              ? DateTime.parse(msg['created_at'])
+                  .toLocal()
+                  .toString()
+                  .split(' ')[1]
+                  .substring(0, 5)
+              : 'Now',
+          'messages': []
+        };
+      }
+
+      threads[otherId]!['lastMsg'] = msg['content'];
+      threads[otherId]!['messages'].add({
+        'sender_id': msg['sender_id'],
+        'text': msg['content'],
+        'time': msg['created_at'] != null
+            ? DateTime.parse(msg['created_at'])
+                .toLocal()
+                .toString()
+                .split(' ')[1]
+                .substring(0, 5)
+            : '',
+      });
+    }
+    return threads.values.toList();
   }
 
   Widget _buildThreadSidebar(Color cardBg, Color text, Color subText) {
@@ -251,6 +258,11 @@ class _StudentMessagingPanelState extends State<StudentMessagingPanel> {
   }
 
   Widget _buildChatConsole(Color cardBg, Color text, Color subText) {
+    if (_threads.isEmpty) {
+      return Center(
+        child: Text("No messages yet", style: TextStyle(color: subText)),
+      );
+    }
     final activeThread = _threads[_selectedThreadIndex];
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
@@ -318,30 +330,29 @@ class _StudentMessagingPanelState extends State<StudentMessagingPanel> {
   }
 
   Widget _buildMessageBubble(Map<String, dynamic> m, Color text) {
-    bool isStudent = m['sender'] == 'Student';
+    bool isMe = m['sender_id'] == widget.studentId;
     return Align(
-      alignment: isStudent ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         constraints: const BoxConstraints(maxWidth: 500),
         decoration: BoxDecoration(
-          color: isStudent
+          color: isMe
               ? aViolet
               : (widget.isDarkMode
-                    ? Colors.white.withOpacity(0.05)
-                    : Colors.grey[100]),
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.grey[100]),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
-          crossAxisAlignment: isStudent
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
+          crossAxisAlignment:
+              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             Text(
               m['text'],
               style: TextStyle(
-                color: isStudent ? Colors.white : text,
+                color: isMe ? Colors.white : text,
                 fontSize: 13,
               ),
             ),
@@ -349,7 +360,7 @@ class _StudentMessagingPanelState extends State<StudentMessagingPanel> {
             Text(
               m['time'],
               style: TextStyle(
-                color: isStudent ? Colors.white70 : Colors.blueGrey,
+                color: isMe ? Colors.white70 : Colors.blueGrey,
                 fontSize: 9,
               ),
             ),
@@ -363,9 +374,8 @@ class _StudentMessagingPanelState extends State<StudentMessagingPanel> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: widget.isDarkMode
-            ? Colors.black.withOpacity(0.1)
-            : Colors.grey[50],
+        color:
+            widget.isDarkMode ? Colors.black.withOpacity(0.1) : Colors.grey[50],
       ),
       child: Row(
         children: [
@@ -406,14 +416,14 @@ class _StudentMessagingPanelState extends State<StudentMessagingPanel> {
   }
 
   Widget _badge(String text, Color c) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: c.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Text(
-      text,
-      style: TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.w900),
-    ),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: c.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.w900),
+        ),
+      );
 }

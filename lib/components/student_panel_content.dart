@@ -11,26 +11,14 @@ import 'panels/offices_panel.dart';
 class StudentPanelContent extends StatelessWidget {
   final String panelType;
   final bool isDarkMode;
+  final Map<String, dynamic> studentData;
 
   const StudentPanelContent({
     super.key,
     required this.panelType,
     required this.isDarkMode,
+    required this.studentData,
   });
-
-  // --- CENTRALIZED MOCK DATABASE RECORD ---
-  // This Map acts as the "Source of Truth". Every panel now consumes this data.
-  static final Map<String, dynamic> mockStudentData = {
-    "id": "2024-00001",
-    "name": "DARLENE ANGEL",
-    "program": "BS Computer Science",
-    "year": "2nd Year",
-    "status": "Regular / Enrolled",
-    "semester": "2nd Semester SY 2025-2026",
-    "balance": 0.00,
-    "clearance_status": "Pending Registrar",
-    "email": "darlene.angel@student.edu",
-  };
 
   // Theme Constants
   static const Color aViolet = Color(0xFF8B5CF6);
@@ -56,27 +44,27 @@ class StudentPanelContent extends StatelessWidget {
       case 'subject_load':
         return SubjectLoadPanel(
           isDarkMode: isDarkMode,
-          studentData: mockStudentData,
+          studentData: studentData,
         );
       case 'assessment':
         return AssessmentPanel(
           isDarkMode: isDarkMode,
-          studentData: mockStudentData, // Added to satisfy your update
+          studentData: studentData,
         );
       case 'grade_book':
         return GradeBookPanel(
           isDarkMode: isDarkMode,
-          studentData: mockStudentData, // Added to satisfy your update
+          studentData: studentData,
         );
       case 'profile':
         return ProfilePanel(
           isDarkMode: isDarkMode,
-          studentData: mockStudentData,
+          studentData: studentData,
         );
       case 'offices':
         return OfficesPanel(
           isDarkMode: isDarkMode,
-          studentData: mockStudentData, // Added to satisfy your update
+          studentData: studentData,
         );
       default:
         return _buildDefaultPanel();

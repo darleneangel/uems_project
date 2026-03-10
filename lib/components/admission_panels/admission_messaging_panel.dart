@@ -160,23 +160,19 @@ class _AdmissionMessagingPanelState extends State<AdmissionMessagingPanel> {
   Widget build(BuildContext context) {
     final Color textColor = widget.isDarkMode ? Colors.white : pViolet;
     final Color cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
-    final Color subTextColor = widget.isDarkMode
-        ? Colors.white54
-        : Colors.blueGrey;
+    final Color subTextColor =
+        widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
-    return Padding(
-      padding: const EdgeInsets.all(40),
-      child: Row(
-        children: [
-          // 1. MODERN THREAD LIST SIDEBAR
-          _buildThreadSidebar(cardColor, textColor, subTextColor),
-          const SizedBox(width: 24),
-          // 2. INTERACTIVE CHAT & NOTICE CONSOLE
-          Expanded(
-            child: _buildChatConsole(cardColor, textColor, subTextColor),
-          ),
-        ],
-      ),
+    return Row(
+      children: [
+        // 1. MODERN THREAD LIST SIDEBAR
+        _buildThreadSidebar(cardColor, textColor, subTextColor),
+        const SizedBox(width: 24),
+        // 2. INTERACTIVE CHAT & NOTICE CONSOLE
+        Expanded(
+          child: _buildChatConsole(cardColor, textColor, subTextColor),
+        ),
+      ],
     );
   }
 
@@ -410,9 +406,8 @@ class _AdmissionMessagingPanelState extends State<AdmissionMessagingPanel> {
           border: isNotice ? Border.all(color: aViolet.withOpacity(0.3)) : null,
         ),
         child: Column(
-          crossAxisAlignment: isOfficer
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
+          crossAxisAlignment:
+              isOfficer ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             if (isNotice)
               const Row(
@@ -452,9 +447,8 @@ class _AdmissionMessagingPanelState extends State<AdmissionMessagingPanel> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: widget.isDarkMode
-            ? Colors.black.withOpacity(0.1)
-            : Colors.grey[50],
+        color:
+            widget.isDarkMode ? Colors.black.withOpacity(0.1) : Colors.grey[50],
       ),
       child: Row(
         children: [
@@ -557,16 +551,16 @@ class _AdmissionMessagingPanelState extends State<AdmissionMessagingPanel> {
 
   // --- UI HELPERS ---
   Widget _badge(String text, Color c) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: c.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Text(
-      text,
-      style: TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.w900),
-    ),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: c.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.w900),
+        ),
+      );
 
   Widget _actionIconButton(
     IconData icon,

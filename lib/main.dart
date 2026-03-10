@@ -1,14 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'views/login_view.dart';
+import 'services/supabase_service.dart'; // Import the service from the Canvas
 
-void main() {
+// 1. Change main to async to allow for database initialization
+void main() async {
+  // 2. Mandatory: Ensure Flutter handles are ready before calling native plugins (Supabase/SQLite)
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 3. Initialize the Core Sync Engine
+  // Replace these placeholders with your actual project credentials
+  try {
+    await SupabaseService.init();
+    print(' UEMS Engine Initialized Successfully');
+  } catch (e) {
+    print(' UEMS Initialization Failed: $e');
+  }
+
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-  //HELLO
+
   @override
   Widget build(BuildContext context) {
     final poppins = GoogleFonts.poppins();
