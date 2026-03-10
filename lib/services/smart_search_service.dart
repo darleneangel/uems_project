@@ -12,7 +12,11 @@ class SmartSearchService extends ChangeNotifier {
   List<String> _selectedDepartments = ['All'];
   List<String> _selectedCategories = ['All'];
   String _sortBy = 'relevance'; // relevance, name, date, amount
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
   List<SearchResult> _searchResults = [];
   bool _isSearching = false;
 
@@ -223,18 +227,32 @@ class SmartSearchService extends ChangeNotifier {
 
     // Filter by departments
     List<Map<String, dynamic>> filtered = _unifiedDatabase;
+<<<<<<< HEAD
 
     if (!_selectedDepartments.contains('All')) {
       filtered = filtered
           .where((item) => _selectedDepartments.contains(item['department']))
           .toList();
+=======
+    
+    if (!_selectedDepartments.contains('All')) {
+      filtered = filtered.where((item) =>
+        _selectedDepartments.contains(item['department'])
+      ).toList();
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
     }
 
     // Filter by categories
     if (!_selectedCategories.contains('All')) {
+<<<<<<< HEAD
       filtered = filtered
           .where((item) => _selectedCategories.contains(item['category']))
           .toList();
+=======
+      filtered = filtered.where((item) =>
+        _selectedCategories.contains(item['category'])
+      ).toList();
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
     }
 
     // Search across multiple fields
@@ -245,12 +263,21 @@ class SmartSearchService extends ChangeNotifier {
       final description = (item['description'] as String).toLowerCase();
       final id = (item['id'] as String).toLowerCase();
       final status = (item['status'] as String).toLowerCase();
+<<<<<<< HEAD
 
       return title.contains(queryLower) ||
           subtitle.contains(queryLower) ||
           description.contains(queryLower) ||
           id.contains(queryLower) ||
           status.contains(queryLower);
+=======
+      
+      return title.contains(queryLower) ||
+             subtitle.contains(queryLower) ||
+             description.contains(queryLower) ||
+             id.contains(queryLower) ||
+             status.contains(queryLower);
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
     }).toList();
 
     // Convert to SearchResult objects with relevance scoring
@@ -282,14 +309,22 @@ class SmartSearchService extends ChangeNotifier {
   /// Calculate relevance score for search result
   double _calculateRelevance(Map<String, dynamic> item, String query) {
     double score = 0.0;
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
     // Exact match in title gets highest score
     if ((item['title'] as String).toLowerCase() == query) {
       score += 100.0;
     } else if ((item['title'] as String).toLowerCase().contains(query)) {
       score += 50.0;
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
     // Match in ID or subtitle
     if ((item['id'] as String).toLowerCase().contains(query)) {
       score += 40.0;
@@ -297,12 +332,20 @@ class SmartSearchService extends ChangeNotifier {
     if ((item['subtitle'] as String).toLowerCase().contains(query)) {
       score += 30.0;
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
     // Match in description
     if ((item['description'] as String).toLowerCase().contains(query)) {
       score += 20.0;
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
     // Match in status
     if ((item['status'] as String).toLowerCase().contains(query)) {
       score += 10.0;
@@ -329,8 +372,14 @@ class SmartSearchService extends ChangeNotifier {
         break;
       case 'relevance':
       default:
+<<<<<<< HEAD
         _searchResults
             .sort((a, b) => b.relevanceScore.compareTo(a.relevanceScore));
+=======
+        _searchResults.sort((a, b) =>
+          b.relevanceScore.compareTo(a.relevanceScore)
+        );
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
         break;
     }
   }
@@ -371,10 +420,15 @@ class SmartSearchService extends ChangeNotifier {
   Map<String, int> getSearchStats() {
     return {
       'total': _searchResults.length,
+<<<<<<< HEAD
       'registrar':
           _searchResults.where((r) => r.department == 'Registrar').length,
       'accounting':
           _searchResults.where((r) => r.department == 'Accounting').length,
+=======
+      'registrar': _searchResults.where((r) => r.department == 'Registrar').length,
+      'accounting': _searchResults.where((r) => r.department == 'Accounting').length,
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
     };
   }
 }

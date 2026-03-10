@@ -473,8 +473,15 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                   _tableDataCell(s['time'], textColor, isSmall: true),
                   _tableDataCell(s['hrs/units'], textColor),
                   _tableDataCell(s['section'], subTextColor, isBold: true),
+<<<<<<< HEAD
                 ]))
             .toList(),
+=======
+                ],
+              ),
+            )
+            ,
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
       ],
     );
   }
@@ -509,6 +516,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                   style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+<<<<<<< HEAD
                       color: textColor)),
               const SizedBox(height: 20),
               ..._summaryFees.entries
@@ -522,6 +530,51 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text("Miscellaneous Items",
                   style: GoogleFonts.inter(
+=======
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ...summaryFees.entries
+                      .map((e) => _feeRow(e.key, e.value, textColor))
+                      ,
+                  const SizedBox(height: 32),
+                  Text(
+                    "Payment Schedules",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _paymentOptionCard(
+                    "Cash Option (10% Disc.)",
+                    "Full settlement: P43,725.00",
+                    success,
+                    textColor,
+                  ),
+                  const SizedBox(height: 8),
+                  _paymentOptionCard(
+                    "Installment Option",
+                    "Upon Registration: P15,000.00",
+                    aViolet,
+                    textColor,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 48),
+            // Misc Breakdown
+            Expanded(
+              flex: 5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Itemized Miscellaneous Fees",
+                    style: GoogleFonts.inter(
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: textColor)),

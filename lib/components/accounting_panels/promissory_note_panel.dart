@@ -102,18 +102,18 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
       int remainder = num % 100;
 
       if (hundreds > 0) {
-        result += ones[hundreds] + ' Hundred ';
+        result += '${ones[hundreds]} Hundred ';
       }
 
       if (remainder >= 20) {
-        result += tens[remainder ~/ 10] + ' ';
+        result += '${tens[remainder ~/ 10]} ';
         if (remainder % 10 > 0) {
-          result += ones[remainder % 10] + ' ';
+          result += '${ones[remainder % 10]} ';
         }
       } else if (remainder >= 10) {
-        result += teens[remainder - 10] + ' ';
+        result += '${teens[remainder - 10]} ';
       } else if (remainder > 0) {
-        result += ones[remainder] + ' ';
+        result += '${ones[remainder]} ';
       }
 
       return result.trim();
@@ -128,19 +128,19 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
       int remainder = whole % 1000;
 
       if (millions > 0) {
-        words += convertHundreds(millions) + ' Million ';
+        words += '${convertHundreds(millions)} Million ';
       }
       if (thousands > 0) {
-        words += convertHundreds(thousands) + ' Thousand ';
+        words += '${convertHundreds(thousands)} Thousand ';
       }
       if (remainder > 0) {
         words += convertHundreds(remainder);
       }
     }
 
-    words = words.trim() + ' Pesos';
+    words = '${words.trim()} Pesos';
     if (cents > 0) {
-      words += ' and ' + cents.toString() + ' Centavos';
+      words += ' and $cents Centavos';
     }
 
     return words;

@@ -10,7 +10,6 @@ import 'accounting_panels/documentation_panel.dart';
 import 'accounting_panels/daily_report_panel.dart';
 import 'accounting_panels/promissory_note_panel.dart';
 import 'shared/messaging_panel.dart';
-import 'accounting_panels/subject_load_fee_panel.dart';
 
 class AccountingPanelContent extends StatelessWidget {
   final int selectedIndex;

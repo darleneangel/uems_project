@@ -27,7 +27,11 @@ class _SmartSearchWidgetState extends State<SmartSearchWidget>
   final SmartSearchService _searchService = SmartSearchService();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _overlayFocusNode = FocusNode();
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
   bool _showFilters = false;
   bool _isOverlayOpen = false;
 
@@ -44,7 +48,11 @@ class _SmartSearchWidgetState extends State<SmartSearchWidget>
   @override
   void initState() {
     super.initState();
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
     if (widget.defaultDepartment != null) {
       _searchService.setDepartmentFilter([widget.defaultDepartment!]);
     }
@@ -266,8 +274,14 @@ class _SmartSearchWidgetState extends State<SmartSearchWidget>
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
+<<<<<<< HEAD
                       color:
                           widget.isDarkMode ? Colors.white10 : Colors.black12,
+=======
+                      color: widget.isDarkMode
+                          ? Colors.white10
+                          : Colors.black12,
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
                     ),
                   ),
                 ),
@@ -487,7 +501,13 @@ class _SmartSearchWidgetState extends State<SmartSearchWidget>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
+<<<<<<< HEAD
           color: isSelected ? aViolet.withOpacity(0.2) : Colors.transparent,
+=======
+          color: isSelected
+              ? aViolet.withOpacity(0.2)
+              : Colors.transparent,
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? aViolet : textColor.withOpacity(0.2),

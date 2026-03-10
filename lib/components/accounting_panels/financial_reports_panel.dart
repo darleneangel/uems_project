@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+<<<<<<< HEAD
 import '../../services/supabase_service.dart';
+=======
+import 'package:uems_project/services/financial_pdf_manager.dart';
+import 'package:uems_project/services/income_statement_pdf_service.dart';
+import 'package:uems_project/services/balance_sheet_pdf_service.dart';
+import 'package:uems_project/services/cash_flow_pdf_service.dart';
+import 'package:uems_project/services/tax_compliance_pdf_service.dart';
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
 
 class FinancialReportsPanel extends StatelessWidget {
   final bool isDarkMode;

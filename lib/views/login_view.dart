@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'dart:ui';
 import 'dart:math' as math;
 
 // Dashboard Imports
@@ -14,9 +13,13 @@ import 'accounting_dashboard_view.dart';
 import 'admission_dashboard_view.dart';
 import 'registrar_dashboard_view.dart';
 import 'hr_dashboard_view.dart';
+<<<<<<< HEAD
 import '../components/program_chair_dashboard_view.dart';
 import 'teacher_dashboard_view.dart';
 import '../services/supabase_service.dart';
+=======
+import 'forgot_password_view.dart';
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
 
 class UEMSLoginPage extends StatefulWidget {
   const UEMSLoginPage({super.key});
@@ -470,7 +473,61 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
               ],
             ),
           ),
+<<<<<<< HEAD
         ),
+=======
+
+          const SizedBox(height: 48),
+
+          _buildAnimatedItem(
+            _buildInputField(
+              controller: _idController,
+              label: "User ID",
+              hint: "Enter User ID",
+              icon: LucideIcons.user,
+            ),
+            1,
+          ),
+          const SizedBox(height: 24),
+          _buildAnimatedItem(
+            _buildInputField(
+              controller: _passwordController,
+              label: "Password",
+              hint: "Enter your password",
+              icon: LucideIcons.lock,
+              isPassword: true,
+            ),
+            2,
+          ),
+
+          _buildAnimatedItem(
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const ForgotPasswordView(),
+                    ),
+                  );
+                },
+                child: Text(
+                  "Forgot Password?",
+                  style: GoogleFonts.inter(
+                    color: accentViolet,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            2,
+          ),
+
+          const SizedBox(height: 32),
+          _buildAnimatedItem(_buildLoginButton(), 3),
+        ],
+>>>>>>> d138ad71e47d0fa2aa3fdce54d8072ffc7205485
       ),
     );
   }
