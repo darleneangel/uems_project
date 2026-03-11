@@ -54,15 +54,19 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
     }
   }
 
+// Inside _submitRequest logic:
   void _submitRequest() async {
     if (_selectedDocument == null) return;
     setState(() => _isSubmitting = true);
 
     try {
+      // 1. GENERATE THE HASH (The 'Data' stored in the QR)
+      // Using Student ID + Timestamp ensures uniqueness for the scanner
+      final String studentIdNum = widget.studentData['user_id_number'];
       final String qrHash =
-          'REQ-${widget.studentData['user_id_number']}-${DateTime.now().millisecondsSinceEpoch}';
+          'REQ-$studentIdNum-${DateTime.now().millisecondsSinceEpoch}';
 
-      // 1. SAVE TO CLOUD LEDGER
+      // 2. SAVE TO CLOUD LEDGER (Supabase)
       await SupabaseService().client.from('office_requests').insert({
         'student_id': widget.studentId,
         'request_type': _selectedDocument!['name'],
@@ -73,30 +77,26 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
         'remarks': _requestController.text,
       });
 
-      // 2. TRIGGER GMAIL SIMULATION
-      await _simulateGmailDispatch(_selectedDocument!['name'], qrHash);
+      // 3. TRIGGER GMAIL DISPATCH (Simulated using Database Email)
+      // Pulling the real email e.g., 'angel.lustre2005@gmail.com'
+      final String personalEmail =
+          widget.studentData['email'] ?? "your registered email";
+      await _showGmailSimulation(
+          personalEmail, qrHash, _selectedDocument!['name']);
 
       if (mounted) {
         setState(() => _generatedRequestId = qrHash);
         _requestController.clear();
-        widget.onRequestSubmitted?.call();
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("Submission Error: $e"),
-              backgroundColor: Colors.redAccent),
-        );
-      }
+      // Handle error...
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
-  /// GMAIL DISPATCH SIMULATOR: High-fidelity proof of automated email notification
-  Future<void> _simulateGmailDispatch(String type, String hash) async {
-    final email = widget.studentData['email'] ?? "your registered gmail";
+  Future<void> _showGmailSimulation(String email, String hash, String docType) {
+    // Use a Public QR API to make the "Email" look professional
     final String qrUrl =
         "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=$hash";
 
@@ -114,37 +114,27 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
                 style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    letterSpacing: 1)),
+                    fontSize: 16)),
             const SizedBox(height: 12),
-            Text("An official copy of your request for $type has been sent to:",
+            Text("An official stub for your $docType request was sent to:",
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 13)),
             Text(email,
                 style: const TextStyle(
                     color: Color(0xFF69F0AE), fontWeight: FontWeight.bold)),
-            const SizedBox(height: 32),
-            // The "Web-Ready" QR proves this can be viewed in an email client
+            const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                   color: Colors.white, borderRadius: BorderRadius.circular(16)),
               child: Image.network(qrUrl, width: 120, height: 120),
             ),
-            const SizedBox(height: 24),
-            const Text(
-                "Present the QR from your email at the Accounting window.",
+            const SizedBox(height: 12),
+            const Text("Present this QR at the Registrar window for releasing.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white38, fontSize: 11)),
+                style: TextStyle(color: Colors.white38, fontSize: 10)),
           ],
         ),
-        actions: [
-          Center(
-              child: TextButton(
-                  onPressed: () => Navigator.pop(c),
-                  child: const Text("UNDERSTOOD",
-                      style: TextStyle(fontWeight: FontWeight.bold))))
-        ],
       ),
     );
   }

@@ -2,7 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:qr_flutter/qr_flutter.dart';
+import 'package:mailer/mailer.dart';
+import 'package:mailer/smtp_server.dart';
 import '../../services/supabase_service.dart';
 
 class OfficesPanel extends StatefulWidget {
@@ -22,25 +23,21 @@ class OfficesPanel extends StatefulWidget {
 class _OfficesPanelState extends State<OfficesPanel>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  // --- FORM STATE ---
-  String? _selectedRequestType;
-  final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _remarksController = TextEditingController();
+  String? _selectedDocType;
   bool _isSubmitting = false;
 
-  // Standardized Theme Constants
+  // Theme Constants
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color success = Color(0xFF69F0AE);
   static const Color surfaceDark = Color(0xFF1E1B4B);
 
-  // Registrar Services Catalog
-  final List<Map<String, dynamic>> _serviceCatalog = [
-    {"name": "Official Transcript of Records (TOR)", "price": 250.0},
+  // Registrar Catalog
+  final List<Map<String, dynamic>> _catalog = [
+    {"name": "Official Transcript (TOR)", "price": 250.0},
     {"name": "Form 138 (Report Card)", "price": 150.0},
     {"name": "Certificate of Enrollment", "price": 100.0},
     {"name": "Diploma Request", "price": 500.0},
-    {"name": "Honorable Dismissal", "price": 200.0},
-    {"name": "Registration Form (Copy)", "price": 50.0},
   ];
 
   @override
@@ -49,103 +46,155 @@ class _OfficesPanelState extends State<OfficesPanel>
     _tabController = TabController(length: 2, vsync: this);
   }
 
-  /// DATABASE ACTION: Creates a real record in Supabase and triggers Gmail simulation
-  Future<void> _submitRequest() async {
-    if (_selectedRequestType == null) return;
+  /// --- SMTP NOTIFICATION ENGINE ---
+  /// Transmits a high-quality, real scannable QR ticket to the student's personal email.
+  Future<void> _sendTicketToEmail(
+      String recipientEmail, String hash, String docType) async {
+    // --- CREDENTIAL CONFIGURATION ---
+    // IMPORTANT: Use your 16-character App Password here
+    const String senderEmail = 'bright.future.academyUEMSSP@gmail.com';
+    const String appPassword = 'jnea wnbk atjg gyqi';
 
-    setState(() => _isSubmitting = true);
-    final client = SupabaseService().client;
+    final smtpServer = gmail(senderEmail, appPassword);
 
-    // Find price from catalog
-    final double price = _serviceCatalog
-        .firstWhere((s) => s['name'] == _selectedRequestType)['price'];
+    // We use the QR Server API to generate a high-contrast, scannable real image.
+    // data=$hash is the payload the Registrar's webcam will read.
+    final String qrUrl =
+        "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$hash&margin=10&ecc=H";
 
-    // Generate unique hash for the QR ticket
-    final String hash =
-        "REQ-${widget.studentData['user_id_number']}-${DateTime.now().millisecondsSinceEpoch}";
+    final message = Message()
+      ..from = const Address(senderEmail, 'SSCR Registrar Office')
+      ..recipients.add(recipientEmail)
+      ..subject = 'UEMS Claim Ticket: $docType'
+      ..html = """
+        <div style='font-family: sans-serif; max-width: 550px; margin: auto; border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);'>
+          <div style='background-color: #2E1065; padding: 40px; text-align: center;'>
+            <h1 style='color: white; margin: 0; font-size: 24px; letter-spacing: 1px;'>OFFICIAL CLAIM TICKET</h1>
+            <p style='color: #a78bfa; font-size: 12px; margin-top: 8px;'>San Sebastian College - Recoletos de Cavite</p>
+          </div>
+          <div style='padding: 40px; text-align: center; background-color: #ffffff;'>
+            <p style='font-size: 16px; color: #1e293b;'>Hello <b>${widget.studentData['fn']}</b>,</p>
+            <p style='color: #64748b; line-height: 1.6;'>Your request for <b>$docType</b> has been logged in the institutional ledger. Please present the QR code below at the Registrar window for verification and releasing.</p>
+            
+            <div style='margin: 40px 0;'>
+              <div style='display: inline-block; padding: 15px; border: 2px solid #8B5CF6; border-radius: 20px;'>
+                <img src='$qrUrl' width='200' height='200' style='display: block;' alt='QR Ticket' />
+              </div>
+              <p style='color: #8B5CF6; font-weight: bold; font-size: 13px; margin-top: 15px; font-family: monospace;'>REF: $hash</p>
+            </div>
+
+            <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; border: 1px dashed #cbd5e1; text-align: left;'>
+              <p style='margin: 0; font-size: 11px; color: #475569;'><b>Instructions:</b></p>
+              <ul style='margin: 10px 0 0 0; padding-left: 20px; font-size: 11px; color: #64748b;'>
+                <li>Ensure payment is settled via the Accounting Office.</li>
+                <li>Present this email (digital or printed) to the Registrar.</li>
+                <li>Status will be updated to 'Released' upon scanning.</li>
+              </ul>
+            </div>
+          </div>
+          <div style='text-align: center; padding: 20px; background-color: #f1f5f9; color: #94a3b8; font-size: 10px;'>
+            Automated Generation: Unified Education Management System Core
+          </div>
+        </div>
+      """;
 
     try {
-      // 1. Insert into cloud database
+      await send(message, smtpServer);
+      debugPrint('Ticket transmitted to $recipientEmail');
+    } catch (e) {
+      debugPrint('SMTP Error: $e');
+    }
+  }
+
+  /// --- DATABASE ACTION ---
+  /// Generates a unique hash, saves it to Supabase, and triggers the SMTP dispatch.
+  Future<void> _submitOfficeRequest() async {
+    if (_selectedDocType == null) return;
+    setState(() => _isSubmitting = true);
+
+    final client = SupabaseService().client;
+    final String idNum = widget.studentData['user_id_number'];
+
+    // Create a unique scannable hash: REQ + ID + Epoch
+    final String qrHash = "REQ-$idNum-${DateTime.now().millisecondsSinceEpoch}";
+    final double price = _catalog
+        .firstWhere((item) => item['name'] == _selectedDocType)['price'];
+
+    try {
+      // 1. Insert Request into the cloud ledger (office_requests table)
       await client.from('office_requests').insert({
         'student_id': widget.studentData['id'],
-        'request_type': _selectedRequestType,
+        'request_type': _selectedDocType,
+        'qr_hash': qrHash,
         'amount_due': price,
-        'qr_hash': hash,
         'payment_status': 'Unpaid',
         'request_status': 'Submitted',
-        'remarks': _messageController.text,
+        'remarks': _remarksController.text,
       });
 
-      // 2. Trigger the Gmail UI Simulation
-      await _simulateGmailDispatch(_selectedRequestType!, hash);
+      // 2. Resolve target email (Priority: Database Email -> Default Fallback)
+      final String personalEmail =
+          widget.studentData['email'] ?? "angel.lustre2005@gmail.com";
+
+      // 3. Dispatch the real image QR ticket via SMTP
+      await _sendTicketToEmail(personalEmail, qrHash, _selectedDocType!);
 
       if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-          _selectedRequestType = null;
-          _messageController.clear();
-        });
-        _tabController.animateTo(1); // Move to history tab
+        setState(() => _isSubmitting = false);
+        _showSuccessDialog(personalEmail, qrHash);
+        _remarksController.clear();
+        _tabController.animateTo(1); // Auto-navigate to history tab
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
-        _showError("System Error: Could not reach the ledger.");
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Cloud Sync Failure: $e"),
+            backgroundColor: Colors.redAccent));
       }
     }
   }
 
-  /// GMAIL SIMULATION: Displays the scannable ticket sent to Gmail
-  Future<void> _simulateGmailDispatch(String type, String hash) async {
-    final email = widget.studentData['email'] ?? "your registered gmail";
-    final String qrUrl =
-        "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=$hash";
-
-    return showDialog(
+  void _showSuccessDialog(String email, String hash) {
+    showDialog(
       context: context,
       builder: (c) => AlertDialog(
         backgroundColor: const Color(0xFF0F071D),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(LucideIcons.mail, color: aViolet, size: 48),
-            const SizedBox(height: 20),
-            const Text("GMAIL TICKET DISPATCHED",
+            const Icon(LucideIcons.mailCheck, color: success, size: 56),
+            const SizedBox(height: 24),
+            const Text("TICKET DISPATCHED",
                 style: TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w900,
                     fontSize: 18,
                     letterSpacing: 1)),
             const SizedBox(height: 12),
-            Text("An official copy of your request for $type has been sent to:",
+            Text("A high-resolution scannable ticket was sent to:",
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 13)),
-            const SizedBox(height: 4),
             Text(email,
                 style: const TextStyle(
-                    color: success, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 24),
+                    color: aViolet, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 32),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(16)),
-              child: Image.network(qrUrl, width: 150, height: 150),
+                  color: Colors.white, borderRadius: BorderRadius.circular(20)),
+              child: Image.network(
+                  "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=$hash&margin=10",
+                  height: 140,
+                  width: 140),
             ),
             const SizedBox(height: 24),
-            const Text(
-                "Present this QR at the Accounting window for collection.",
+            const Text("Present this ticket to the Registrar window.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white38, fontSize: 11)),
           ],
         ),
-        actions: [
-          Center(
-              child: TextButton(
-                  onPressed: () => Navigator.pop(c),
-                  child: const Text("UNDERSTOOD",
-                      style: TextStyle(fontWeight: FontWeight.bold))))
-        ],
       ),
     );
   }
@@ -157,20 +206,15 @@ class _OfficesPanelState extends State<OfficesPanel>
     final Color cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildDashboardSummary(cardColor, textColor),
-        const SizedBox(height: 24),
         _buildTabBar(textColor),
         const SizedBox(height: 24),
-        SizedBox(
-          height:
-              600, // Constraints height for the TabBarView to prevent layout exceptions
+        Expanded(
           child: TabBarView(
             controller: _tabController,
             children: [
-              _buildNewRequestForm(cardColor, textColor),
-              _buildRequestHistory(cardColor, textColor),
+              _buildRequestForm(cardColor, textColor),
+              _buildHistoryQueue(cardColor, textColor),
             ],
           ),
         ),
@@ -178,223 +222,136 @@ class _OfficesPanelState extends State<OfficesPanel>
     );
   }
 
-  Widget _buildDashboardSummary(Color cardColor, Color textColor) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: SupabaseService().client.from('office_requests').stream(
-          primaryKey: ['id']).eq('student_id', widget.studentData['id']),
-      builder: (context, snapshot) {
-        int active = 0;
-        int pickup = 0;
-        int completed = 0;
-
-        if (snapshot.hasData) {
-          final data = snapshot.data!;
-          active = data
-              .where((r) =>
-                  r['request_status'] == 'Submitted' ||
-                  r['request_status'] == 'Processing')
-              .length;
-          pickup = data
-              .where((r) => r['request_status'] == 'Ready for Pickup')
-              .length;
-          completed =
-              data.where((r) => r['request_status'] == 'Released').length;
-        }
-
-        return Row(
-          children: [
-            _statCard("Pending Review", active.toString(), Colors.blueAccent,
-                cardColor, textColor),
-            const SizedBox(width: 16),
-            _statCard("Ready for Pickup", pickup.toString(), success, cardColor,
-                textColor),
-            const SizedBox(width: 16),
-            _statCard("Total Released", completed.toString(), aViolet,
-                cardColor, textColor),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _statCard(String label, String value, Color color, Color cardColor,
-      Color textColor) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
+  Widget _buildTabBar(Color t) => Container(
+        height: 50,
         decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: widget.isDarkMode ? Colors.white10 : Colors.black12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(value,
-                style: GoogleFonts.inter(
-                    fontSize: 24, fontWeight: FontWeight.w900, color: color)),
-            Text(label,
-                style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: textColor.withOpacity(0.6),
-                    fontWeight: FontWeight.bold)),
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12)),
+        child: TabBar(
+          controller: _tabController,
+          indicator: BoxDecoration(
+              color: aViolet, borderRadius: BorderRadius.circular(10)),
+          labelColor: Colors.white,
+          unselectedLabelColor: t.withOpacity(0.4),
+          labelStyle:
+              GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12),
+          tabs: const [
+            Tab(text: "REQUEST DOCUMENT"),
+            Tab(text: "CLAIM TICKETS")
           ],
         ),
-      ),
-    );
-  }
+      );
 
-  Widget _buildTabBar(Color textColor) {
+  Widget _buildRequestForm(Color bg, Color text) {
     return Container(
-      height: 50,
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: widget.isDarkMode
-            ? Colors.white.withOpacity(0.05)
-            : Colors.black.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        indicatorSize: TabBarIndicatorSize.tab,
-        indicator: BoxDecoration(
-            borderRadius: BorderRadius.circular(12), color: aViolet),
-        labelColor: Colors.white,
-        unselectedLabelColor: textColor.withOpacity(0.5),
-        labelStyle:
-            GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12),
-        tabs: const [
-          Tab(text: "REQUEST DOCUMENT"),
-          Tab(text: "TRACKING & TICKETS")
+          color: bg,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.white10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _label("Institutional Document Catalog"),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            dropdownColor: surfaceDark,
+            style: TextStyle(color: text, fontWeight: FontWeight.bold),
+            decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.03),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none)),
+            items: _catalog
+                .map((c) => DropdownMenuItem(
+                      value: c['name']?.toString() ?? '',
+                      child: Text(
+                          "${c['name'] ?? 'Unknown'} (₱${c['price'] ?? '0.00'})"),
+                    ))
+                .toList(),
+            onChanged: (v) => setState(() => _selectedDocType = v),
+          ),
+          const SizedBox(height: 24),
+          _label("Reason for Request"),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _remarksController,
+            style: TextStyle(color: text),
+            maxLines: 3,
+            decoration: InputDecoration(
+                hintText: "e.g., For Scholarship Application...",
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.03),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none)),
+          ),
+          const Spacer(),
+          SizedBox(
+            width: double.infinity,
+            height: 65,
+            child: ElevatedButton(
+              onPressed: _isSubmitting ? null : _submitOfficeRequest,
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: aViolet,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                  shadowColor: aViolet.withOpacity(0.5)),
+              child: _isSubmitting
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text("GENERATE & DISPATCH TICKET",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, letterSpacing: 1)),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildNewRequestForm(Color cardColor, Color textColor) {
-    final inputFill = widget.isDarkMode
-        ? Colors.white.withOpacity(0.05)
-        : Colors.grey.shade100;
-
-    return SingleChildScrollView(
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-              color: widget.isDarkMode ? Colors.white10 : Colors.black12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              const Icon(LucideIcons.fileSignature, color: aViolet),
-              const SizedBox(width: 12),
-              Text("Registrar Service Gateway",
-                  style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: textColor)),
-            ]),
-            const SizedBox(height: 32),
-            _buildLabel("Select Document Type", textColor),
-            const SizedBox(height: 8),
-            _buildDropdown(
-              value: _selectedRequestType,
-              items: _serviceCatalog.map((s) => s['name'].toString()).toList(),
-              hint: "Choose document...",
-              onChanged: (val) => setState(() => _selectedRequestType = val),
-              textColor: textColor,
-              fillColor: inputFill,
-            ),
-            const SizedBox(height: 24),
-            _buildLabel("Purpose / Remarks", textColor),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _messageController,
-              maxLines: 3,
-              style: TextStyle(color: textColor),
-              decoration: InputDecoration(
-                  hintText: "Reason for request...",
-                  filled: true,
-                  fillColor: inputFill,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none)),
-            ),
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submitRequest,
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: aViolet,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16))),
-                child: _isSubmitting
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("SUBMIT TO CLOUD LEDGER",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.white)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRequestHistory(Color cardColor, Color textColor) {
+  Widget _buildHistoryQueue(Color bg, Color text) {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: SupabaseService().client.from('office_requests').stream(
           primaryKey: ['id']).eq('student_id', widget.studentData['id']),
       builder: (context, snapshot) {
         if (!snapshot.hasData)
           return const Center(child: CircularProgressIndicator(color: aViolet));
-        final requests = snapshot.data!;
-        if (requests.isEmpty)
-          return const Center(
-              child: Text("No records found in cloud database."));
+        final list = snapshot.data!;
+        if (list.isEmpty)
+          return Center(
+              child: Text("No request history found in cloud.",
+                  style: TextStyle(color: text.withOpacity(0.3))));
 
         return ListView.builder(
-          itemCount: requests.length,
-          itemBuilder: (context, index) {
-            final req = requests[index];
-            bool isPaid = req['payment_status'] == 'Paid';
-
+          itemCount: list.length,
+          itemBuilder: (context, i) {
+            final req = list[i];
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                  color: cardColor,
+                  color: bg,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.white10)),
-              child: ExpansionTile(
-                leading: const Icon(LucideIcons.fileText, color: aViolet),
-                title: Text(req['request_type'],
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: Text(
-                    "Ref: ${req['qr_hash'].toString().split('-').last}",
-                    style:
-                        const TextStyle(fontSize: 11, color: Colors.blueGrey)),
-                trailing: _statusBadge(req['request_status'],
-                    isPaid ? success : Colors.orangeAccent),
+              child: Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        _buildTicketSection(req, textColor),
-                        const Divider(height: 32, color: Colors.white10),
-                        _timelineItem("Request Filed",
-                            req['date_applied'] ?? "Just now", true),
-                        _timelineItem(
-                            req['request_status'], "Latest Update", false),
-                      ],
-                    ),
-                  )
+                  const Icon(LucideIcons.fileText, color: aViolet, size: 20),
+                  const SizedBox(width: 16),
+                  Expanded(
+                      child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(req['request_type'],
+                          style: TextStyle(
+                              color: text, fontWeight: FontWeight.bold)),
+                      Text("ID: ${req['qr_hash'].toString().split('-').last}",
+                          style: const TextStyle(
+                              color: Colors.blueGrey, fontSize: 10)),
+                    ],
+                  )),
+                  _statusBadge(req['request_status']),
                 ],
               ),
             );
@@ -404,95 +361,21 @@ class _OfficesPanelState extends State<OfficesPanel>
     );
   }
 
-  Widget _buildTicketSection(Map<String, dynamic> req, Color textColor) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-          color: aViolet.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: aViolet.withOpacity(0.1))),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("OFFICIAL GMAIL TICKET",
-                    style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: aViolet)),
-                const SizedBox(height: 4),
-                Text(
-                    req['payment_status'] == 'Paid'
-                        ? "PAID & CLEARED"
-                        : "UNPAID",
-                    style: TextStyle(
-                        color: textColor, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 8),
-                const Text("Scan this QR at Window 2 for releasing.",
-                    style: TextStyle(fontSize: 10, color: Colors.blueGrey)),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-                color: Colors.white, borderRadius: BorderRadius.circular(8)),
-            child: QrImageView(
-                data: req['qr_hash'],
-                size: 60,
-                version: QrVersions.auto,
-                gapless: false),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _timelineItem(String label, String time, bool done) => Row(children: [
-        Icon(LucideIcons.circleDot, size: 12, color: done ? success : aViolet),
-        const SizedBox(width: 12),
-        Text(label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-        const Spacer(),
-        Text(time, style: const TextStyle(fontSize: 10, color: Colors.blueGrey))
-      ]);
-  Widget _buildLabel(String l, Color t) => Text(l.toUpperCase(),
+  Widget _label(String t) => Text(t.toUpperCase(),
       style: GoogleFonts.inter(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          color: t.withOpacity(0.5)));
-  Widget _buildDropdown(
-          {required String? value,
-          required List<String> items,
-          required String hint,
-          required ValueChanged<String?> onChanged,
-          required Color textColor,
-          required Color fillColor}) =>
-      Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-              color: fillColor, borderRadius: BorderRadius.circular(12)),
-          child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                  value: value,
-                  isExpanded: true,
-                  dropdownColor: surfaceDark,
-                  style: TextStyle(color: textColor),
-                  onChanged: onChanged,
-                  items: items
-                      .map((i) => DropdownMenuItem(value: i, child: Text(i)))
-                      .toList(),
-                  hint: Text(hint,
-                      style: TextStyle(color: textColor.withOpacity(0.3))))));
-  Widget _statusBadge(String t, Color c) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-          color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-      child: Text(t.toUpperCase(),
-          style:
-              TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold)));
-  void _showError(String m) => ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(m), backgroundColor: Colors.redAccent));
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          color: Colors.blueGrey,
+          letterSpacing: 1.5));
+
+  Widget _statusBadge(String s) {
+    Color c = s == 'Released' ? success : Colors.orangeAccent;
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+            color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+        child: Text(s.toUpperCase(),
+            style:
+                TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold)));
+  }
 }

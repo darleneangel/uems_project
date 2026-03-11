@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../services/supabase_service.dart';
 
 class GradesManagementPanel extends StatefulWidget {
   final bool isDarkMode;
@@ -14,39 +15,18 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
   String? _selectedStudentId;
   final TextEditingController _searchController = TextEditingController();
 
-  final Map<String, dynamic> _mockGrades = {
-    "2024-00001": {
-      "name": "DARLENE ANGEL",
-      "gpa": "1.25",
-      "status": "Honor Roll",
-      "subjects": [
-        {"code": "ITCC 411", "title": "System Integration", "grade": "1.0"},
-        {"code": "ITCC 412", "title": "Information Security", "grade": "1.25"},
-        {"code": "ITCP 413", "title": "Capstone 1", "grade": "1.5"},
-      ],
-    },
-    "2024-00002": {
-      "name": "JUAN DELA CRUZ",
-      "gpa": "1.75",
-      "status": "Good Standing",
-      "subjects": [
-        {"code": "ITCC 411", "title": "System Integration", "grade": "1.75"},
-        {"code": "ITCC 412", "title": "Information Security", "grade": "2.0"},
-      ],
-    },
-  };
+  // Palette
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color success = Color(0xFF69F0AE);
 
   @override
   Widget build(BuildContext context) {
-    final Color textColor = widget.isDarkMode
-        ? Colors.white
-        : const Color(0xFF2E1065);
-    final Color cardColor = widget.isDarkMode
-        ? const Color(0xFF1E1B4B)
-        : Colors.white;
-    final Color subTextColor = widget.isDarkMode
-        ? Colors.white54
-        : Colors.blueGrey;
+    final Color textColor =
+        widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
+    final Color cardColor =
+        widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
+    final Color subTextColor =
+        widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,8 +35,8 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
         const SizedBox(height: 24),
         Expanded(
           child: _selectedStudentId == null
-              ? _buildSearchGrid(cardColor, textColor, subTextColor)
-              : _buildStudentGradeView(cardColor, textColor, subTextColor),
+              ? _buildCloudStudentList(cardColor, textColor, subTextColor)
+              : _buildLiveGradeView(cardColor, textColor, subTextColor),
         ),
       ],
     );
@@ -69,259 +49,220 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text("Scholastic Records Hub",
+                style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: textColor)),
             Text(
-              "Grades & Academic Records",
-              style: GoogleFonts.inter(
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                color: textColor,
-              ),
-            ),
-            Text(
-              "Monitor academic progress, compute GPAs, and audit submitted grades.",
-              style: TextStyle(color: subTextColor, fontSize: 13),
-            ),
+                "Audit grade distribution, compute institutional GWAs, and verify transcripts.",
+                style: TextStyle(color: subTextColor, fontSize: 13)),
           ],
         ),
-        _actionButton(
-          LucideIcons.fileText,
-          "EXPORT TRANSCRIPT",
-          const Color(0xFF8B5CF6),
+        ElevatedButton.icon(
+          onPressed: () {},
+          icon: const Icon(LucideIcons.fileText, size: 16),
+          label: const Text("GENERATE TRANSCRIPT"),
+          style: ElevatedButton.styleFrom(
+              backgroundColor: aViolet,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10))),
         ),
       ],
     );
   }
 
-  Widget _buildSearchGrid(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
+  Widget _buildCloudStudentList(
+      Color cardColor, Color textColor, Color subTextColor) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
-        ),
-      ),
+          color: cardColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white10)),
       child: Column(
         children: [
           TextField(
             controller: _searchController,
             style: TextStyle(color: textColor),
             decoration: InputDecoration(
-              hintText: "Search Student to View Grades...",
+              hintText: "Lookup Student for Grade Audit...",
               prefixIcon: const Icon(LucideIcons.search, size: 18),
               filled: true,
               fillColor: Colors.white.withOpacity(0.05),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
             ),
             onChanged: (v) => setState(() {}),
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: ListView(
-              children: _mockGrades.entries
-                  .where(
-                    (e) =>
-                        e.key.contains(_searchController.text) ||
-                        e.value['name'].contains(
-                          _searchController.text.toUpperCase(),
-                        ),
-                  )
-                  .map(
-                    (e) => ListTile(
-                      onTap: () => setState(() => _selectedStudentId = e.key),
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: SupabaseService()
+                  .client
+                  .from('profiles')
+                  .stream(primaryKey: ['id']).eq('role', 'student'),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData)
+                  return const Center(
+                      child: CircularProgressIndicator(color: aViolet));
+                final list = snapshot.data!
+                    .where((s) =>
+                        s['user_id_number']
+                            .toString()
+                            .contains(_searchController.text) ||
+                        s['fn']
+                            .toString()
+                            .toUpperCase()
+                            .contains(_searchController.text.toUpperCase()))
+                    .toList();
+
+                if (list.isEmpty)
+                  return Center(
+                      child: Text("No students found in cloud.",
+                          style: TextStyle(color: subTextColor)));
+
+                return ListView.builder(
+                  itemCount: list.length,
+                  itemBuilder: (context, i) {
+                    final student = list[i];
+                    return ListTile(
+                      onTap: () =>
+                          setState(() => _selectedStudentId = student['id']),
                       leading: CircleAvatar(
-                        backgroundColor: const Color(
-                          0xFF8B5CF6,
-                        ).withOpacity(0.1),
-                        child: const Icon(
-                          LucideIcons.star,
-                          size: 16,
-                          color: Color(0xFF8B5CF6),
-                        ),
-                      ),
-                      title: Text(
-                        e.value['name'],
-                        style: TextStyle(
-                          color: textColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(
-                        "Student ID: ${e.key} • GPA: ${e.value['gpa']}",
-                        style: TextStyle(color: subTextColor, fontSize: 12),
-                      ),
-                      trailing: const Icon(
-                        LucideIcons.chevronRight,
-                        size: 16,
-                        color: Colors.white24,
-                      ),
-                    ),
-                  )
-                  .toList(),
+                          backgroundColor: aViolet.withOpacity(0.1),
+                          child: const Icon(LucideIcons.star,
+                              size: 16, color: aViolet)),
+                      title: Text("${student['fn']} ${student['ln']}",
+                          style: TextStyle(
+                              color: textColor, fontWeight: FontWeight.bold)),
+                      subtitle: Text("ID: ${student['user_id_number']}",
+                          style: TextStyle(color: subTextColor, fontSize: 12)),
+                      trailing: const Icon(LucideIcons.chevronRight,
+                          size: 16, color: Colors.white24),
+                    );
+                  },
+                );
+              },
             ),
-          ),
+          )
         ],
       ),
     );
   }
 
-  Widget _buildStudentGradeView(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
-    final s = _mockGrades[_selectedStudentId];
+  Widget _buildLiveGradeView(
+      Color cardColor, Color textColor, Color subTextColor) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
-        ),
-      ),
+          color: cardColor,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.white10)),
       child: Column(
         children: [
           Row(
             children: [
               IconButton(
-                icon: Icon(LucideIcons.arrowLeft, color: textColor),
-                onPressed: () => setState(() => _selectedStudentId = null),
-              ),
+                  icon: Icon(LucideIcons.arrowLeft, color: textColor),
+                  onPressed: () => setState(() => _selectedStudentId = null)),
               const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    s['name'],
-                    style: GoogleFonts.inter(
+              Text("Detailed Academic Roster",
+                  style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
-                  ),
-                  Text(
-                    "Official Grade Record • ${s['status']}",
-                    style: TextStyle(color: subTextColor, fontSize: 12),
-                  ),
-                ],
-              ),
+                      color: textColor)),
               const Spacer(),
-              _statBadge(
-                "CUMULATIVE GPA: ${s['gpa']}",
-                const Color(0xFF69F0AE),
-              ),
+              _statBadge("CLOUD SYNC ACTIVE", success),
             ],
           ),
           const Divider(height: 48, color: Colors.white10),
           Expanded(
-            child: Table(
-              columnWidths: const {
-                0: FlexColumnWidth(1),
-                1: FlexColumnWidth(4),
-                2: FlexColumnWidth(1),
-              },
-              children: [
-                TableRow(
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: widget.isDarkMode
-                            ? Colors.white10
-                            : Colors.black12,
-                      ),
-                    ),
-                  ),
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              // JOIN: grades -> study_loads -> subjects
+              future: SupabaseService()
+                  .client
+                  .from('grades')
+                  .select('''
+                midterm_grade, final_grade, final_numeric_grade, status,
+                study_loads!inner (
+                  student_id,
+                  subjects (code, name)
+                )
+              ''')
+                  .eq('study_loads.student_id', _selectedStudentId!)
+                  .then((res) => List<Map<String, dynamic>>.from(res)),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData)
+                  return const Center(child: CircularProgressIndicator());
+                final grades = snapshot.data!;
+
+                if (grades.isEmpty)
+                  return Center(
+                      child: Text("No grades encoded for this student.",
+                          style: TextStyle(color: subTextColor)));
+
+                return Table(
+                  columnWidths: const {
+                    0: FlexColumnWidth(1),
+                    1: FlexColumnWidth(4),
+                    2: FlexColumnWidth(1)
+                  },
                   children: [
-                    _tableHead("CODE"),
-                    _tableHead("SUBJECT TITLE"),
-                    _tableHead("GRADE"),
-                  ],
-                ),
-                ...(s['subjects'] as List)
-                    .map(
-                      (sub) => TableRow(
+                    TableRow(
+                      decoration: BoxDecoration(
+                          border: Border(
+                              bottom: BorderSide(color: Colors.white10))),
+                      children: [
+                        _tableHead("CODE"),
+                        _tableHead("SUBJECT"),
+                        _tableHead("GRADE")
+                      ],
+                    ),
+                    ...grades.map((g) {
+                      final s = g['study_loads']?['subjects'];
+                      return TableRow(
                         children: [
-                          _tableCell(sub['code'], textColor),
-                          _tableCell(sub['title'], textColor),
+                          _tableCell(s?['code'] ?? 'N/A', textColor),
                           _tableCell(
-                            sub['grade'],
-                            const Color(0xFF8B5CF6),
-                            isBold: true,
-                          ),
+                              s?['name'] ?? 'Unknown Subject', textColor),
+                          _tableCell(g['final_grade'] ?? '-', aViolet,
+                              isBold: true),
                         ],
-                      ),
-                    )
-                    ,
-              ],
+                      );
+                    }).toList(),
+                  ],
+                );
+              },
             ),
-          ),
+          )
         ],
       ),
     );
   }
 
   Widget _tableHead(String text) => Padding(
-    padding: const EdgeInsets.all(12),
-    child: Text(
-      text,
-      style: const TextStyle(
-        color: Colors.blueGrey,
-        fontSize: 10,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-  );
+      padding: const EdgeInsets.all(12),
+      child: Text(text,
+          style: const TextStyle(
+              color: Colors.blueGrey,
+              fontSize: 10,
+              fontWeight: FontWeight.bold)));
   Widget _tableCell(String text, Color c, {bool isBold = false}) => Padding(
-    padding: const EdgeInsets.all(12),
-    child: Text(
-      text,
-      style: TextStyle(
-        color: c,
-        fontSize: 14,
-        fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-      ),
-    ),
-  );
-
-  Widget _actionButton(IconData icon, String label, Color c) {
-    return ElevatedButton.icon(
-      onPressed: () {},
-      icon: Icon(icon, size: 16),
-      label: Text(
-        label,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: c,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
+      padding: const EdgeInsets.all(12),
+      child: Text(text,
+          style: TextStyle(
+              color: c,
+              fontSize: 14,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal)));
   Widget _statBadge(String text, Color c) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-    decoration: BoxDecoration(
-      color: c.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: c.withOpacity(0.3)),
-    ),
-    child: Text(
-      text,
-      style: GoogleFonts.inter(
-        color: c,
-        fontSize: 12,
-        fontWeight: FontWeight.w900,
-      ),
-    ),
-  );
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+          color: c.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.withOpacity(0.3))),
+      child: Text(text,
+          style: GoogleFonts.inter(
+              color: c, fontSize: 10, fontWeight: FontWeight.w900)));
 }

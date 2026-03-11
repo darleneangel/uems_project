@@ -17,28 +17,25 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
   final TextEditingController _searchController = TextEditingController();
   String _filter = "All";
 
-  // Form State for Pre-Registration
-  String? _selectedCategory;
-  String? _selectedProgram;
-  bool _noMiddleName = false;
-  String _selectedGender = "Male";
-  DateTime? _selectedBirthDate;
-
-  // Real Database Lists
-  List<String> _dbCategories = [
+  // Real Database Lists (Map stored as: {'id': 'UUID', 'name': 'Course Name'})
+  List<Map<String, String>> _dbPrograms = [];
+  final List<String> _dbCategories = [
     "New Student",
     "Transferee",
     "Cross Enrollee",
     "Returning Student"
   ];
-  List<String> _dbPrograms = [];
+
   bool _isFetchingMasterData = false;
+
+  // Form State for Dialogs
+  String? _selectedCategoryId;
+  String? _selectedCourseId;
 
   // Palette
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color success = Color(0xFF69F0AE);
   static const Color surfaceDark = Color(0xFF1E1B4B);
-  static const Color accentCyan = Color(0xFF22D3EE);
 
   @override
   void initState() {
@@ -52,22 +49,20 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
     super.dispose();
   }
 
-  /// FETCH: Loads Courses/Programs from the real database
+  /// DATABASE: Loads Courses from the 'courses' table to populate the form
   Future<void> _loadMasterData() async {
     setState(() => _isFetchingMasterData = true);
     try {
       final client = SupabaseService().client;
-
-      // Fetching programs from the 'courses' table
       final List<dynamic> courseData =
-          await client.from('courses').select('name');
+          await client.from('courses').select('id, name');
 
       if (mounted) {
         setState(() {
-          _dbPrograms = courseData.map((c) => c['name'].toString()).toList();
-          if (_dbPrograms.isEmpty) {
-            _dbPrograms = ["No Programs Found in DB"];
-          }
+          _dbPrograms = courseData
+              .map((c) =>
+                  {'id': c['id'].toString(), 'name': c['name'].toString()})
+              .toList();
           _isFetchingMasterData = false;
         });
       }
@@ -77,52 +72,28 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
     }
   }
 
-  /// 1. PRE-REGISTRATION: Save temporary record to 'applicants'
+  /// CREATE: Save pre-registration to 'applicants' table
   Future<void> _handlePreRegistration(Map<String, dynamic> data) async {
     try {
       await SupabaseService().client.from('applicants').insert(data);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              backgroundColor: success,
-              content: Text("Applicant registered and added to directory.")),
-        );
+        _showToast("Intake Record Created Successfully.", success);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              backgroundColor: Colors.redAccent,
-              content: Text("Database Error: $e")),
-        );
-      }
+      if (mounted) _showToast("Database Sync Error: $e", Colors.redAccent);
     }
   }
 
-  /// 2. UPDATE: Modify existing record in 'applicants'
-  Future<void> _handleUpdateRegistration(
-      String id, Map<String, dynamic> data) async {
+  /// UPDATE: Modify status or details in 'applicants'
+  Future<void> _handleUpdateStatus(String id, String newStatus) async {
     try {
       await SupabaseService()
           .client
           .from('applicants')
-          .update(data)
-          .eq('id', id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              backgroundColor: success,
-              content: Text("Applicant record updated successfully.")),
-        );
-      }
+          .update({'status': newStatus}).eq('id', id);
+      if (mounted) _showToast("Applicant status set to $newStatus.", aViolet);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              backgroundColor: Colors.redAccent,
-              content: Text("Update Error: $e")),
-        );
-      }
+      if (mounted) _showToast("Update Failed: $e", Colors.redAccent);
     }
   }
 
@@ -146,9 +117,10 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
               stream: SupabaseService().client.from('applicants').stream(
                   primaryKey: ['id']).order('created_at', ascending: false),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(
                       child: CircularProgressIndicator(color: aViolet));
+                }
 
                 final list = snapshot.data!.where((a) {
                   final mSearch = a['full_name']
@@ -159,7 +131,7 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
                   return mSearch && mFilter;
                 }).toList();
 
-                if (list.isEmpty) return _emptyState(textColor);
+                if (list.isEmpty) return _buildEmptyState(textColor);
 
                 return ListView.builder(
                   itemCount: list.length,
@@ -180,13 +152,14 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Applicant Directory",
+              Text("Applicant Intake Directory",
                   style: GoogleFonts.inter(
                       fontSize: 28,
                       fontWeight: FontWeight.w900,
                       color: t,
                       letterSpacing: -1)),
-              const Text("Manage temporary records for incoming students.",
+              const Text(
+                  "Consolidated view of pre-registration records awaiting verification.",
                   style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
             ],
           ),
@@ -228,7 +201,7 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
                 onChanged: (v) => setState(() {}),
                 style: TextStyle(color: t),
                 decoration: const InputDecoration(
-                    hintText: "Search name or ID...",
+                    hintText: "Search applicant by legal name...",
                     prefixIcon: Icon(LucideIcons.search, color: aViolet),
                     border: InputBorder.none),
               ),
@@ -237,7 +210,6 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
           const SizedBox(width: 16),
           _filterChip("All"),
           _filterChip("Pending"),
-          _filterChip("For Payment"),
           _filterChip("Verified"),
         ],
       );
@@ -287,19 +259,32 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
           ),
           _statusBadge(a['status']),
           const SizedBox(width: 16),
-          IconButton(
-              icon: const Icon(LucideIcons.edit3,
-                  size: 18, color: Colors.blueGrey),
-              onPressed: () => _showEditApplicationDialog(context, a)),
+          _actionMenu(a),
         ],
       ),
     );
   }
 
+  Widget _actionMenu(Map<String, dynamic> a) {
+    return PopupMenuButton<String>(
+      icon: const Icon(LucideIcons.moreVertical, color: Colors.blueGrey),
+      color: surfaceDark,
+      onSelected: (val) => _handleUpdateStatus(a['id'], val),
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+            value: 'Pending',
+            child:
+                Text("Set to Pending", style: TextStyle(color: Colors.white))),
+        const PopupMenuItem(
+            value: 'Verified',
+            child: Text("Set to Verified", style: TextStyle(color: success))),
+      ],
+    );
+  }
+
   Widget _statusBadge(String s) {
-    Color c = Colors.orangeAccent;
-    if (s == 'Verified' || s == 'Paid') c = success;
-    if (s == 'For Payment') c = accentCyan;
+    Color c =
+        (s == 'Verified' || s == 'Admitted') ? success : Colors.orangeAccent;
     return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
@@ -309,20 +294,15 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
                 TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.w900)));
   }
 
-  // --- PRE-REGISTRATION DIALOG ---
+  // --- DIALOGS ---
 
   void _showNewApplicationDialog(BuildContext context) {
-    final TextEditingController surnameCtrl = TextEditingController();
-    final TextEditingController givenNameCtrl = TextEditingController();
-    final TextEditingController emailCtrl = TextEditingController();
-
-    // Reset selection state for a fresh dialog session
-    _selectedCategory = null;
-    _selectedProgram = null;
+    final surnameCtrl = TextEditingController();
+    final givenNameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.8),
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
@@ -334,8 +314,8 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
             content: Container(
               width: 850,
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Sidebar
                   Container(
                     width: 250,
                     padding: const EdgeInsets.all(40),
@@ -347,32 +327,23 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(LucideIcons.school,
+                        const Icon(LucideIcons.userPlus,
                             color: aViolet, size: 40),
                         const SizedBox(height: 24),
-                        Text("Pre-Registration",
+                        Text("Pre-Reg\nSystem",
                             style: GoogleFonts.inter(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w900,
                                 color: aViolet,
                                 height: 1.1)),
-                        const SizedBox(height: 16),
-                        const Text(
-                            "Create a temporary intake record for the Admissions pipeline.",
-                            style: TextStyle(
-                                color: Colors.blueGrey,
-                                fontSize: 12,
-                                height: 1.5)),
                         const Spacer(),
-                        _stepIndicator(
-                            "1", "Categorization", _selectedCategory != null),
-                        _stepIndicator(
-                            "2", "Academic Choice", _selectedProgram != null),
-                        _stepIndicator("3", "Identity Details",
-                            givenNameCtrl.text.isNotEmpty),
+                        _step("Category", _selectedCategoryId != null),
+                        _step("Program", _selectedCourseId != null),
+                        _step("Identity", givenNameCtrl.text.isNotEmpty),
                       ],
                     ),
                   ),
+                  // Form
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(40),
@@ -380,26 +351,24 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Applicant Metadata",
+                            Text("Database Provisioning",
                                 style: _sectionHeaderStyle()),
                             const SizedBox(height: 24),
-                            // Real DB Dropdown: Categories
+                            _buildLabel("Intake Classification *"),
                             _buildDropdown(
-                                "Entrance Category *",
-                                _selectedCategory,
-                                _dbCategories,
-                                (v) => setDialogState(
-                                    () => _selectedCategory = v)),
+                                value: _selectedCategoryId,
+                                items: _dbCategories,
+                                onChanged: (v) => setDialogState(
+                                    () => _selectedCategoryId = v)),
                             const SizedBox(height: 16),
-                            // Real DB Dropdown: Programs (Courses)
-                            _buildDropdown(
-                                "Target Program *",
-                                _selectedProgram,
-                                _dbPrograms,
-                                (v) =>
-                                    setDialogState(() => _selectedProgram = v)),
+                            _buildLabel("Target Course (from Courses Table) *"),
+                            _buildMapDropdown(
+                                value: _selectedCourseId,
+                                items: _dbPrograms,
+                                onChanged: (v) => setDialogState(
+                                    () => _selectedCourseId = v)),
                             const SizedBox(height: 32),
-                            Text("Personal Identity",
+                            Text("Legal Identity",
                                 style: _sectionHeaderStyle()),
                             const SizedBox(height: 24),
                             Row(children: [
@@ -416,15 +385,12 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
                                 children: [
                                   TextButton(
                                       onPressed: () => Navigator.pop(context),
-                                      child: const Text("CANCEL",
-                                          style: TextStyle(
-                                              color: Colors.blueGrey,
-                                              fontWeight: FontWeight.bold))),
+                                      child: const Text("CANCEL")),
                                   const SizedBox(width: 20),
                                   ElevatedButton(
                                     onPressed: () {
-                                      if (_selectedCategory == null ||
-                                          _selectedProgram == null ||
+                                      if (_selectedCategoryId == null ||
+                                          _selectedCourseId == null ||
                                           surnameCtrl.text.isEmpty) return;
                                       _handlePreRegistration({
                                         "application_no":
@@ -432,8 +398,9 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
                                         "full_name":
                                             "${givenNameCtrl.text.toUpperCase()} ${surnameCtrl.text.toUpperCase()}",
                                         "email": emailCtrl.text,
-                                        "applicant_type": _selectedCategory,
-                                        "target_program": _selectedProgram,
+                                        "applicant_type": _selectedCategoryId,
+                                        "target_course_id":
+                                            _selectedCourseId, // Mapped to UUID
                                         "status": "Pending",
                                       });
                                       Navigator.pop(context);
@@ -441,13 +408,8 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
                                     style: ElevatedButton.styleFrom(
                                         backgroundColor: aViolet,
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 32, vertical: 18),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12))),
-                                    child: const Text("INITIALIZE APPLICATION",
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                            horizontal: 32, vertical: 18)),
+                                    child: const Text("INITIALIZE RECORD"),
                                   ),
                                 ]),
                           ],
@@ -464,159 +426,27 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
     );
   }
 
-  // --- EDIT REGISTRATION DIALOG ---
+  // --- UI HELPERS ---
 
-  void _showEditApplicationDialog(
-      BuildContext context, Map<String, dynamic> applicant) {
-    // Simple parsing logic to split full name back into Given Name and Surname
-    final nameParts = applicant['full_name'].toString().split(' ');
-    final String initialSurname = nameParts.length > 1 ? nameParts.last : "";
-    final String initialGivenName = nameParts.length > 1
-        ? nameParts.sublist(0, nameParts.length - 1).join(' ')
-        : nameParts.first;
-
-    final TextEditingController surnameCtrl =
-        TextEditingController(text: initialSurname);
-    final TextEditingController givenNameCtrl =
-        TextEditingController(text: initialGivenName);
-    final TextEditingController emailCtrl =
-        TextEditingController(text: applicant['email'] ?? "");
-
-    String? localCategory = applicant['applicant_type'];
-    String? localProgram =
-        applicant['target_program']; // Assumes column exists in DB
-
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.8),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor:
-                widget.isDarkMode ? const Color(0xFF0F071D) : Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
-            contentPadding: EdgeInsets.zero,
-            content: Container(
-              width: 850,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 250,
-                    padding: const EdgeInsets.all(40),
-                    decoration: BoxDecoration(
-                        color: aViolet.withOpacity(0.05),
-                        borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(32),
-                            bottomLeft: Radius.circular(32))),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(LucideIcons.edit3, color: aViolet, size: 40),
-                        const SizedBox(height: 24),
-                        Text("Edit Record",
-                            style: GoogleFonts.inter(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                color: aViolet,
-                                height: 1.1)),
-                        const SizedBox(height: 16),
-                        Text(
-                            "Modifying details for ${applicant['application_no']}",
-                            style: const TextStyle(
-                                color: Colors.blueGrey,
-                                fontSize: 12,
-                                height: 1.5)),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(40),
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Applicant Metadata",
-                                style: _sectionHeaderStyle()),
-                            const SizedBox(height: 24),
-                            _buildDropdown(
-                                "Entrance Category *",
-                                localCategory,
-                                _dbCategories,
-                                (v) => setDialogState(() => localCategory = v)),
-                            const SizedBox(height: 16),
-                            _buildDropdown(
-                                "Target Program *",
-                                localProgram,
-                                _dbPrograms,
-                                (v) => setDialogState(() => localProgram = v)),
-                            const SizedBox(height: 32),
-                            Text("Personal Identity",
-                                style: _sectionHeaderStyle()),
-                            const SizedBox(height: 24),
-                            Row(children: [
-                              Expanded(child: _field("Surname *", surnameCtrl)),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                  child: _field("Given Name *", givenNameCtrl)),
-                            ]),
-                            const SizedBox(height: 16),
-                            _field("Email Address *", emailCtrl),
-                            const SizedBox(height: 40),
-                            Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text("CANCEL",
-                                          style: TextStyle(
-                                              color: Colors.blueGrey,
-                                              fontWeight: FontWeight.bold))),
-                                  const SizedBox(width: 20),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      _handleUpdateRegistration(
-                                          applicant['id'], {
-                                        "full_name":
-                                            "${givenNameCtrl.text.toUpperCase()} ${surnameCtrl.text.toUpperCase()}",
-                                        "email": emailCtrl.text,
-                                        "applicant_type": localCategory,
-                                        "target_program": localProgram,
-                                      });
-                                      Navigator.pop(context);
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: aViolet,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 32, vertical: 18),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12))),
-                                    child: const Text("SAVE CHANGES",
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ),
-                                ]),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // --- UI ATOMS ---
+  Widget _step(String l, bool a) => Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(children: [
+        Icon(a ? LucideIcons.checkCircle2 : LucideIcons.circle,
+            size: 14, color: a ? aViolet : Colors.blueGrey),
+        const SizedBox(width: 12),
+        Text(l,
+            style: TextStyle(
+                color: a ? aViolet : Colors.blueGrey,
+                fontSize: 12,
+                fontWeight: a ? FontWeight.bold : FontWeight.normal))
+      ]));
   Widget _field(String l, TextEditingController c) =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _label(l),
+        Text(l.toUpperCase(),
+            style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueGrey)),
         const SizedBox(height: 8),
         TextField(
             controller: c,
@@ -629,57 +459,64 @@ class _ApplicantManagementPanelState extends State<ApplicantManagementPanel> {
       ]);
 
   Widget _buildDropdown(
-          String l, String? v, List<String> i, Function(String?) onChanged) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _label(l),
-        const SizedBox(height: 8),
-        Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.02),
-                borderRadius: BorderRadius.circular(12)),
-            child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                    value: v,
-                    isExpanded: true,
-                    hint: const Text("Select from database...",
-                        style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
-                    items: i
-                        .map((e) => DropdownMenuItem(
-                            value: e,
-                            child:
-                                Text(e, style: const TextStyle(fontSize: 13))))
-                        .toList(),
-                    onChanged: onChanged)))
-      ]);
+      {required String? value,
+      required List<String> items,
+      required Function(String?) onChanged}) {
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.02),
+            borderRadius: BorderRadius.circular(12)),
+        child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+                value: value,
+                isExpanded: true,
+                items: items
+                    .map((e) => DropdownMenuItem(
+                        value: e,
+                        child: Text(e, style: const TextStyle(fontSize: 13))))
+                    .toList(),
+                onChanged: onChanged)));
+  }
 
-  Widget _stepIndicator(String n, String l, bool a) => Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(children: [
-        CircleAvatar(
-            radius: 10,
-            backgroundColor: a ? aViolet : Colors.blueGrey.withOpacity(0.2),
-            child: Text(n,
-                style: const TextStyle(fontSize: 10, color: Colors.white))),
-        const SizedBox(width: 12),
-        Text(l,
-            style: TextStyle(
-                fontSize: 12,
-                color: a ? aViolet : Colors.blueGrey,
-                fontWeight: a ? FontWeight.bold : FontWeight.normal))
-      ]));
-  Widget _label(String t) => Text(t.toUpperCase(),
-      style: GoogleFonts.inter(
-          fontSize: 9,
-          fontWeight: FontWeight.w800,
-          color: Colors.blueGrey,
-          letterSpacing: 0.5));
+  Widget _buildMapDropdown(
+      {required String? value,
+      required List<Map<String, String>> items,
+      required Function(String?) onChanged}) {
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.02),
+            borderRadius: BorderRadius.circular(12)),
+        child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+                value: value,
+                isExpanded: true,
+                items: items
+                    .map((e) => DropdownMenuItem(
+                        value: e['id'],
+                        child: Text(e['name']!,
+                            style: const TextStyle(fontSize: 13))))
+                    .toList(),
+                onChanged: onChanged)));
+  }
+
+  Widget _buildLabel(String t) => Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(t.toUpperCase(),
+          style: GoogleFonts.inter(
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              color: Colors.blueGrey,
+              letterSpacing: 0.5)));
   TextStyle _sectionHeaderStyle() => GoogleFonts.inter(
       fontSize: 12,
       fontWeight: FontWeight.w900,
       color: aViolet,
       letterSpacing: 1.5);
-  Widget _emptyState(Color t) => Center(
-      child: Text("No applicants found matching filter.",
+  Widget _buildEmptyState(Color t) => Center(
+      child: Text("No applicants found in the cloud directory.",
           style: TextStyle(color: t.withOpacity(0.2))));
+  void _showToast(String m, Color c) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(m), backgroundColor: c));
 }

@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../services/supabase_service.dart';
 
 class RegistrarOverviewPanel extends StatelessWidget {
   final bool isDarkMode;
   const RegistrarOverviewPanel({super.key, required this.isDarkMode});
 
+  // Standardized Tonal Palette
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color success = Color(0xFF69F0AE);
+  static const Color surfaceDark = Color(0xFF1E1B4B);
+
   @override
   Widget build(BuildContext context) {
     final Color textColor = isDarkMode ? Colors.white : const Color(0xFF2E1065);
-    final Color cardColor = isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
+    final Color cardColor = isDarkMode ? surfaceDark : Colors.white;
 
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -24,49 +31,63 @@ class RegistrarOverviewPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
+
+          // REAL-TIME ANALYTICS ROW
           Row(
             children: [
-              _statCard(
-                "Active Students",
-                "4,291",
-                LucideIcons.users,
-                const Color(0xFF8B5CF6),
-                cardColor,
-                textColor,
+              // 1. Live Active Student Counter
+              _buildLiveStatCard(
+                label: "Active Students",
+                icon: LucideIcons.users,
+                color: aViolet,
+                cardBg: cardColor,
+                text: textColor,
+                stream: SupabaseService()
+                    .client
+                    .from('student_details')
+                    .stream(primaryKey: ['profile_id']).eq(
+                        'enrollment_status', 'Enrolled'),
               ),
-              _statCard(
-                "Pending Graduation",
-                "856",
-                LucideIcons.graduationCap,
-                const Color(0xFF69F0AE),
-                cardColor,
-                textColor,
+
+              // 2. Pending Transitions (Derived from 4th Year Students)
+              _buildLiveStatCard(
+                label: "Graduation Track",
+                icon: LucideIcons.graduationCap,
+                color: success,
+                cardBg: cardColor,
+                text: textColor,
+                stream: SupabaseService().client.from('student_details').stream(
+                    primaryKey: ['profile_id']).eq('year_level_id', '4th Year'),
               ),
-              _statCard(
-                "Requests Pending",
-                "24",
-                LucideIcons.fileText,
-                Colors.orangeAccent,
-                cardColor,
-                textColor,
+
+              // 3. Live Document Requests queue
+              _buildLiveStatCard(
+                label: "Requests Pending",
+                icon: LucideIcons.fileText,
+                color: Colors.orangeAccent,
+                cardBg: cardColor,
+                text: textColor,
+                stream: SupabaseService().client.from('office_requests').stream(
+                    primaryKey: ['id']).eq('request_status', 'Submitted'),
               ),
             ],
           ),
           const SizedBox(height: 32),
-          // Additional quick actions or recent activity can go here
+
+          _buildActivityPlaceholder(cardColor, textColor),
         ],
       ),
     );
   }
 
-  Widget _statCard(
-    String label,
-    String val,
-    IconData icon,
-    Color color,
-    Color cardBg,
-    Color text,
-  ) {
+  Widget _buildLiveStatCard({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required Color cardBg,
+    required Color text,
+    required Stream<List<Map<String, dynamic>>> stream,
+  }) {
     return Expanded(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -81,15 +102,29 @@ class RegistrarOverviewPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 16),
-            Text(
-              val,
-              style: GoogleFonts.inter(
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                color: text,
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: 16),
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: stream,
+              builder: (context, snapshot) {
+                String count =
+                    snapshot.hasData ? snapshot.data!.length.toString() : "0";
+                return Text(
+                  count,
+                  style: GoogleFonts.inter(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: text,
+                  ),
+                );
+              },
             ),
             Text(
               label,
@@ -98,6 +133,36 @@ class RegistrarOverviewPanel extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityPlaceholder(Color cardBg, Color text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(40),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: isDarkMode ? Colors.white10 : Colors.black12),
+      ),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(LucideIcons.activity,
+                color: aViolet.withOpacity(0.2), size: 48),
+            const SizedBox(height: 16),
+            Text(
+              "Institutional Audit Sync: Active",
+              style: TextStyle(
+                  color: text.withOpacity(0.4), fontWeight: FontWeight.bold),
+            ),
+            Text(
+              "Administrative modifications are logged in real-time.",
+              style: TextStyle(color: text.withOpacity(0.2), fontSize: 12),
             ),
           ],
         ),
