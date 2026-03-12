@@ -10,6 +10,7 @@ import 'registrar_panels/curriculum_catalog_panel.dart';
 import 'registrar_panels/reporting_compliance_panel.dart';
 import 'registrar_panels/registrar_messages_panel.dart';
 import 'registrar_panels/student_requests_panel.dart';
+import 'registrar_panels/audit_trail_panel.dart';
 
 class RegistrarPanelContent extends StatelessWidget {
   final String panelType;
@@ -73,6 +74,11 @@ class RegistrarPanelContent extends StatelessWidget {
       case 'requests':
         return StudentRequestsPanel(
           key: const ValueKey('requests'),
+          isDarkMode: isDarkMode,
+        );
+      case 'audit':
+        return AuditTrailPanel(
+          key: const ValueKey('audit'),
           isDarkMode: isDarkMode,
         );
       case 'overview':

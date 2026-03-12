@@ -14,7 +14,7 @@ class SupabaseService {
     await Supabase.initialize(
       url: 'https://ipmkemontxkxzfymidej.supabase.co',
       anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwbWtlbW9udHhreHpmeW1pZGVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNjMxNzcsImV4cCI6MjA4ODYzOTE3N30.oJxVpgxwmXUxyTWi-jC8mKuTkUP4RYgaqmin-Kxn5ms', // Use your project's anon key
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwbWtlbW9udHhreHpmeW1pZGVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNjMxNzcsImV4cCI6MjA4ODYzOTE3N30.oJxVpgxwmXUxyTWi-jC8mKuTkUP4RYgaqmin-Kxn5ms',
     );
   }
 
@@ -35,6 +35,16 @@ class SupabaseService {
   /// Fetches a specific profile by ID
   Future<Map<String, dynamic>?> getProfileById(String id) async {
     return await _client.from('profiles').select().eq('id', id).maybeSingle();
+  }
+
+  /// NEW: Identifies the first available Registrar to initialize a student thread
+  Future<Map<String, dynamic>?> getRegistrarContact() async {
+    return await _client
+        .from('profiles')
+        .select('id, fn, ln, role')
+        .eq('role', 'registrar')
+        .limit(1)
+        .maybeSingle();
   }
 
   // --- REAL-TIME STREAMS ---

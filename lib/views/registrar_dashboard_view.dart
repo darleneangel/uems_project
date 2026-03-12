@@ -29,6 +29,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
     'reports', // 7
     'messages', // 8
     'requests', // 9
+    'audit', // 10
   ];
 
   static const Color pViolet = Color(0xFF2E1065);
@@ -234,6 +235,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
                 _sidebarHeader("SYSTEM"),
                 _menuItem(LucideIcons.mail, "Student Inbox", 8),
                 _menuItem(LucideIcons.fileSignature, "Document Requests", 9),
+                _menuItem(LucideIcons.history, "Institutional Audit", 10),
               ],
             ),
           ),
@@ -326,11 +328,11 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
   }
 
   Widget _headerAction(IconData icon, Color color) => Container(
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.05),
-      shape: BoxShape.circle,
-    ),
-    child: Icon(icon, color: color, size: 20),
-  );
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.05),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: color, size: 20),
+      );
 }

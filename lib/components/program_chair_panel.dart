@@ -16,7 +16,7 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color surfaceDark = Color(0xFF1E1033);
   static const Color lCard = Color(0xFFFFFFFF);
-  
+
   late bool _isDarkMode;
 
   // Internal in-memory store for program items
@@ -96,9 +96,14 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
     final email = _emailController.text.trim();
     final employeeId = _employeeIdController.text.trim();
     final password = _passwordController.text.trim();
-    
+
     // Validate all required fields
-    if (title.isEmpty || name.isEmpty || department.isEmpty || email.isEmpty || employeeId.isEmpty || password.isEmpty) {
+    if (title.isEmpty ||
+        name.isEmpty ||
+        department.isEmpty ||
+        email.isEmpty ||
+        employeeId.isEmpty ||
+        password.isEmpty) {
       List<String> missingFields = [];
       if (title.isEmpty) missingFields.add('Title');
       if (name.isEmpty) missingFields.add('Name');
@@ -106,9 +111,11 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
       if (email.isEmpty) missingFields.add('Email');
       if (employeeId.isEmpty) missingFields.add('Employee ID');
       if (password.isEmpty) missingFields.add('Password');
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill all required fields: ${missingFields.join(', ')}')),
+        SnackBar(
+            content: Text(
+                'Please fill all required fields: ${missingFields.join(', ')}')),
       );
       return;
     }
@@ -169,8 +176,14 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
   // Styled action card
   Widget _actionCard(String key, String label, IconData icon, bool selected) {
     final bg = selected
-        ? LinearGradient(colors: [_isDarkMode ? aViolet : pViolet, _isDarkMode ? pViolet : aViolet.withValues(alpha:0.8)])
-        : LinearGradient(colors: [_isDarkMode ? Colors.white10 : Colors.grey.shade100, _isDarkMode ? Colors.white12 : Colors.grey.shade200]);
+        ? LinearGradient(colors: [
+            _isDarkMode ? aViolet : pViolet,
+            _isDarkMode ? pViolet : aViolet.withValues(alpha: 0.8)
+          ])
+        : LinearGradient(colors: [
+            _isDarkMode ? Colors.white10 : Colors.grey.shade100,
+            _isDarkMode ? Colors.white12 : Colors.grey.shade200
+          ]);
     return GestureDetector(
       onTap: () {
         switch (key) {
@@ -199,7 +212,7 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
           gradient: bg,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected 
+            color: selected
                 ? (_isDarkMode ? aViolet : pViolet)
                 : (_isDarkMode ? Colors.white10 : Colors.grey.shade300),
             width: selected ? 1.5 : 1.0,
@@ -210,23 +223,31 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: selected ? (_isDarkMode ? Colors.white24 : Colors.black12) : Colors.transparent,
+                color: selected
+                    ? (_isDarkMode ? Colors.white24 : Colors.black12)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: selected 
+                  color: selected
                       ? (_isDarkMode ? Colors.white38 : Colors.black26)
                       : Colors.transparent,
                   width: 1.0,
                 ),
               ),
-              child: Icon(icon, color: selected ? Colors.white : (_isDarkMode ? Colors.white70 : Colors.black54), size: 20),
+              child: Icon(icon,
+                  color: selected
+                      ? Colors.white
+                      : (_isDarkMode ? Colors.white70 : Colors.black54),
+                  size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 label,
                 style: GoogleFonts.inter(
-                  color: selected ? Colors.white : (_isDarkMode ? Colors.white70 : Colors.black54),
+                  color: selected
+                      ? Colors.white
+                      : (_isDarkMode ? Colors.white70 : Colors.black54),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -245,11 +266,13 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
     final hintColor = _isDarkMode ? Colors.white30 : Colors.grey.shade500;
     final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
     final borderColor = _isDarkMode ? Colors.white24 : Colors.grey.shade300;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Administrator Details', style: GoogleFonts.inter(color: textColor, fontSize: 14, fontWeight: FontWeight.bold)),
+        Text('Administrator Details',
+            style: GoogleFonts.inter(
+                color: textColor, fontSize: 14, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         TextField(
           controller: _nameController,
@@ -259,18 +282,20 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
             hintStyle: TextStyle(color: hintColor),
             filled: true,
             fillColor: fillColor,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
+              borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: borderColor, width: 2.0),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
+              borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: borderColor, width: 2.0),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
-              borderSide: BorderSide(color: _isDarkMode ? aViolet : pViolet, width: 2.5),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                  color: _isDarkMode ? aViolet : pViolet, width: 2.5),
             ),
           ),
         ),
@@ -283,18 +308,20 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
             hintStyle: TextStyle(color: hintColor),
             filled: true,
             fillColor: fillColor,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
+              borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: borderColor, width: 2.0),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
+              borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: borderColor, width: 2.0),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
-              borderSide: BorderSide(color: _isDarkMode ? aViolet : pViolet, width: 2.5),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                  color: _isDarkMode ? aViolet : pViolet, width: 2.5),
             ),
           ),
         ),
@@ -307,18 +334,20 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
             hintStyle: TextStyle(color: hintColor),
             filled: true,
             fillColor: fillColor,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
+              borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: borderColor, width: 2.0),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
+              borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: borderColor, width: 2.0),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
-              borderSide: BorderSide(color: _isDarkMode ? aViolet : pViolet, width: 2.5),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                  color: _isDarkMode ? aViolet : pViolet, width: 2.5),
             ),
           ),
         ),
@@ -331,18 +360,20 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
             hintStyle: TextStyle(color: hintColor),
             filled: true,
             fillColor: fillColor,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
+              borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: borderColor, width: 2.0),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
+              borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: borderColor, width: 2.0),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
-              borderSide: BorderSide(color: _isDarkMode ? aViolet : pViolet, width: 2.5),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                  color: _isDarkMode ? aViolet : pViolet, width: 2.5),
             ),
           ),
         ),
@@ -356,18 +387,20 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
             hintStyle: TextStyle(color: hintColor),
             filled: true,
             fillColor: fillColor,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
+              borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: borderColor, width: 2.0),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
+              borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: borderColor, width: 2.0),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10), 
-              borderSide: BorderSide(color: _isDarkMode ? aViolet : pViolet, width: 2.5),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                  color: _isDarkMode ? aViolet : pViolet, width: 2.5),
             ),
           ),
         ),
@@ -379,8 +412,10 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
                 onPressed: _submitCreateOrUpdate,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _isDarkMode ? aViolet : pViolet,
-                  side: BorderSide(color: _isDarkMode ? aViolet : pViolet, width: 2.0),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  side: BorderSide(
+                      color: _isDarkMode ? aViolet : pViolet, width: 2.0),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -409,7 +444,8 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
               },
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: borderColor, width: 2.0),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -435,7 +471,7 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
     final subTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
     final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
     final borderColor = _isDarkMode ? Colors.white24 : Colors.grey.shade300;
-    
+
     if (visible.isEmpty) {
       return Text(
         'No program items found.',
@@ -508,7 +544,7 @@ class _ProgramChairPanelState extends State<ProgramChairPanel> {
     final subTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
     final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
     final borderColor = _isDarkMode ? Colors.white24 : Colors.grey.shade300;
-    
+
     if (archived.isEmpty) {
       return Text(
         'No archived items.',
