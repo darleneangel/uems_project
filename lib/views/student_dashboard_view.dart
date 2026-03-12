@@ -64,7 +64,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
 
     final client = SupabaseService().client;
     final studentId = widget.userData!['id'];
-    final now = DateTime.now().toIso8601String();
+    final now = DateTime.now();
+    final timeOnly =
+        "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:00";
 
     try {
       // Parallel data fetching for performance

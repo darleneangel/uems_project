@@ -48,6 +48,10 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
     final client = SupabaseService().client;
     final String profileId = widget.studentData['id'];
 
+    final now = DateTime.now();
+    final timeOnly =
+        "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:00";
+
     try {
       // 1. Fetch official Study Load (Joined with Subjects)
       final List<dynamic> loadData = await client
