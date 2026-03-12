@@ -318,7 +318,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                             _animateEntrance(
                                 2,
                                 Text(
-                                  "UEMS: The Intelligent Core for Academic Excellence at SSCR-Cavite.",
+                                  "UEMS: The Intelligent Core for Academic Excellence at Bright Future Academy.",
                                   style: TextStyle(
                                       color: Colors.white.withOpacity(0.7),
                                       fontSize: 18,
@@ -360,7 +360,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                           const SizedBox(height: 40),
                           _animateEntrance(
                               1,
-                              Text("WELCOME BACK",
+                              Text("WELCOME",
                                   style: GoogleFonts.inter(
                                       fontSize: 34,
                                       fontWeight: FontWeight.w900,
@@ -376,13 +376,13 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                                       fontWeight: FontWeight.w500))),
                           const SizedBox(height: 40),
                           _animateEntrance(
-                              2, _buildLabel("Identity Identifier")),
+                              2, _buildLabel("Identification Number")),
                           _animateEntrance(
                               2,
                               _buildTextField(_idController, "e.g., 202350031",
                                   LucideIcons.user)),
                           const SizedBox(height: 24),
-                          _animateEntrance(3, _buildLabel("Security Key")),
+                          _animateEntrance(3, _buildLabel("Password")),
                           _animateEntrance(
                               3,
                               _buildTextField(_passwordController, "••••••••",
@@ -420,7 +420,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                                   const Spacer(),
                                   TextButton(
                                       onPressed: () {},
-                                      child: const Text("Recovery Logic",
+                                      child: const Text("Forgot Password?",
                                           style: TextStyle(
                                               color: aViolet,
                                               fontSize: 14,
@@ -451,7 +451,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           children: [
-                                            Text("SYNCHRONIZE SESSION",
+                                            Text("LOG IN",
                                                 style: GoogleFonts.inter(
                                                     fontWeight: FontWeight.w900,
                                                     letterSpacing: 1.5,

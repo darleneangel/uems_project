@@ -1,238 +1,255 @@
-import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:camera/camera.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:zxing_lib/zxing.dart';
-import 'package:zxing_lib/common.dart';
-import 'package:zxing_lib/qrcode.dart';
-import 'package:image/image.dart' as img;
+import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
-class WindowsQRScanner extends StatefulWidget {
+class WindowsQRScanner extends StatelessWidget {
   final Function(String code) onScan;
   final VoidCallback onManualEntry;
 
   const WindowsQRScanner(
       {super.key, required this.onScan, required this.onManualEntry});
 
-  @override
-  State<WindowsQRScanner> createState() => _WindowsQRScannerState();
-}
+  /// THE SIMPLE ENGINE: Opens the dedicated high-priority camera window
+  Future<void> _launchSimpleScanner(BuildContext context) async {
+    var res = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SimpleBarcodeScannerPage(),
+      ),
+    );
 
-class _WindowsQRScannerState extends State<WindowsQRScanner> {
-  CameraController? _controller;
-  bool _isReadyToShow = false;
-  String? _statusText = "Detecting Institutional Hardware...";
-  bool _hasError = false;
-  Timer? _scanTimer;
-  int _currentCameraIndex = 0;
-  List<CameraDescription> _availableCameras = [];
-
-  @override
-  void initState() {
-    super.initState();
-    // Delay to let the UI dialog animation finish
-    Future.delayed(const Duration(milliseconds: 1000), () => _probeHardware());
-  }
-
-  /// THE PROBER: Iterates through all Windows camera handles to bypass locks
-  Future<void> _probeHardware() async {
-    if (!mounted) return;
-
-    try {
-      _availableCameras = await availableCameras();
-      if (_availableCameras.isEmpty) {
-        setState(() {
-          _statusText = "No 2M USB Camera found. Check connection.";
-          _hasError = true;
-        });
-        return;
-      }
-
-      _attemptHandshake(_currentCameraIndex);
-    } catch (e) {
-      setState(() {
-        _statusText = "Hardware Access Denied: $e";
-        _hasError = true;
-      });
-    }
-  }
-
-  Future<void> _attemptHandshake(int index) async {
-    if (!mounted) return;
-
-    // Release any previous attempts
-    if (_controller != null) {
-      await _controller!.dispose();
-      _controller = null;
-    }
-
-    final camera = _availableCameras[index];
-    setState(() {
-      _statusText = "Pinging Hardware Hub [Index $index]...";
-      _hasError = false;
-    });
-
-    try {
-      final controller = CameraController(
-        camera,
-        ResolutionPreset.low, // Minimum bandwidth for best chance of success
-        enableAudio: false,
-      );
-
-      // Timeout wrapper: If driver doesn't answer in 5s, it's locked
-      await controller.initialize().timeout(const Duration(seconds: 5));
-
-      if (mounted) {
-        setState(() {
-          _controller = controller;
-          _isReadyToShow = true;
-          _statusText = "Encrypted Stream Active";
-        });
-
-        // Scan loop (Throttled for Windows stability)
-        _scanTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-          if (!mounted || _hasError || _controller == null) timer.cancel();
-          _captureAndProcess();
-        });
-      }
-    } catch (e) {
-      // If index 0 fails, try the next one (Windows often has multiple handles for 1 camera)
-      if (index + 1 < _availableCameras.length) {
-        _currentCameraIndex++;
-        _attemptHandshake(_currentCameraIndex);
-      } else {
-        if (mounted) {
-          setState(() {
-            _hasError = true;
-            _statusText =
-                "Windows Driver Conflict Detected.\n(All hardware handles are locked)";
-          });
-        }
+    if (res is String && res != "-1") {
+      onScan(res);
+      if (context.mounted) {
+        Navigator.pop(context); // Close this hub after a successful scan
       }
     }
-  }
-
-  Future<void> _captureAndProcess() async {
-    if (_controller == null || !_controller!.value.isInitialized || _hasError)
-      return;
-    try {
-      final XFile image = await _controller!.takePicture();
-      final bytes = await image.readAsBytes();
-      final img.Image? bitmap = img.decodeImage(bytes);
-
-      if (bitmap != null && mounted) {
-        final pixels = bitmap.toUint8List().buffer.asInt32List();
-        final source = RGBLuminanceSource(bitmap.width, bitmap.height, pixels);
-        final result =
-            QRCodeReader().decode(BinaryBitmap(HybridBinarizer(source)));
-
-        if (result.text != null) {
-          HapticFeedback.vibrate();
-          widget.onScan(result.text!);
-        }
-      }
-    } catch (_) {}
-  }
-
-  @override
-  void dispose() {
-    _scanTimer?.cancel();
-    _controller?.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF0F071D),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+      backgroundColor: const Color(0xFF0F071D), // Deep Space Violet
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
+      elevation: 24,
       child: Container(
-        width: 500,
-        height: 620,
-        padding: const EdgeInsets.all(32),
+        width: 600, // Enlarge the terminal width
+        height: 750, // Enlarge the terminal height
+        padding: const EdgeInsets.all(48),
         child: Column(
           children: [
-            Row(
-              children: [
-                const Icon(LucideIcons.shieldCheck, color: Color(0xFF8B5CF6)),
-                const SizedBox(width: 12),
-                Text("CORE VALIDATOR",
-                    style: GoogleFonts.inter(
-                        color: Colors.white, fontWeight: FontWeight.w900)),
-                const Spacer(),
-                IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(LucideIcons.x, color: Colors.white24))
-              ],
-            ),
-            const SizedBox(height: 32),
+            _buildHeader(),
+            const SizedBox(height: 40),
+
+            // --- THE VISUAL VIEWPORT (Simulated Scanner Area) ---
             Expanded(
               child: Container(
+                width: double.infinity,
                 decoration: BoxDecoration(
                   color: Colors.black,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(32),
                   border: Border.all(
-                      color: _hasError
-                          ? Colors.redAccent.withOpacity(0.2)
-                          : Colors.white10),
+                      color: const Color(0xFF8B5CF6).withOpacity(0.3),
+                      width: 2),
                 ),
-                child: _isReadyToShow && _controller != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: CameraPreview(_controller!))
-                    : _buildStatusView(),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Atmospheric Background Grid
+                    Opacity(
+                      opacity: 0.1,
+                      child: CustomPaint(
+                        painter: GridPainter(),
+                        size: Size.infinite,
+                      ),
+                    ),
+
+                    // Center Instruction
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(LucideIcons.scanLine,
+                            color: Color(0xFF8B5CF6), size: 80),
+                        const SizedBox(height: 24),
+                        Text(
+                          "HARDWARE READY",
+                          style: GoogleFonts.orbitron(
+                            color: const Color(0xFF8B5CF6),
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 4,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Corner Brackets
+                    Positioned(top: 30, left: 30, child: _buildCorner(0)),
+                    Positioned(top: 30, right: 30, child: _buildCorner(1)),
+                    Positioned(bottom: 30, left: 30, child: _buildCorner(3)),
+                    Positioned(bottom: 30, right: 30, child: _buildCorner(2)),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 32),
-            _buildActionArea(),
+
+            const SizedBox(height: 48),
+            _buildActionButtons(context),
+            const SizedBox(height: 24),
+
+            const Text(
+              "Institutional Protocol v4.4 • Encrypted Channel Active",
+              style: TextStyle(
+                  color: Colors.white10,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusView() => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!_hasError)
-              const CircularProgressIndicator(color: Color(0xFF8B5CF6))
-            else
-              const Icon(LucideIcons.alertCircle,
-                  color: Colors.orangeAccent, size: 40),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(_statusText!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+  Widget _buildHeader() => Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B5CF6).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
             ),
+            child: const Icon(LucideIcons.shieldCheck,
+                color: Color(0xFF8B5CF6), size: 28),
+          ),
+          const SizedBox(width: 20),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "CORE IDENTIFIER",
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 22,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const Text(
+                "SSCR-Cavite Administrative Node",
+                style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const Spacer(),
+          _statusBadge(),
+        ],
+      );
+
+  Widget _statusBadge() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF69F0AE).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF69F0AE).withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                    color: Color(0xFF69F0AE), shape: BoxShape.circle)),
+            const SizedBox(width: 10),
+            const Text("ONLINE",
+                style: TextStyle(
+                    color: Color(0xFF69F0AE),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1)),
           ],
         ),
       );
 
-  Widget _buildActionArea() => Column(
+  Widget _buildActionButtons(BuildContext context) => Column(
         children: [
-          const Text("Point Student QR at webcam lens.",
-              style: TextStyle(color: Colors.white38, fontSize: 10)),
-          const SizedBox(height: 24),
+          // THE PRIMARY CAMERA TRIGGER
           SizedBox(
             width: double.infinity,
-            height: 60,
+            height: 75, // Taller button for better presence
             child: ElevatedButton.icon(
-              onPressed: widget.onManualEntry,
-              icon: const Icon(LucideIcons.keyboard),
-              label: const Text("USE SECURE MANUAL ENTRY"),
+              onPressed: () => _launchSimpleScanner(context),
+              icon: const Icon(LucideIcons.maximize, size: 24),
+              label: Text("ACTIVATE SCANNER WINDOW",
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w900, letterSpacing: 1)),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B5CF6),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16))),
+                backgroundColor: const Color(0xFF8B5CF6),
+                foregroundColor: Colors.white,
+                elevation: 8,
+                shadowColor: const Color(0xFF8B5CF6).withOpacity(0.4),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+              ),
             ),
-          )
+          ),
+          const SizedBox(height: 16),
+
+          // THE MANUAL FAIL-SAFE
+          SizedBox(
+            width: double.infinity,
+            height: 65,
+            child: TextButton.icon(
+              onPressed: onManualEntry,
+              icon: const Icon(LucideIcons.keyboard, size: 18),
+              label: const Text("USE SECURE MANUAL ENTRY",
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white38,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
         ],
       );
+
+  Widget _buildCorner(int rotation) => Transform.rotate(
+        angle: rotation * 1.5708, // 90 degrees in radians
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: const BoxDecoration(
+            border: Border(
+              top: BorderSide(color: Color(0xFF8B5CF6), width: 4),
+              left: BorderSide(color: Color(0xFF8B5CF6), width: 4),
+            ),
+          ),
+        ),
+      );
+}
+
+/// Custom Grid Painter for the tech-background feel
+class GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 0.5;
+
+    for (var i = 0.0; i < size.width; i += 40) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+    }
+    for (var i = 0.0; i < size.height; i += 40) {
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
