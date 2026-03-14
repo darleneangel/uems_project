@@ -18,97 +18,117 @@ class SupabaseService {
     );
   }
 
-  // --- IDENTITY QUERIES ---
+  // --- IDENTITY & CONTEXT QUERIES ---
 
-  /// Fetches the specific profile for the login screen
+  /// Fetches the profile for login using the numeric User ID Number (e.g. 6001, 2031)
   Future<Map<String, dynamic>?> getProfile(
       String idNumber, String password) async {
-    final response = await _client
-        .from('profiles')
-        .select('*, student_details(*), employee_details(*)')
-        .eq('user_id_number', idNumber)
-        .eq('password_hash', password)
-        .maybeSingle();
-    return response;
-  }
-
-  /// Fetches a specific profile by ID
-  Future<Map<String, dynamic>?> getProfileById(String id) async {
-    return await _client.from('profiles').select().eq('id', id).maybeSingle();
-  }
-
-  /// NEW: Identifies the first available Registrar to initialize a student thread
-  Future<Map<String, dynamic>?> getRegistrarContact() async {
     return await _client
         .from('profiles')
-        .select('id, fn, ln, role')
-        .eq('role', 'registrar')
-        .limit(1)
+        .select('*, student_details(*), employee_details(*)')
+        .ilike('user_id_number', idNumber)
+        .eq('password_hash', password)
         .maybeSingle();
+  }
+
+  /// PROGRAM CHAIR: Resolves the managed department based on the 4-digit ID
+  Future<Map<String, dynamic>?> getChairContext(String userIdNumber) async {
+    return await _client
+        .from('employee_details')
+        .select(
+            'department_id, departments(name), profiles!inner(user_id_number)')
+        .eq('profiles.user_id_number', userIdNumber)
+        .maybeSingle();
+  }
+
+  // --- ACADEMIC & FACULTY MANAGEMENT ---
+
+  /// UNIVERSAL ACCESS: Fetches specialists in a specific Dept OR global Gen Ed faculty
+  Future<List<Map<String, dynamic>>> getFacultyForChair(String deptId) async {
+    return await client
+        .from('profiles')
+        .select(
+            'id, fn, ln, employee_details!inner(department_id, faculty_type)')
+        // FIX: Wrapped "Gen Ed" in double quotes to handle the space in the PostgREST parser
+        .or('faculty_type.eq."Gen Ed", department_id.eq.$deptId',
+            referencedTable: 'employee_details');
+  }
+
+  /// ENROLLMENT QUEUE: Finds students in the Dept who are Enrolled but have NO LOAD
+  Future<List<Map<String, dynamic>>> getStudentQueue(String chairDeptId) async {
+    final response = await _client
+        .from('profiles')
+        .select('''
+          *, 
+          student_details!inner(*, courses!inner(*), year_levels!inner(*)), 
+          study_loads!study_loads_student_id_fkey(id)
+        ''') // FIX: Explicitly defined relationship key to avoid PGRST201 ambiguity
+        .eq('role', 'student')
+        .eq('student_details.enrollment_status', 'Enrolled')
+        .eq('student_details.courses.department_id', chairDeptId);
+
+    // Filter students where study_loads list is empty
+    return List<Map<String, dynamic>>.from(response).where((s) {
+      return (s['study_loads'] as List).isEmpty;
+    }).toList();
+  }
+
+  /// BATCH ACTION: Syncs multiple study loads to the cloud ledger
+  Future<void> batchAssignSubjects(List<Map<String, dynamic>> inserts) async {
+    await _client.from('study_loads').insert(inserts);
+  }
+
+  /// CATALOG CRUD: Adds a new subject to the institutional catalog
+  Future<void> addSubjectToCatalog(Map<String, dynamic> subjectData) async {
+    await _client.from('subjects').insert(subjectData);
   }
 
   // --- REAL-TIME STREAMS ---
 
-  /// Watches a specific student's profile for changes (GWA, Balance, etc.)
+  /// Watches a student's profile for live updates (GWA/Balance)
   Stream<List<Map<String, dynamic>>> streamPersonalProfile(String profileId) {
     return _client
         .from('profiles')
         .stream(primaryKey: ['id']).eq('id', profileId);
   }
 
-  /// Watches a student's specific payments
-  Stream<List<Map<String, dynamic>>> streamPayments(String profileId) {
+  /// Watches student study loads for schedule changes
+  Stream<List<Map<String, dynamic>>> streamStudyLoads(String profileId) {
     return _client
-        .from('payments')
+        .from('study_loads')
         .stream(primaryKey: ['id']).eq('student_id', profileId);
   }
 
-  /// Creates a new service request
-  Future<void> createRequest(Map<String, dynamic> requestData) async {
-    await _client.from('office_requests').insert(requestData);
+  // --- REGISTRAR & MESSAGING ---
+
+  Future<Map<String, dynamic>?> getRegistrarContact() async {
+    return await _client
+        .from('profiles')
+        .select('id, fn, ln')
+        .eq('role', 'registrar')
+        .limit(1)
+        .maybeSingle();
   }
 
-  /// Sends a message
   Future<void> sendMessage(Map<String, dynamic> messageData) async {
     await _client.from('messages').insert(messageData);
   }
 
-  // --- ACCOUNTING & FINANCE ---
-
-  /// Fetches all students with their details for lookup
-  Future<List<Map<String, dynamic>>> getAllStudents() async {
-    final response = await _client
-        .from('profiles')
-        .select('*, student_details(*)')
-        .eq('role', 'student');
-    return List<Map<String, dynamic>>.from(response as List);
+  Future<void> createRequest(Map<String, dynamic> requestData) async {
+    await _client.from('office_requests').insert(requestData);
   }
 
-  /// Updates a student's account balance
+  // --- ACCOUNTING & FINANCE ---
+
   Future<void> updateAccountBalance(String profileId, double newBalance) async {
     await _client
         .from('student_details')
         .update({'account_balance': newBalance}).eq('profile_id', profileId);
   }
 
-  /// Fetches all pending payments
-  Future<List<Map<String, dynamic>>> getPendingPayments() async {
-    final response = await _client
-        .from('payments')
-        .select('*, profiles(*)')
-        .eq('status', 'Pending');
-    return List<Map<String, dynamic>>.from(response as List);
-  }
-
-  /// Real-time stream of pending payments
   Stream<List<Map<String, dynamic>>> streamPendingPayments() {
     return _client
         .from('payments')
         .stream(primaryKey: ['id']).eq('status', 'Pending');
-  }
-
-  /// Real-time stream of student details (for balance updates)
-  Stream<List<Map<String, dynamic>>> streamStudentDetails() {
-    return _client.from('student_details').stream(primaryKey: ['profile_id']);
   }
 }

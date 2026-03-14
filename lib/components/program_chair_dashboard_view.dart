@@ -5,7 +5,14 @@ import 'program_chair_panel_content.dart';
 
 class ProgramChairDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
-  const ProgramChairDashboardView({super.key, required this.onLogout});
+  final Map<String, dynamic>
+      userData; // THE FIX: Accepting the 6001 profile data
+
+  const ProgramChairDashboardView({
+    super.key,
+    required this.onLogout,
+    required this.userData, // THE FIX: Required in constructor
+  });
 
   @override
   State<ProgramChairDashboardView> createState() =>
@@ -47,10 +54,12 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
                       constraints: const BoxConstraints(maxWidth: 1400),
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
+                        // THE BRIDGE: Passing identity to the hub
                         child: ProgramChairPanelContent(
                           key: ValueKey(_selectedIndex),
                           selectedIndex: _selectedIndex,
                           isDarkMode: _isDarkMode,
+                          userData: widget.userData,
                         ),
                       ),
                     ),
@@ -108,7 +117,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                "PROGRAM_CHAIR_HUB",
+                "${widget.userData['fn'] ?? 'PROGRAM'}_${widget.userData['ln'] ?? 'CHAIR'}",
                 style: GoogleFonts.inter(
                   color: textColor,
                   fontWeight: FontWeight.bold,
@@ -116,7 +125,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
                 ),
               ),
               Text(
-                "Department Head",
+                "ID: ${widget.userData['user_id_number'] ?? '6001'}",
                 style: GoogleFonts.inter(
                   color: success,
                   fontSize: 10,
@@ -192,7 +201,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
         if (_isSidebarExpanded) ...[
           const SizedBox(width: 12),
           Text(
-            "UEMSSP Program Chair",
+            "UEMSSP Faculty",
             style: GoogleFonts.orbitron(
               color: textColor,
               fontWeight: FontWeight.bold,

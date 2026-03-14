@@ -1,5 +1,4 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,7 +14,7 @@ import 'accounting_dashboard_view.dart';
 import 'admission_dashboard_view.dart';
 import 'registrar_dashboard_view.dart';
 import 'hr_dashboard_view.dart';
-import '../components/program_chair_dashboard_view.dart';
+import '../components/program_chair_dashboard_view.dart'; // Verified Path
 import 'teacher_dashboard_view.dart';
 import '../services/supabase_service.dart';
 
@@ -39,27 +38,22 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // Animation Controllers
   late AnimationController _formController;
   late AnimationController _welcomeController;
   late Animation<double> _pulseAnimation;
   late Animation<double> _welcomeOpacity;
   late List<Animation<double>> _formElementAnimations;
 
-  // Violet Theme Palette (High Fidelity)
-  static const Color pViolet = Color(0xFF1E1033); // Midnight Deep
-  static const Color sViolet = Color(0xFF2E1065); // Core Violet
-  static const Color aViolet = Color(0xFF8B5CF6); // Neon Accent
-  static const Color tDark = Color(0xFF0F071D); // Deep Space
-  static const Color glassWhite = Colors.white10;
-  static const Color success = Color(0xFF69F0AE); // Bio-Green
-  static const Color error = Color(0xFFFF5252); // Alert Red
+  static const Color pViolet = Color(0xFF1E1033);
+  static const Color sViolet = Color(0xFF2E1065);
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color tDark = Color(0xFF0F071D);
+  static const Color success = Color(0xFF69F0AE);
+  static const Color error = Color(0xFFFF5252);
 
   @override
   void initState() {
     super.initState();
-
-    // Entrance animations for form elements (Staggered)
     _formController = AnimationController(
         duration: const Duration(milliseconds: 1200), vsync: this);
     _formElementAnimations = List.generate(6, (i) {
@@ -69,16 +63,14 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       );
     });
 
-    // Success Screen Animations
     _welcomeController =
         AnimationController(duration: const Duration(seconds: 2), vsync: this);
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _welcomeController, curve: Curves.easeInOutSine),
-    );
+        CurvedAnimation(
+            parent: _welcomeController, curve: Curves.easeInOutSine));
     _welcomeOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-          parent: _welcomeController, curve: const Interval(0.0, 0.4)),
-    );
+        CurvedAnimation(
+            parent: _welcomeController, curve: const Interval(0.0, 0.4)));
 
     _formController.forward();
   }
@@ -91,8 +83,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     _passwordController.dispose();
     super.dispose();
   }
-
-  // --- LOGIC (KEEPING UNTOUCHED AS REQUESTED) ---
 
   void _handleLogin() async {
     final id = _idController.text.trim();
@@ -117,9 +107,9 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       setState(() => _isLoading = false);
 
       if (results.isNotEmpty) {
-        final userData = results.first;
-        _loggedInUserData = userData;
-        final String role = (userData['role'] as String).toLowerCase();
+        _loggedInUserData = results.first;
+        final String role =
+            (_loggedInUserData!['role'] as String).toLowerCase();
         _routeToDashboard(role);
       } else {
         _showError("Identity Mismatch. Please check your credentials.");
@@ -158,7 +148,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         destination = 'program_chair_dashboard';
         break;
       default:
-        _showError("Role '$role' not provisioned in this terminal.");
+        _showError("Role '$role' not provisioned.");
         return;
     }
 
@@ -178,23 +168,19 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   void _showError(String m) => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(m, style: const TextStyle(fontWeight: FontWeight.bold)),
-          backgroundColor: error,
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(24),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
+            content:
+                Text(m, style: const TextStyle(fontWeight: FontWeight.bold)),
+            backgroundColor: error,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(24),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16))),
       );
-
-  // --- UI BUILDING (MODERNIZED) ---
 
   @override
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 800),
-      switchInCurve: Curves.easeInOutQuart,
-      switchOutCurve: Curves.easeInOutQuart,
       child: _buildCurrentView(),
     );
   }
@@ -217,7 +203,9 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       case 'teacher_dashboard':
         return TeacherDashboardView(onLogout: _resetToLogin);
       case 'program_chair_dashboard':
-        return ProgramChairDashboardView(onLogout: _resetToLogin);
+        // THE FIX: Relay the 6001 data to the Dashboard constructor
+        return ProgramChairDashboardView(
+            userData: _loggedInUserData!, onLogout: _resetToLogin);
       case 'welcome_uemssp':
         return _buildWelcomeLoading();
       default:
