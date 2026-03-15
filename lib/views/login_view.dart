@@ -18,6 +18,8 @@ import '../components/program_chair_dashboard_view.dart'; // Verified Path
 import '../components/teacher_dashboard_view.dart';
 import '../services/supabase_service.dart';
 
+import 'forgot_password_handler.dart';
+
 class UEMSLoginPage extends StatefulWidget {
   const UEMSLoginPage({super.key});
 
@@ -408,12 +410,14 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                                           fontWeight: FontWeight.w600)),
                                   const Spacer(),
                                   TextButton(
-                                      onPressed: () {},
+                                      onPressed: () => ForgotPasswordHandler
+                                          .showRecoveryFlow(
+                                              context, _isDarkMode),
                                       child: const Text("Forgot Password?",
                                           style: TextStyle(
                                               color: aViolet,
                                               fontSize: 14,
-                                              fontWeight: FontWeight.w900))),
+                                              fontWeight: FontWeight.w900)))
                                 ],
                               )),
                           const SizedBox(height: 40),
