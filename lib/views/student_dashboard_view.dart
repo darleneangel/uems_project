@@ -1,8 +1,8 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'dart:ui';
-import '../components/shared/student_messaging_panel.dart';
+import 'dart:ui'; // Ensure this file exports a MessagingPanel widget
+import '../components/shared/messaging_panel.dart';
 import '../components/dashboard_panel_template.dart';
 import '../components/student_panel_content.dart';
 import '../services/supabase_service.dart';
@@ -39,7 +39,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     'grade_book',
     'profile',
     'offices',
-    'messaging', // New module for messaging
+    'messaging',
   ];
 
   // Standardized Violet Theme Palette
@@ -48,9 +48,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   static const Color surfaceDark = Color(0xFF1E1B4B);
   static const Color accentViolet = Color(0xFF8B5CF6);
   static const Color successColor = Color(0xFF69F0AE);
-  static const Color aViolet = Color(
-    0xFF7C3AED,
-  ); // Corrected Vivid Violet (No red tint)
+  static const Color aViolet = Color(0xFF7C3AED);
 
   @override
   void initState() {
@@ -65,8 +63,6 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     final client = SupabaseService().client;
     final studentId = widget.userData!['id'];
     final now = DateTime.now();
-    final timeOnly =
-        "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:00";
 
     try {
       // Parallel data fetching for performance
@@ -86,8 +82,6 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
             .from('study_loads')
             .select('*, subjects(*)')
             .eq('student_id', studentId)
-            .gte('time_start', now)
-            .order('time_start')
             .limit(1)
             .maybeSingle(),
         client
@@ -116,7 +110,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
         });
       }
     } catch (e) {
-      debugPrint("Sync Error: $e");
+      debugPrint("Student Dashboard Sync Error: $e");
       if (mounted) setState(() => _isDataLoading = false);
     }
   }
@@ -129,15 +123,14 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     return {
       ...(widget.userData ?? {}),
       ...details,
-      'grade_book': _grades, // Matches _panelTypes[3]
-      'assessment': _assessments, // Matches _panelTypes[2]
-      'offices': _requests, // Matches _panelTypes[5]
+      'grade_book': _grades,
+      'assessment': _assessments,
+      'offices': _requests,
     };
   }
 
   @override
   Widget build(BuildContext context) {
-    // Sidebar items: last item is Logout (destructive)
     final sidebarItems = [
       PanelMenuItem(title: 'Dashboard', icon: LucideIcons.home),
       PanelMenuItem(title: 'Subject Load', icon: LucideIcons.bookOpen),
@@ -145,14 +138,10 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
       PanelMenuItem(title: 'Grade Book', icon: LucideIcons.book),
       PanelMenuItem(title: 'Profile', icon: LucideIcons.user),
       PanelMenuItem(title: 'Offices & Requests', icon: LucideIcons.building),
-      PanelMenuItem(
-        title: 'Messaging',
-        icon: LucideIcons.messageSquare,
-      ), // New module
+      PanelMenuItem(title: 'Messaging', icon: LucideIcons.messageSquare),
       PanelMenuItem(title: 'Logout', icon: LucideIcons.logOut),
     ];
 
-    // Panel title mapping
     String panelTitle = 'Dashboard';
     String subtitle = '';
     switch (_selectedIndex) {
@@ -171,7 +160,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
       case 5:
         panelTitle = 'Offices & Requests';
         break;
-      case 6: // New case for Messaging
+      case 6:
         panelTitle = 'Messaging';
         break;
       default:
@@ -180,22 +169,20 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
             'Welcome to Bright Future Academy, ${widget.userData?['fn'] ?? 'STUDENT'}';
     }
 
-    // compute colors (used by dashboard content helper)
     final cardColor = _isDarkMode
         ? surfaceDark.withOpacity(0.7)
         : Colors.white.withOpacity(0.8);
     final textColor = _isDarkMode ? Colors.white : primaryViolet;
     final subTextColor = _isDarkMode ? Colors.white60 : Colors.blueGrey;
 
-    // The panel content: dashboard content when 0, otherwise StudentPanelContent
     Widget panelContent;
     if (_selectedIndex == 0) {
       panelContent = _buildPanelContentHome(cardColor, textColor, subTextColor);
     } else if (_selectedIndex == 6) {
-      // Handle Messaging panel
-      panelContent = StudentMessagingPanel(
+      // Corrected: Passing 'userData' as a Map instead of 'userId' as a String
+      panelContent = MessagingPanel(
         isDarkMode: _isDarkMode,
-        studentId: widget.userData?['id']?.toString(),
+        userData: widget.userData ?? {},
       );
     } else {
       panelContent = StudentPanelContent(
@@ -212,12 +199,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
       subtitle: subtitle,
       panelContent: panelContent,
       sidebarItems: sidebarItems,
-      onLogout: () {
-        widget.onLogout?.call();
-      },
+      onLogout: () => widget.onLogout?.call(),
       isDarkMode: _isDarkMode,
       onMenuItemSelected: (index) {
-        // template will call this for non-destructive items; Logout handled in template
         if (index >= 0 && index < _panelTypes.length) {
           setState(() => _selectedIndex = index);
         }
@@ -231,14 +215,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     );
   }
 
-  // --- Dashboard content (kept as helper methods) ---
   Widget _buildPanelContentHome(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
+      Color cardColor, Color textColor, Color subTextColor) {
     return SingleChildScrollView(
-      // Wrap the content in a SingleChildScrollView
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.0, end: 1.0),
         duration: const Duration(milliseconds: 800),
@@ -247,9 +226,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
           return Opacity(
             opacity: value,
             child: Transform.translate(
-              offset: Offset(0, 30 * (1 - value)),
-              child: child,
-            ),
+                offset: Offset(0, 30 * (1 - value)), child: child),
           );
         },
         child: Column(
@@ -271,10 +248,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   }
 
   Widget _buildNextClassCard(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
+      Color cardColor, Color textColor, Color subTextColor) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(32),
@@ -289,10 +263,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: accentViolet.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
+              color: accentViolet.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10))
         ],
       ),
       child: Row(
@@ -300,9 +273,8 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20)),
             child: const Icon(LucideIcons.clock, color: Colors.white, size: 32),
           ),
           const SizedBox(width: 24),
@@ -312,62 +284,46 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      "UP NEXT",
-                      style: GoogleFonts.inter(
-                        color: successColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
+                    Text("UP NEXT",
+                        style: GoogleFonts.inter(
+                            color: successColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5)),
                     const SizedBox(width: 8),
                     Container(
-                      width: 4,
-                      height: 4,
-                      decoration: const BoxDecoration(
-                        color: Colors.white54,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                            color: Colors.white54, shape: BoxShape.circle)),
                     const SizedBox(width: 8),
                     Text(
-                      _nextClass != null
-                          ? "TODAY, ${_nextClass!['time_start']}"
-                          : "NO CLASSES REMAINING",
-                      style: GoogleFonts.inter(
-                        color: Colors.white70,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                        _nextClass != null
+                            ? "TODAY, ${_nextClass!['time_start']}"
+                            : "NO CLASSES REMAINING",
+                        style: GoogleFonts.inter(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  _nextClass?['subjects']?['name'] ?? "No Upcoming Class",
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text(_nextClass?['subjects']?['name'] ?? "No Upcoming Class",
+                    style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(
-                      LucideIcons.mapPin,
-                      color: Colors.white70,
-                      size: 14,
-                    ),
+                    const Icon(LucideIcons.mapPin,
+                        color: Colors.white70, size: 14),
                     const SizedBox(width: 6),
                     Text(
-                      "${_nextClass?['room_number'] ?? 'N/A'} • ${_nextClass?['professor_id'] ?? 'N/A'}",
-                      style: GoogleFonts.inter(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 14,
-                      ),
-                    ),
+                        "${_nextClass?['room_number'] ?? 'N/A'} • ${_nextClass?['professor_id'] ?? 'N/A'}",
+                        style: GoogleFonts.inter(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 14)),
                   ],
                 ),
               ],
@@ -384,9 +340,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              textStyle: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                  borderRadius: BorderRadius.circular(16)),
             ),
           ),
         ],
@@ -399,52 +353,40 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     return Row(
       children: [
         _buildAnimatedCard(
-          index: 0,
-          child: _statCard(
-            "GWA Standing",
-            _getCombinedData()['current_gwa']?.toString() ?? "0.00",
-            LucideIcons.trendingUp,
-            Colors.blueAccent,
-            cardColor,
-            textColor,
-          ),
-        ),
+            index: 0,
+            child: _statCard(
+                "GWA Standing",
+                _getCombinedData()['current_gwa']?.toString() ?? "0.00",
+                LucideIcons.trendingUp,
+                Colors.blueAccent,
+                cardColor,
+                textColor)),
         const SizedBox(width: 16),
         _buildAnimatedCard(
-          index: 1,
-          child: _statCard(
-            "Units Enrolled",
-            _getCombinedData()['enrolled_units']?.toString() ?? "0.0",
-            LucideIcons.layers,
-            const Color.fromARGB(255, 242, 64, 255),
-            cardColor,
-            textColor,
-          ),
-        ),
+            index: 1,
+            child: _statCard(
+                "Units Enrolled",
+                _getCombinedData()['enrolled_units']?.toString() ?? "0.0",
+                LucideIcons.layers,
+                const Color.fromARGB(255, 242, 64, 255),
+                cardColor,
+                textColor)),
         const SizedBox(width: 16),
         _buildAnimatedCard(
-          index: 2,
-          child: _statCard(
-            "Account Balance",
-            "₱${_getCombinedData()['account_balance'] ?? '0.00'}",
-            LucideIcons.wallet,
-            successColor,
-            cardColor,
-            textColor,
-          ),
-        ),
+            index: 2,
+            child: _statCard(
+                "Account Balance",
+                "₱${_getCombinedData()['account_balance'] ?? '0.00'}",
+                LucideIcons.wallet,
+                successColor,
+                cardColor,
+                textColor)),
       ],
     );
   }
 
-  Widget _statCard(
-    String label,
-    String value,
-    IconData icon,
-    Color iconColor,
-    Color cardColor,
-    Color textColor,
-  ) {
+  Widget _statCard(String label, String value, IconData icon, Color iconColor,
+      Color cardColor, Color textColor) {
     return SizedBox(
       width: double.infinity,
       child: ClipRRect(
@@ -454,14 +396,12 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: _isDarkMode
-                    ? Colors.white.withOpacity(0.05)
-                    : Colors.black.withOpacity(0.05),
-              ),
-            ),
+                color: cardColor,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                    color: _isDarkMode
+                        ? Colors.white.withOpacity(0.05)
+                        : Colors.black.withOpacity(0.05))),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -469,52 +409,37 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: iconColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(icon, color: iconColor, size: 20),
-                    ),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                            color: iconColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12)),
+                        child: Icon(icon, color: iconColor, size: 20)),
                     if (label == "Account Balance")
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: successColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          "CLEARED",
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: successColor,
-                          ),
-                        ),
-                      ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                              color: successColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8)),
+                          child: const Text("CLEARED",
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: successColor))),
                   ],
                 ),
                 const SizedBox(height: 20),
-                Text(
-                  value,
-                  style: GoogleFonts.inter(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: textColor,
-                  ),
-                ),
+                Text(value,
+                    style: GoogleFonts.inter(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: textColor)),
                 const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Colors.blueGrey,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text(label,
+                    style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.blueGrey,
+                        fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -524,75 +449,52 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   }
 
   Widget _buildEnrollmentTrackSection(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
+      Color cardColor, Color textColor, Color subTextColor) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: _isDarkMode ? Colors.white10 : Colors.black12,
-        ),
-      ),
+          color: cardColor,
+          borderRadius: BorderRadius.circular(28),
+          border:
+              Border.all(color: _isDarkMode ? Colors.white10 : Colors.black12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Enrollment Tracks",
-            style: GoogleFonts.inter(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: textColor,
-            ),
-          ),
-          Text(
-            "School Year: 2025-2026 | Semester: 2nd Semester",
-            style: GoogleFonts.inter(fontSize: 13, color: subTextColor),
-          ),
+          Text("Enrollment Tracks",
+              style: GoogleFonts.inter(
+                  fontSize: 22, fontWeight: FontWeight.w800, color: textColor)),
+          Text("School Year: 2025-2026 | Semester: 2nd Semester",
+              style: GoogleFonts.inter(fontSize: 13, color: subTextColor)),
           const SizedBox(height: 40),
           Stack(
             children: [
               Container(
-                height: 12,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: _isDarkMode ? Colors.white10 : Colors.black12,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              FractionallySizedBox(
-                widthFactor: _enrollmentProgress,
-                child: Container(
                   height: 12,
+                  width: double.infinity,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [successColor, accentViolet],
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: successColor.withOpacity(0.3),
-                        blurRadius: 10,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                      color: _isDarkMode ? Colors.white10 : Colors.black12,
+                      borderRadius: BorderRadius.circular(10))),
+              FractionallySizedBox(
+                  widthFactor: _enrollmentProgress,
+                  child: Container(
+                      height: 12,
+                      decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                              colors: [successColor, accentViolet]),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                                color: successColor.withOpacity(0.3),
+                                blurRadius: 10)
+                          ]))),
               const Positioned(
-                right: 0,
-                top: -25,
-                child: Text(
-                  "You are Now Enrolled",
-                  style: TextStyle(
-                    color: successColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
+                  right: 0,
+                  top: -25,
+                  child: Text("You are Now Enrolled",
+                      style: TextStyle(
+                          color: successColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14))),
             ],
           ),
           const SizedBox(height: 24),
@@ -602,12 +504,8 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
               _statusIndicator("Submitted", true, successColor),
               _statusIndicator("Paid", true, successColor),
               _statusIndicator("Advising", true, successColor),
-              _statusIndicator(
-                "Assessment",
-                false,
-                accentViolet,
-                isCurrent: true,
-              ),
+              _statusIndicator("Assessment", false, accentViolet,
+                  isCurrent: true),
             ],
           ),
         ],
@@ -615,135 +513,90 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     );
   }
 
-  Widget _statusIndicator(
-    String label,
-    bool isDone,
-    Color color, {
-    bool isCurrent = false,
-  }) {
+  Widget _statusIndicator(String label, bool isDone, Color color,
+      {bool isCurrent = false}) {
     return Column(
       children: [
         Icon(
-          isDone
-              ? LucideIcons.checkCircle2
-              : (isCurrent ? LucideIcons.circleDot : LucideIcons.circle),
-          color: color,
-          size: 20,
-        ),
+            isDone
+                ? LucideIcons.checkCircle2
+                : (isCurrent ? LucideIcons.circleDot : LucideIcons.circle),
+            color: color,
+            size: 20),
         const SizedBox(height: 8),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            color: isDone || isCurrent ? color : Colors.blueGrey,
-            fontWeight: FontWeight.bold,
-            fontSize: 11,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.inter(
+                color: isDone || isCurrent ? color : Colors.blueGrey,
+                fontWeight: FontWeight.bold,
+                fontSize: 11)),
       ],
     );
   }
 
   Widget _buildAnnouncements(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
+      Color cardColor, Color textColor, Color subTextColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Latest Announcements",
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: textColor,
-          ),
-        ),
+        Text("Latest Announcements",
+            style: GoogleFonts.inter(
+                fontSize: 20, fontWeight: FontWeight.w800, color: textColor)),
         const SizedBox(height: 20),
         if (_announcements.isEmpty && !_isDataLoading)
-          _announcementItem(
-            "Bright Future Academy",
-            "System",
-            "No new announcements at this time.",
-            cardColor,
-            textColor,
-            subTextColor,
-          )
+          _announcementItem("Bright Future Academy", "System",
+              "No new announcements.", cardColor, textColor, subTextColor)
         else
           ..._announcements.map((ann) => _announcementItem(
-                ann['author'] ?? "Bright Future Academy",
-                ann['created_at']?.toString().split('T')[0] ?? "",
-                ann['content'] ?? "",
-                cardColor,
-                textColor,
-                subTextColor,
-              )),
+              ann['author'] ?? "Bright Future Academy",
+              ann['created_at']?.toString().split('T')[0] ?? "",
+              ann['content'] ?? "",
+              cardColor,
+              textColor,
+              subTextColor)),
       ],
     );
   }
 
-  Widget _announcementItem(
-    String office,
-    String date,
-    String msg,
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
+  Widget _announcementItem(String office, String date, String msg,
+      Color cardColor, Color textColor, Color subTextColor) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: _isDarkMode ? Colors.white10 : Colors.black12,
-        ),
-      ),
+          color: cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border:
+              Border.all(color: _isDarkMode ? Colors.white10 : Colors.black12)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: aViolet.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(LucideIcons.megaphone, color: aViolet, size: 20),
-          ),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                  color: aViolet.withOpacity(0.1), shape: BoxShape.circle),
+              child:
+                  const Icon(LucideIcons.megaphone, color: aViolet, size: 20)),
           const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      office,
-                      style: GoogleFonts.inter(
-                        color: textColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    Text(
-                      date,
-                      style: GoogleFonts.inter(
-                        color: subTextColor,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(office,
+                          style: GoogleFonts.inter(
+                              color: textColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15)),
+                      Text(date,
+                          style: GoogleFonts.inter(
+                              color: subTextColor, fontSize: 12)),
+                    ]),
                 const SizedBox(height: 8),
-                Text(
-                  msg,
-                  style: GoogleFonts.inter(
-                    color: subTextColor,
-                    height: 1.5,
-                    fontSize: 14,
-                  ),
-                ),
+                Text(msg,
+                    style: GoogleFonts.inter(
+                        color: subTextColor, height: 1.5, fontSize: 14)),
               ],
             ),
           ),
@@ -753,51 +606,38 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   }
 
   Widget _buildMVGSection(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
+      Color cardColor, Color textColor, Color subTextColor) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: _isDarkMode ? Colors.white10 : Colors.black12,
-        ),
-      ),
+          color: cardColor,
+          borderRadius: BorderRadius.circular(28),
+          border:
+              Border.all(color: _isDarkMode ? Colors.white10 : Colors.black12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Bright Future Academy Identity",
-            style: GoogleFonts.inter(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: textColor,
-            ),
-          ),
+          Text("Bright Future Academy Identity",
+              style: GoogleFonts.inter(
+                  fontSize: 22, fontWeight: FontWeight.w800, color: textColor)),
           const SizedBox(height: 24),
           _mvgItem(
-            "Mission",
-            "To provide holistic education that empowers students to become globally competitive leaders through innovation and character formation.",
-            LucideIcons.target,
-            Colors.blueAccent,
-          ),
+              "Mission",
+              "To provide holistic education that empowers students...",
+              LucideIcons.target,
+              Colors.blueAccent),
           const SizedBox(height: 16),
           _mvgItem(
-            "Vision",
-            "A premier institution recognized for academic excellence, research innovation, and community-driven transformation.",
-            LucideIcons.eye,
-            Colors.orangeAccent,
-          ),
+              "Vision",
+              "A premier institution recognized for academic excellence...",
+              LucideIcons.eye,
+              Colors.orangeAccent),
           const SizedBox(height: 16),
           _mvgItem(
-            "Goals",
-            "• Foster Academic Rigor\n• Promote Holistic Development\n• Strengthen Community Engagement",
-            LucideIcons.flag,
-            Colors.greenAccent,
-          ),
+              "Goals",
+              "• Foster Academic Rigor\n• Promote Holistic Development",
+              LucideIcons.flag,
+              Colors.greenAccent),
         ],
       ),
     );
@@ -808,28 +648,24 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color, size: 20),
-        ),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: color, size: 20)),
         const SizedBox(width: 16),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: GoogleFonts.inter(
-                      fontWeight: FontWeight.bold, color: color, fontSize: 16)),
-              const SizedBox(height: 4),
-              Text(content,
-                  style: GoogleFonts.inter(
-                      color: _isDarkMode ? Colors.white70 : Colors.blueGrey,
-                      fontSize: 14)),
-            ],
-          ),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title,
+                style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold, color: color, fontSize: 16)),
+            const SizedBox(height: 4),
+            Text(content,
+                style: GoogleFonts.inter(
+                    color: _isDarkMode ? Colors.white70 : Colors.blueGrey,
+                    fontSize: 14)),
+          ]),
         ),
       ],
     );
@@ -841,15 +677,8 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
         tween: Tween(begin: 0.0, end: 1.0),
         duration: Duration(milliseconds: 400 + (index * 150)),
         curve: Curves.easeOutBack,
-        builder: (context, value, child) {
-          return Transform.scale(
-            scale: value,
-            child: Opacity(
-              opacity: value,
-              child: child,
-            ),
-          );
-        },
+        builder: (context, value, child) => Transform.scale(
+            scale: value, child: Opacity(opacity: value, child: child)),
         child: child,
       ),
     );

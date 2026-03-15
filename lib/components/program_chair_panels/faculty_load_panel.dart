@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -5,7 +6,10 @@ import '../../services/supabase_service.dart';
 
 class FacultyLoadPanel extends StatefulWidget {
   final bool isDarkMode;
-  const FacultyLoadPanel({super.key, required this.isDarkMode});
+  final Map<String, dynamic> userData;
+
+  const FacultyLoadPanel(
+      {super.key, required this.isDarkMode, required this.userData});
 
   @override
   State<FacultyLoadPanel> createState() => _FacultyLoadPanelState();
@@ -13,19 +17,26 @@ class FacultyLoadPanel extends StatefulWidget {
 
 class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
   final TextEditingController _searchController = TextEditingController();
-  String _activeFilter = "All";
+  final SupabaseService _service = SupabaseService();
 
+  String _activeLoadFilter = "All"; // All, Overloaded, Underloaded, Regular
   bool _isLoading = true;
   String? _chairDeptId;
   String? _chairDeptName;
-  List<Map<String, dynamic>> _facultyList = [];
-  int _totalAssignedUnits = 0;
 
-  // Modern Tonal Palette Constants
+  List<Map<String, dynamic>> _facultyList = [];
+  List<Map<String, dynamic>> _globalSubjectCatalog = [];
+
+  // Statistics
+  int _totalFaculty = 0;
+  int _overloadedCount = 0;
+  int _underloadedCount = 0;
+
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color surfaceDark = Color(0xFF1E1B4B);
-  static const Color pViolet = Color(0xFF2E1065);
   static const Color success = Color(0xFF69F0AE);
+  static const Color danger = Color(0xFFFF5252);
+  static const Color warning = Color(0xFFFFD740);
 
   @override
   void initState() {
@@ -33,115 +44,142 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
     _initializeFacultyOversight();
   }
 
-  /// 🛰️ STEP 1: Handshake - Identify the Chair and their managed Department
+  /// 🛰️ INITIALIZE: Resolve identity and load analytics
   Future<void> _initializeFacultyOversight() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
-    final client = SupabaseService().client;
-    final user = client.auth.currentUser;
-
     try {
-      // Find the Chair's department
-      final chairData = await client
-          .from('employee_details')
-          .select('department_id, departments(name)')
-          .eq('profile_id', user!.id)
-          .maybeSingle();
+      final String? userIdNum = widget.userData['user_id_number']?.toString();
+      if (userIdNum == null) return;
 
+      final chairData = await _service.getChairContext(userIdNum);
       if (chairData != null) {
-        _chairDeptId = chairData['department_id'];
-        _chairDeptName = chairData['departments']['name'];
-      }
-
-      await _fetchFacultyLoadData();
-    } catch (e) {
-      debugPrint("Context Initialization Error: $e");
-    }
-  }
-
-  /// 🛰️ STEP 2: Fetch Professors (Filtered by Dept + Gen Ed + Expertise)
-  Future<void> _fetchFacultyLoadData() async {
-    final client = SupabaseService().client;
-
-    try {
-      // 1. Deep join fetch: Profiles -> Employee Details -> Expertise -> Subjects
-      final List<dynamic> profData = await client.from('profiles').select('''
-            *,
-            employee_details!inner(*, departments!inner(*)),
-            professor_expertise (
-              subjects (*)
-            )
-          ''').eq('role', 'professor');
-
-      // 2. Filter logic: Show specialists in Chair's Dept OR Gen Ed staff (CAS)
-      final List<Map<String, dynamic>> filteredList =
-          List<Map<String, dynamic>>.from(profData).where((p) {
-        final String deptName = p['employee_details']['departments']['name'];
-        final String deptId = p['employee_details']['department_id'];
-
-        return deptId == _chairDeptId ||
-            deptName.contains("General Education") ||
-            deptName.contains("Gen Ed") ||
-            deptName == "CAS";
-      }).toList();
-
-      // 3. Aggregate Units for Statistics
-      int unitSum = 0;
-      for (var prof in filteredList) {
-        final List<dynamic> loads = await client
-            .from('study_loads')
-            .select('subjects(units)')
-            .eq('professor_id', prof['id']);
-
-        int profUnits = 0;
-        for (var l in loads) {
-          profUnits += (l['subjects']['units'] as int? ?? 0);
-        }
-        prof['current_units'] = profUnits;
-        unitSum += profUnits;
-      }
-
-      if (mounted) {
-        setState(() {
-          _facultyList = filteredList;
-          _totalAssignedUnits = unitSum;
-          _isLoading = false;
-        });
+        _chairDeptId = chairData['department_id']?.toString();
+        _chairDeptName = chairData['departments']?['name'];
+        await _fetchSubjectCatalog();
+        await _fetchFacultyLoadData();
       }
     } catch (e) {
-      debugPrint("Faculty Sync Error: $e");
+      debugPrint("Init Error: $e");
+    } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  List<Map<String, dynamic>> _getProcessedList() {
+  Future<void> _fetchSubjectCatalog() async {
+    final response = await _service.client.from('subjects').select('*');
+    setState(() =>
+        _globalSubjectCatalog = List<Map<String, dynamic>>.from(response));
+  }
+
+  Future<void> _fetchFacultyLoadData() async {
+    if (_chairDeptId == null) return;
+    try {
+      final List<Map<String, dynamic>> profData =
+          await _service.getFacultyForChair(_chairDeptId!);
+
+      int overloaded = 0;
+      int underloaded = 0;
+
+      for (var prof in profData) {
+        final List<dynamic> loads = await _service.client
+            .from('study_loads')
+            .select('*, subjects(*)')
+            .eq('professor_id', prof['id'])
+            .filter('student_id', 'is', null);
+
+        int totalUnits = loads.fold(
+            0,
+            (sum, l) =>
+                sum + (int.tryParse(l['subjects']['units'].toString()) ?? 0));
+
+        prof['current_units'] = totalUnits;
+        prof['master_loads'] = loads;
+
+        if (totalUnits > 21) overloaded++;
+        if (totalUnits < 12) underloaded++;
+      }
+
+      if (mounted) {
+        setState(() {
+          _facultyList = profData;
+          _totalFaculty = profData.length;
+          _overloadedCount = overloaded;
+          _underloadedCount = underloaded;
+        });
+      }
+    } catch (e) {
+      debugPrint("Data Sync Error: $e");
+    }
+  }
+
+  /// 🛠️ CRUD Actions
+  Future<void> _assignSubject(
+      String profId, String subId, String day, String time) async {
+    final prof = _facultyList.firstWhere((p) => p['id'] == profId);
+    final sub =
+        _globalSubjectCatalog.firstWhere((s) => s['id'].toString() == subId);
+    final int unitsToAdd = int.tryParse(sub['units'].toString()) ?? 0;
+
+    if ((prof['current_units'] ?? 0) + unitsToAdd > 21) {
+      _showToast(
+          "ASSIGNMENT REJECTED: Professor is at maximum capacity (21 Units).",
+          danger);
+      return;
+    }
+
+    try {
+      await _service.client.from('study_loads').insert({
+        'professor_id': profId,
+        'subject_id': subId,
+        'day_schedule': day,
+        'time_start': time.contains('-') ? time.split('-')[0].trim() : time,
+        'time_end': time.contains('-') ? time.split('-')[1].trim() : "TBD",
+        'student_id': null,
+        'section_block': 'MASTER',
+      });
+      _showToast("Master Schedule Updated.", success);
+      await _fetchFacultyLoadData();
+    } catch (e) {
+      _showToast("Error: $e", danger);
+    }
+  }
+
+  Future<void> _deleteMasterLoad(String loadId) async {
+    await _service.client.from('study_loads').delete().eq('id', loadId);
+    await _fetchFacultyLoadData();
+    _showToast("Schedule Entry Deleted.", warning);
+  }
+
+  /// 🔍 FILTER LOGIC
+  List<Map<String, dynamic>> get _filteredFaculty {
     final query = _searchController.text.toLowerCase();
     return _facultyList.where((f) {
       final name = "${f['fn']} ${f['ln']}".toLowerCase();
-      final pos = f['employee_details']['position'].toString().toLowerCase();
-      final matchesSearch = name.contains(query) || pos.contains(query);
+      final id = f['user_id_number'].toString();
+      final units = f['current_units'] ?? 0;
 
-      if (_activeFilter == "Overloaded")
-        return matchesSearch && (f['current_units'] ?? 0) > 21;
-      if (_activeFilter == "Underloaded")
-        return matchesSearch && (f['current_units'] ?? 0) < 12;
-      if (_activeFilter == "Regular")
-        return matchesSearch &&
-            (f['current_units'] ?? 0) >= 12 &&
-            (f['current_units'] ?? 0) <= 21;
+      bool matchesSearch = name.contains(query) || id.contains(query);
+      bool matchesLoad = true;
 
-      return matchesSearch;
+      if (_activeLoadFilter == "Overloaded")
+        matchesLoad = units > 21;
+      else if (_activeLoadFilter == "Underloaded")
+        matchesLoad = units < 12;
+      else if (_activeLoadFilter == "Regular")
+        matchesLoad = units >= 12 && units <= 21;
+
+      return matchesSearch && matchesLoad;
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color textColor = widget.isDarkMode ? Colors.white : pViolet;
-    final Color bgColor = widget.isDarkMode ? surfaceDark : Colors.white;
+    final textColor = widget.isDarkMode ? Colors.white : Colors.black87;
+    final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
     if (_isLoading)
       return const Center(child: CircularProgressIndicator(color: aViolet));
-
-    final filteredList = _getProcessedList();
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -152,450 +190,341 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
           _buildHeader(textColor),
           const SizedBox(height: 32),
 
-          // 2. ANALYTICS ROW (Live Data)
+          // 1. ANALYTICS OVERVIEW
           Row(
             children: [
-              _statItem("Managed Faculty", _facultyList.length.toString(),
-                  LucideIcons.users, aViolet, textColor),
-              const SizedBox(width: 20),
-              _statItem("Total Units Assigned", _totalAssignedUnits.toString(),
-                  LucideIcons.layers, success, textColor),
-              const SizedBox(width: 20),
-              _statItem(
-                  "Avg Unit Load",
-                  (_totalAssignedUnits /
-                          (_facultyList.isEmpty ? 1 : _facultyList.length))
-                      .toStringAsFixed(1),
-                  LucideIcons.activity,
-                  Colors.blueAccent,
-                  textColor),
+              _statCard("Total Faculty", _totalFaculty.toString(),
+                  LucideIcons.users, aViolet, cardColor, textColor),
+              _statCard("Overloaded", _overloadedCount.toString(),
+                  LucideIcons.alertTriangle, danger, cardColor, textColor),
+              _statCard("Underloaded", _underloadedCount.toString(),
+                  LucideIcons.trendingDown, warning, cardColor, textColor),
             ],
           ),
           const SizedBox(height: 32),
 
-          _buildFilterBar(textColor),
+          // 2. SEARCH & FILTER BAR
+          _buildFilterBar(cardColor, textColor),
           const SizedBox(height: 24),
 
-          // 4. FACULTY DIRECTORY LIST
-          _buildFacultyList(filteredList, textColor, bgColor),
+          // 3. FACULTY LIST
+          _buildFacultyList(cardColor, textColor),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(Color textColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Faculty Load & Assignment",
-          style: GoogleFonts.inter(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: textColor,
-              letterSpacing: -1),
-        ),
-        Text(
-          "Department: ${_chairDeptName ?? 'Managed Units'} | Tracking specialization and workload balancing.",
-          style: const TextStyle(color: Colors.blueGrey, fontSize: 14),
-        ),
-      ],
-    );
-  }
+  Widget _buildHeader(Color t) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Academic Resource Oversight",
+              style: GoogleFonts.inter(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: t,
+                  letterSpacing: -1)),
+          Text(
+              "Department: ${_chairDeptName ?? 'N/A'} | Real-time workload management & load balancing.",
+              style: const TextStyle(color: Colors.blueGrey, fontSize: 14)),
+        ],
+      );
 
-  Widget _buildFilterBar(Color textColor) {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: widget.isDarkMode
-                  ? Colors.white.withOpacity(0.05)
-                  : Colors.black.withOpacity(0.02),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (v) => setState(() {}),
-              style: TextStyle(color: textColor, fontSize: 14),
-              decoration: const InputDecoration(
-                hintText: "Search faculty name or position...",
-                hintStyle: TextStyle(color: Colors.blueGrey),
-                prefixIcon: Icon(LucideIcons.search, size: 18, color: aViolet),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 15),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        _filterChip("All"),
-        _filterChip("Regular"),
-        _filterChip("Overloaded"),
-        _filterChip("Underloaded"),
-      ],
-    );
-  }
-
-  Widget _buildFacultyList(
-      List<Map<String, dynamic>> list, Color textColor, Color bgColor) {
-    if (list.isEmpty) return _buildEmptyState(textColor);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-            color: widget.isDarkMode ? Colors.white10 : Colors.black12),
-      ),
-      child: Column(
-        children: list.map((f) => _buildFacultyItem(f, textColor)).toList(),
-      ),
-    );
-  }
-
-  Widget _buildFacultyItem(Map<String, dynamic> f, Color textColor) {
-    final int units = f['current_units'] ?? 0;
-    final String status = units > 21
-        ? "Overloaded"
-        : (units < 12 ? "Underloaded" : "Regular Load");
-    final Color statusColor = units > 21
-        ? Colors.orangeAccent
-        : (units < 12 ? Colors.blueAccent : success);
-
-    final List expertise = f['professor_expertise'] as List;
-
-    return Column(
-      children: [
-        Padding(
+  Widget _statCard(String label, String val, IconData icon, Color color,
+          Color bg, Color text) =>
+      Expanded(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8),
           padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white10)),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 60,
-                height: 60,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [
-                    aViolet.withOpacity(0.2),
-                    aViolet.withOpacity(0.05)
-                  ]),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Center(
-                    child: Text(f['ln'][0],
-                        style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: aViolet))),
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16)),
+                child: Icon(icon, color: color, size: 24),
               ),
               const SizedBox(width: 20),
-              Expanded(
-                flex: 4,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("${f['fn']} ${f['ln']}",
-                        style: GoogleFonts.inter(
-                            color: textColor,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16)),
-                    Text(
-                        "${f['employee_details']['position']} • ${f['employee_details']['faculty_type']}",
-                        style: const TextStyle(
-                            color: Colors.blueGrey, fontSize: 12)),
-                    const SizedBox(height: 12),
-                    // FEATURE: Expertise Chips
-                    if (expertise.isNotEmpty)
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: expertise.map((e) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: aViolet.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(6),
-                              border:
-                                  Border.all(color: aViolet.withOpacity(0.1)),
-                            ),
-                            child: Text(
-                              e['subjects']['code'],
-                              style: const TextStyle(
-                                  color: aViolet,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          );
-                        }).toList(),
-                      )
-                    else
-                      const Text("No specialization assigned",
-                          style: TextStyle(
-                              color: Colors.white10,
-                              fontSize: 10,
-                              fontStyle: FontStyle.italic)),
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("Active Load",
-                            style: TextStyle(
-                                color: Colors.blueGrey,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900)),
-                        Text("$units/24 Units",
-                            style: TextStyle(
-                                color: textColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                          value: units / 24,
-                          backgroundColor: Colors.white10,
-                          color: statusColor,
-                          minHeight: 6),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 40),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  children: [
-                    _statusBadge(status, statusColor),
-                    if (units > 21)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Icon(LucideIcons.alertTriangle,
-                            color: Colors.orangeAccent, size: 16),
-                      ),
-                  ],
-                ),
-              ),
-              _iconAction(
-                LucideIcons.bookOpen,
-                "View Current Assignments",
-                aViolet,
-                () => _showProfessorSchedule(f),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(val,
+                      style: GoogleFonts.orbitron(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: text)),
+                  Text(label.toUpperCase(),
+                      style: const TextStyle(
+                          color: Colors.blueGrey,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1)),
+                ],
               ),
             ],
           ),
         ),
-        const Divider(height: 1, color: Colors.white10),
-      ],
-    );
-  }
+      );
 
-  /// FEATURE: Detailed Professor Schedule Modal
-  void _showProfessorSchedule(Map<String, dynamic> prof) async {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
+  Widget _buildFilterBar(Color bg, Color text) => Container(
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: surfaceDark,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(color: Colors.white10),
-        ),
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("${prof['fn']} ${prof['ln']}",
-                        style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold)),
-                    const Text("Current Academic Assignments",
-                        style: TextStyle(color: Colors.blueGrey)),
-                  ],
-                ),
-                _statusBadge("${prof['current_units']} Units", aViolet),
-              ],
-            ),
-            const Divider(height: 60, color: Colors.white10),
-            Expanded(
-              child: FutureBuilder<List<dynamic>>(
-                future: SupabaseService()
-                    .client
-                    .from('study_loads')
-                    .select('*, subjects(*)')
-                    .eq('professor_id', prof['id']),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData)
-                    return const Center(child: CircularProgressIndicator());
-                  final loads = snapshot.data!;
-                  if (loads.isEmpty)
-                    return const Center(
-                        child: Text(
-                            "No active subjects assigned for this semester.",
-                            style: TextStyle(color: Colors.white24)));
-
-                  return ListView.builder(
-                    itemCount: loads.length,
-                    itemBuilder: (context, i) {
-                      final l = loads[i];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.03),
-                            borderRadius: BorderRadius.circular(16)),
-                        child: Row(
-                          children: [
-                            const Icon(LucideIcons.calendar,
-                                color: aViolet, size: 18),
-                            const SizedBox(width: 16),
-                            Expanded(
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                  Text(l['subjects']['name'],
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold)),
-                                  Text(
-                                      "${l['day_schedule']} • ${l['time_start']} - ${l['time_end']}",
-                                      style: const TextStyle(
-                                          color: Colors.blueGrey,
-                                          fontSize: 12)),
-                                ])),
-                            Text("${l['subjects']['units']} Units",
-                                style: const TextStyle(
-                                    color: success,
-                                    fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _statItem(
-      String label, String value, IconData icon, Color color, Color textColor) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color:
-              widget.isDarkMode ? Colors.white.withOpacity(0.03) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: widget.isDarkMode ? Colors.white10 : Colors.black12),
-        ),
+            color: bg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white10)),
         child: Row(
           children: [
-            Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12)),
-                child: Icon(icon, color: color, size: 20)),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(value,
-                    style: GoogleFonts.orbitron(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: textColor)),
-                Text(label,
-                    style: const TextStyle(
-                        color: Colors.blueGrey,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold)),
-              ],
-            )
+            const SizedBox(width: 12),
+            const Icon(LucideIcons.search, color: Colors.blueGrey, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                onChanged: (_) => setState(() {}),
+                style: TextStyle(color: text),
+                decoration: const InputDecoration(
+                    hintText: "Search Employee ID or Name...",
+                    border: InputBorder.none),
+              ),
+            ),
+            const VerticalDivider(color: Colors.white10),
+            _loadFilterChip("All"),
+            _loadFilterChip("Regular"),
+            _loadFilterChip("Overloaded"),
+            _loadFilterChip("Underloaded"),
           ],
         ),
-      ),
-    );
-  }
+      );
 
-  Widget _filterChip(String label) {
-    bool isSelected = _activeFilter == label;
+  Widget _loadFilterChip(String label) {
+    bool active = _activeLoadFilter == label;
     return GestureDetector(
-      onTap: () => setState(() => _activeFilter = label),
+      onTap: () => setState(() => _activeLoadFilter = label),
       child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         margin: const EdgeInsets.only(left: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? aViolet : Colors.transparent,
+          color: active ? aViolet : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: isSelected
-                  ? Colors.transparent
-                  : Colors.blueGrey.withOpacity(0.2)),
+          border:
+              Border.all(color: active ? Colors.transparent : Colors.white10),
         ),
         child: Text(label,
             style: TextStyle(
-                color: isSelected ? Colors.white : Colors.blueGrey,
-                fontWeight: FontWeight.bold,
-                fontSize: 13)),
+                color: active ? Colors.white : Colors.blueGrey,
+                fontSize: 12,
+                fontWeight: FontWeight.bold)),
       ),
     );
   }
 
-  Widget _statusBadge(String status, Color color) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: color.withOpacity(0.2))),
-      child: Text(status.toUpperCase(),
-          style: TextStyle(
-              color: color, fontSize: 9, fontWeight: FontWeight.w900)));
+  Widget _buildFacultyList(Color bg, Color text) => Container(
+        decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white10)),
+        child: ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _filteredFaculty.length,
+          separatorBuilder: (_, __) =>
+              const Divider(height: 1, color: Colors.white10),
+          itemBuilder: (context, i) {
+            final f = _filteredFaculty[i];
+            final int units = f['current_units'] ?? 0;
+            final String type =
+                f['employee_details']?['faculty_type'] ?? "Specialist";
+            final bool isGenEd = type == "Gen Ed";
 
-  Widget _iconAction(
-      IconData icon, String tooltip, Color color, VoidCallback onTap) {
-    return IconButton(
-      icon: Icon(icon, color: color.withOpacity(0.6), size: 18),
-      tooltip: tooltip,
-      onPressed: onTap,
+            return ListTile(
+              contentPadding: const EdgeInsets.all(24),
+              leading: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                    color: isGenEd
+                        ? Colors.blueAccent.withOpacity(0.1)
+                        : aViolet.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12)),
+                child: Center(
+                    child: Icon(isGenEd ? LucideIcons.book : LucideIcons.cpu,
+                        color: isGenEd ? Colors.blueAccent : aViolet,
+                        size: 20)),
+              ),
+              title: Text("${f['fn']} ${f['ln']}",
+                  style: TextStyle(
+                      color: text, fontWeight: FontWeight.bold, fontSize: 16)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                      "ID: ${f['user_id_number']} • ${f['employee_details']?['departments']?['name'] ?? 'Gen Ed Unit'}",
+                      style: const TextStyle(
+                          color: Colors.blueGrey, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  _typeBadge(type.toUpperCase(),
+                      isGenEd ? Colors.blueAccent : aViolet),
+                ],
+              ),
+              trailing: SizedBox(
+                width: 300,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text("$units / 21 Units",
+                              style: GoogleFonts.orbitron(
+                                  fontSize: 12,
+                                  color: units > 21 ? danger : text,
+                                  fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                                value: units / 21,
+                                color: units > 21
+                                    ? danger
+                                    : (units < 12 ? warning : success),
+                                backgroundColor: Colors.white10,
+                                minHeight: 4),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    ElevatedButton(
+                        onPressed: () => _showManageLoadDialog(f),
+                        child: const Text("SCHEDULE")),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+  void _showManageLoadDialog(Map<String, dynamic> prof) {
+    final String type = prof['employee_details']?['faculty_type'] ?? "";
+    final bool isGenEd = type == "Gen Ed";
+
+    // SMART CATALOG FILTERING
+    final filteredSubjects = _globalSubjectCatalog.where((s) {
+      if (isGenEd) {
+        // Gen Ed: only non-professional subjects
+        return (s['is_professional_course'] == false);
+      } else {
+        // Specialist: only subjects from the IT department (using Chair's context)
+        return (s['department_id']?.toString() == _chairDeptId);
+      }
+    }).toList();
+
+    String? selSubId;
+    final dayCtrl = TextEditingController();
+    final timeCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          backgroundColor: surfaceDark,
+          title: Text("Schedule Master: ${prof['fn']}",
+              style: const TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                  "ASSIGNING TO: ${isGenEd ? 'GENERAL EDUCATION' : 'SPECIALIZED (IT)'}",
+                  style: const TextStyle(
+                      color: aViolet,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                dropdownColor: surfaceDark,
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+                decoration: const InputDecoration(
+                    labelText: "Select Subject",
+                    labelStyle: TextStyle(color: Colors.blueGrey)),
+                items: filteredSubjects
+                    .map((s) => DropdownMenuItem(
+                        value: s['id'].toString(),
+                        child: Text("${s['code']} - ${s['name']}",
+                            overflow: TextOverflow.ellipsis)))
+                    .toList(),
+                onChanged: (v) => setModalState(() => selSubId = v),
+              ),
+              TextField(
+                  controller: dayCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: "Day (Manual)")),
+              TextField(
+                  controller: timeCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration:
+                      const InputDecoration(labelText: "Time Slot (Manual)")),
+              const SizedBox(height: 20),
+              const Text("EXISTING ASSIGNMENTS",
+                  style: TextStyle(
+                      color: Colors.blueGrey,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold)),
+              ...(prof['master_loads'] as List).map((l) => ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l['subjects']['name'],
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 12)),
+                    trailing: IconButton(
+                        icon: const Icon(LucideIcons.trash2,
+                            size: 14, color: danger),
+                        onPressed: () {
+                          _deleteMasterLoad(l['id']);
+                          Navigator.pop(context);
+                        }),
+                  )),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("CLOSE")),
+            ElevatedButton(
+                onPressed: selSubId == null
+                    ? null
+                    : () {
+                        _assignSubject(
+                            prof['id'], selSubId!, dayCtrl.text, timeCtrl.text);
+                        Navigator.pop(context);
+                      },
+                child: const Text("SAVE")),
+          ],
+        ),
+      ),
     );
   }
 
-  TextStyle _metaStyle() => const TextStyle(
-        color: Colors.blueGrey,
-        fontSize: 10,
-        fontWeight: FontWeight.w900,
-        letterSpacing: 0.5,
-      );
+  Widget _typeBadge(String t, Color c) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+          color: c.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: c.withOpacity(0.2))),
+      child: Text(t,
+          style:
+              TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.w900)));
 
-  Widget _buildEmptyState(Color textColor) => Center(
-      child: Padding(
-          padding: const EdgeInsets.all(80),
-          child: Text("No professors matching criteria in managed departments.",
-              style: TextStyle(color: textColor.withOpacity(0.2)))));
+  void _showToast(String m, Color c) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(m),
+          backgroundColor: c,
+          behavior: SnackBarBehavior.floating));
 }

@@ -59,7 +59,7 @@ class AccountingPanelContent extends StatelessWidget {
       case 8:
         return DailyReportPanel(isDarkMode: isDarkMode);
       case 9:
-        return MessagingPanel(isDarkMode: isDarkMode);
+        return MessagingPanel(isDarkMode: isDarkMode, userData: {});
       case 10:
         return PromissoryNotePanel(isDarkMode: isDarkMode);
       default:

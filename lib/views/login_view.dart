@@ -15,7 +15,7 @@ import 'admission_dashboard_view.dart';
 import 'registrar_dashboard_view.dart';
 import 'hr_dashboard_view.dart';
 import '../components/program_chair_dashboard_view.dart'; // Verified Path
-import 'teacher_dashboard_view.dart';
+import '../components/teacher_dashboard_view.dart';
 import '../services/supabase_service.dart';
 
 class UEMSLoginPage extends StatefulWidget {
@@ -201,7 +201,8 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       case 'accounting_dashboard':
         return AccountingDashboardView(onLogout: _resetToLogin);
       case 'teacher_dashboard':
-        return TeacherDashboardView(onLogout: _resetToLogin);
+        return TeacherDashboardView(
+            userData: _loggedInUserData!, onLogout: _resetToLogin);
       case 'program_chair_dashboard':
         // THE FIX: Relay the 6001 data to the Dashboard constructor
         return ProgramChairDashboardView(

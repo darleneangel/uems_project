@@ -5,7 +5,9 @@ import 'teacher_panel_content.dart';
 
 class TeacherDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
-  const TeacherDashboardView({super.key, required this.onLogout});
+  final Map<String, dynamic> userData;
+  const TeacherDashboardView(
+      {super.key, required this.onLogout, required this.userData});
 
   @override
   State<TeacherDashboardView> createState() => _TeacherDashboardViewState();
@@ -49,6 +51,7 @@ class _TeacherDashboardViewState extends State<TeacherDashboardView> {
                           key: ValueKey(_selectedIndex),
                           selectedIndex: _selectedIndex,
                           isDarkMode: _isDarkMode,
+                          userData: widget.userData,
                         ),
                       ),
                     ),
@@ -106,7 +109,7 @@ class _TeacherDashboardViewState extends State<TeacherDashboardView> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                "PROF_ACCESS_HUB",
+                "${widget.userData['fn'] ?? 'PROF'}_${widget.userData['ln'] ?? 'USER'}",
                 style: GoogleFonts.inter(
                   color: textColor,
                   fontWeight: FontWeight.bold,

@@ -168,7 +168,8 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
                 _menuItem(LucideIcons.users, "Faculty Load", 2),
                 _sidebarHeader("STUDENT AFFAIRS"),
                 _menuItem(LucideIcons.fileText, "Final Assessment", 3),
-                _menuItem(LucideIcons.mail, "Messaging", 4),
+                _menuItem(LucideIcons.mail, "Student List", 4),
+                _menuItem(LucideIcons.mail, "Messaging", 5),
               ],
             ),
           ),
@@ -201,7 +202,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
         if (_isSidebarExpanded) ...[
           const SizedBox(width: 12),
           Text(
-            "UEMSSP Faculty",
+            "UEMSSP Program Chair",
             style: GoogleFonts.orbitron(
               color: textColor,
               fontWeight: FontWeight.bold,

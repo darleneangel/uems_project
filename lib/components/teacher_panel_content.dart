@@ -8,11 +8,13 @@ import 'shared/messaging_panel.dart';
 class TeacherPanelContent extends StatelessWidget {
   final int selectedIndex;
   final bool isDarkMode;
+  final Map<String, dynamic> userData;
 
   const TeacherPanelContent({
     super.key,
     required this.selectedIndex,
     required this.isDarkMode,
+    required this.userData,
   });
 
   static const Color surfaceDark = Color(0xFF1E1B4B);
@@ -24,15 +26,15 @@ class TeacherPanelContent extends StatelessWidget {
 
     switch (selectedIndex) {
       case 0:
-        return TeacherOverviewPanel(isDarkMode: isDarkMode);
+        return TeacherOverviewPanel(isDarkMode: isDarkMode, userData: userData);
       case 1:
-        return TeachingLoadPanel(isDarkMode: isDarkMode);
+        return TeachingLoadPanel(isDarkMode: isDarkMode, userData: userData);
       case 2:
-        return GradeEncodingPanel(isDarkMode: isDarkMode);
+        return GradeEncodingPanel(isDarkMode: isDarkMode, userData: userData);
       case 3:
-        return StudentTrackingPanel(isDarkMode: isDarkMode);
+        return StudentTrackingPanel(isDarkMode: isDarkMode, userData: userData);
       case 4:
-        return MessagingPanel(isDarkMode: isDarkMode);
+        return MessagingPanel(isDarkMode: isDarkMode, userData: userData);
       default:
         return _placeholderPanel("Module Under Construction", textColor);
     }
