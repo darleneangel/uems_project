@@ -38,15 +38,19 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
   static const Color pViolet = Color(0xFF2E1065);
   static const Color success = Color(0xFF69F0AE);
 
+  Color? get textColor => null;
+
   @override
   void initState() {
     super.initState();
     _loadTeacherLoad();
   }
 
-  /// 🛰️ DATABASE: Load all unique subjects assigned to this professor
+  /// 🛰️ DATABASE: Load subjects assigned to this professor from study_loads
   Future<void> _loadTeacherLoad() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
+
     try {
       final response = await _service.client
           .from('study_loads')
@@ -75,75 +79,116 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
         });
       }
     } catch (e) {
-      debugPrint("Load Load Error: $e");
+      debugPrint("Load Teacher Load Error: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  /// 🛰️ DATABASE: Fetch students enrolled in the selected subject
+  /// 🛰️ DATABASE: Fetch the roster with associated Grade records
   Future<void> _loadRoster() async {
     if (_selectedSubjectId == null) return;
     setState(() => _isLoading = true);
+
     try {
       final response = await _service.client
           .from('study_loads')
           .select('''
             id, 
-            assignment_grade, 
-            exam_grade, 
-            project_grade, 
-            final_grade,
-            profiles!study_loads_student_id_fkey(id, fn, ln, user_id_number)
+            profiles!study_loads_student_id_fkey (
+              id, 
+              fn, 
+              ln, 
+              user_id_number
+            ),
+            grades (
+              id,
+              midterm_grade,
+              final_grade,
+              final_numeric_grade
+            )
           ''')
           .eq('professor_id', widget.userData['id'])
-          .eq('subject_id', _selectedSubjectId!);
+          .eq('subject_id', _selectedSubjectId!)
+          .not('student_id', 'is', null);
 
       if (mounted) {
         setState(() {
-          _roster = List<Map<String, dynamic>>.from(response);
+          _roster = List<Map<String, dynamic>>.from(response).map((item) {
+            final gradesList = item['grades'] as List?;
+
+            // Map raw values for UI inputs and calculated values for DB
+            item['active_grade'] = (gradesList != null && gradesList.isNotEmpty)
+                ? Map<String, dynamic>.from(gradesList.first)
+                : {
+                    'midterm_grade': '0',
+                    'final_grade': '0', // Raw Input Final Percentage
+                    'final_numeric_grade': 0.0 // The Transmuted scale (1.0-5.0)
+                  };
+
+            // Internal calculation for UI Display
+            item['weighted_raw_avg'] = _calculateWeightedRaw(
+                item['active_grade']['midterm_grade'],
+                item['active_grade']['final_grade']);
+
+            return item;
+          }).toList();
           _isLoading = false;
         });
       }
     } catch (e) {
       debugPrint("Roster Sync Error: $e");
+      _showToast("Error syncing roster.", Colors.redAccent);
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  /// 🛰️ DATABASE: Update specific student grades
+  /// 🛰️ DATABASE: Update the 'grades' table
   Future<void> _saveGrades(Map<String, dynamic> row) async {
+    final activeGrade = row['active_grade'];
+    final studyLoadId = row['id'];
+
+    // Transmute for DB storage (Numeric(3,2) only allows values < 10)
+    double transmutedScale = _transmuteToScale(row['weighted_raw_avg']);
+
     try {
-      await _service.client.from('study_loads').update({
-        'assignment_grade': row['assignment_grade'],
-        'exam_grade': row['exam_grade'],
-        'project_grade': row['project_grade'],
-        'final_grade': row['final_grade'],
-      }).eq('id', row['id']);
+      await _service.client.from('grades').upsert({
+        if (activeGrade['id'] != null) 'id': activeGrade['id'],
+        'study_load_id': studyLoadId,
+        'midterm_grade': activeGrade['midterm_grade'].toString(),
+        'final_grade':
+            activeGrade['final_grade'].toString(), // Stores raw final input
+        'final_numeric_grade': transmutedScale, // Stores the 1.0-5.0 scale
+        'graded_by': widget.userData['id'],
+        'status': 'Encoded',
+      });
 
       _showToast(
-          "Grades for ${row['profiles']['fn']} updated successfully.", success);
+          "Grades for ${row['profiles']['fn']} saved to Grade Book.", success);
+      _loadRoster();
     } catch (e) {
-      _showToast("Update Failed: $e", Colors.redAccent);
+      debugPrint("Save Error: $e");
+      _showToast("Sync Error: Check Input Values.", Colors.redAccent);
     }
   }
 
-  /// 📐 LOGIC: Weighted Grade Calculation (30/40/30)
-  String _calculateFinal(dynamic a, dynamic e, dynamic p) {
-    double assign = double.tryParse(a.toString()) ?? 0.0;
-    double exam = double.tryParse(e.toString()) ?? 0.0;
-    double proj = double.tryParse(p.toString()) ?? 0.0;
+  /// 📐 LOGIC: Weighted Raw Average (e.g., 90.0)
+  double _calculateWeightedRaw(dynamic rawMidterm, dynamic rawFinal) {
+    double m = double.tryParse(rawMidterm.toString()) ?? 0.0;
+    double f = double.tryParse(rawFinal.toString()) ?? 0.0;
+    if (m == 0 && f == 0) return 0.0;
+    return (m * 0.4) + (f * 0.6);
+  }
 
-    double average = (assign * 0.3) + (exam * 0.4) + (proj * 0.3);
-
-    // SSC-R Cavite Grade Mapping Simulation
-    if (average >= 95) return "1.00";
-    if (average >= 90) return "1.25";
-    if (average >= 85) return "1.50";
-    if (average >= 80) return "1.75";
-    if (average >= 75) return "2.00";
-    if (average >= 70) return "2.50";
-    if (average >= 60) return "3.00";
-    return "5.00";
+  /// 📐 LOGIC: Transmutation to 1.00-5.00 Scale with 95 Ceiling
+  double _transmuteToScale(double average) {
+    if (average == 0) return 0.0;
+    if (average >= 95) return 1.00;
+    if (average >= 91) return 1.25;
+    if (average >= 87) return 1.50;
+    if (average >= 83) return 1.75;
+    if (average >= 79) return 2.00;
+    if (average >= 75) return 3.00;
+    return 5.00;
   }
 
   @override
@@ -188,7 +233,7 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
               letterSpacing: -1),
         ),
         const Text(
-          "Synchronized academic outcomes. Updates here reflect instantly on the student's portal.",
+          "Ceiling: 95.0. Numeric GWA reflects weighted raw scores.",
           style: TextStyle(color: Colors.blueGrey, fontSize: 14),
         ),
       ],
@@ -207,8 +252,14 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
       child: Row(
         children: [
           _buildDropdown(
-              "Current Teaching Load", _selectedSubjectId, _mySubjects, (v) {
-            setState(() => _selectedSubjectId = v);
+              "Teaching Assignments", _selectedSubjectId, _mySubjects, (v) {
+            final selected =
+                _mySubjects.firstWhere((s) => s['id'].toString() == v);
+            setState(() {
+              _selectedSubjectId = v;
+              _selectedSubjectName =
+                  "${selected['code']} - ${selected['name']}";
+            });
             _loadRoster();
           }),
           const Spacer(),
@@ -282,10 +333,10 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
         children: [
           _tableHead("ID NUMBER", 2),
           _tableHead("STUDENT NAME", 4),
-          _tableHead("ASGN (30%)", 2),
-          _tableHead("EXAM (40%)", 2),
-          _tableHead("PROJ (30%)", 2),
-          _tableHead("FINAL", 2),
+          _tableHead("RAW MIDTERM", 2),
+          _tableHead("RAW FINAL", 2),
+          _tableHead("NUMERIC GWA", 2),
+          _tableHead("TRANSMUTED", 2),
           const SizedBox(width: 40),
         ],
       ),
@@ -294,6 +345,9 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
 
   Widget _buildGradeRow(Map<String, dynamic> s, Color text) {
     final profile = s['profiles'];
+    final double rawAvg = s['weighted_raw_avg'] ?? 0.0;
+    final double transmuted = _transmuteToScale(rawAvg);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Row(
@@ -310,9 +364,23 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
               child: Text("${profile['fn']} ${profile['ln']}",
                   style: TextStyle(
                       color: text, fontWeight: FontWeight.bold, fontSize: 14))),
-          Expanded(flex: 2, child: _gradeInput(s, 'assignment_grade')),
-          Expanded(flex: 2, child: _gradeInput(s, 'exam_grade')),
-          Expanded(flex: 2, child: _gradeInput(s, 'project_grade')),
+
+          Expanded(flex: 2, child: _gradeInput(s, 'midterm_grade')),
+          Expanded(flex: 2, child: _gradeInput(s, 'final_grade')),
+
+          // Show Weighted Raw Average (e.g., 90.0)
+          Expanded(
+            flex: 2,
+            child: Center(
+              child: Text(rawAvg == 0 ? "0.0" : rawAvg.toStringAsFixed(1),
+                  style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13)),
+            ),
+          ),
+
+          // Show Transmuted Scale (e.g., 1.25)
           Expanded(
             flex: 2,
             child: Container(
@@ -321,9 +389,11 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
                   color: success.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8)),
               child: Center(
-                  child: Text(s['final_grade'] ?? "0.00",
-                      style: const TextStyle(
-                          color: success, fontWeight: FontWeight.w900))),
+                child: Text(
+                    transmuted == 0 ? "N/A" : transmuted.toStringAsFixed(2),
+                    style: const TextStyle(
+                        color: success, fontWeight: FontWeight.w900)),
+              ),
             ),
           ),
           IconButton(
@@ -346,7 +416,7 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
             fontSize: 13,
             fontWeight: FontWeight.bold),
         decoration: InputDecoration(
-          hintText: (s[field] ?? "0").toString(),
+          hintText: (s['active_grade'][field] ?? "0").toString(),
           hintStyle: const TextStyle(color: Colors.blueGrey),
           filled: true,
           fillColor: Colors.white.withOpacity(0.03),
@@ -357,9 +427,12 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
         ),
         onChanged: (v) {
           setState(() {
-            s[field] = double.tryParse(v) ?? 0.0;
-            s['final_grade'] = _calculateFinal(
-                s['assignment_grade'], s['exam_grade'], s['project_grade']);
+            s['active_grade'][field] = v;
+
+            // Recalculate the weighted raw average based on percentage inputs
+            s['weighted_raw_avg'] = _calculateWeightedRaw(
+                s['active_grade']['midterm_grade'],
+                s['active_grade']['final_grade']);
           });
         },
       ),
@@ -407,7 +480,8 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
               items: items
                   .map((i) => DropdownMenuItem(
                       value: i['id'].toString(),
-                      child: Text("${i['code']} - ${i['name']}")))
+                      child: Text("${i['code']} - ${i['name']}",
+                          overflow: TextOverflow.ellipsis)))
                   .toList(),
               onChanged: onChanged,
             ),
@@ -425,20 +499,27 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
       label: Text(label,
           style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
       style: ElevatedButton.styleFrom(
-        backgroundColor: color.withOpacity(0.1),
-        foregroundColor: color,
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+          backgroundColor: color.withOpacity(0.1),
+          foregroundColor: color,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
     );
   }
 
   Widget _buildEmptyState(Color t) => Center(
       child: Padding(
           padding: const EdgeInsets.all(80),
-          child: Text("No students currently enrolled in this subject roster.",
-              style: TextStyle(color: t.withOpacity(0.2)))));
+          child: Column(
+            children: [
+              Icon(LucideIcons.users, size: 48, color: t.withOpacity(0.1)),
+              const SizedBox(height: 16),
+              Text("No students found in this roster.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: t.withOpacity(0.2))),
+            ],
+          )));
 
   void _showToast(String m, Color c) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -450,9 +531,44 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
     if (_roster.isEmpty) return;
     final pdf = pw.Document();
     pdf.addPage(pw.Page(
-        build: (c) => pw.Center(
-            child: pw.Text(
-                "Official Roster Grade Report: $_selectedSubjectName"))));
+        pageFormat: PdfPageFormat.a4,
+        build: (c) => pw.Padding(
+              padding: const pw.EdgeInsets.all(32),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text("OFFICIAL GRADE BOOK REPORT",
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold, fontSize: 18)),
+                  pw.SizedBox(height: 8),
+                  pw.Text("Subject: $_selectedSubjectName"),
+                  pw.Text("Institutional Ceiling: 95.0"),
+                  pw.Text("Generated on: ${DateTime.now()}"),
+                  pw.SizedBox(height: 20),
+                  pw.Table.fromTextArray(
+                    headers: [
+                      "Student Name",
+                      "Raw Midterm",
+                      "Raw Final",
+                      "Weighted Avg",
+                      "Transmuted"
+                    ],
+                    data: _roster.map((s) {
+                      final p = s['profiles'];
+                      final double rAvg = s['weighted_raw_avg'] ?? 0.0;
+                      return [
+                        "${p['ln']}, ${p['fn']}",
+                        s['active_grade']['midterm_grade'] ?? "0",
+                        s['active_grade']['final_grade'] ?? "0",
+                        rAvg.toStringAsFixed(1),
+                        _transmuteToScale(rAvg).toStringAsFixed(2)
+                      ];
+                    }).toList(),
+                  ),
+                ],
+              ),
+            )));
+
     final dir = await getTemporaryDirectory();
     final file =
         File("${dir.path}/Report_${DateTime.now().millisecondsSinceEpoch}.pdf");

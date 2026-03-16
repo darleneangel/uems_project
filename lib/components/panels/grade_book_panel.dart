@@ -35,13 +35,14 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
     _fetchLiveGrades();
   }
 
-  /// DATABASE ENGINE: Fetches grades with joined subject and semester data
+  /// 🛰️ DATABASE ENGINE: Fetches grades with joined subject and semester data
   Future<void> _fetchLiveGrades() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     final client = SupabaseService().client;
 
     try {
-      // JOINED QUERY: grades -> study_loads -> subjects & semesters
+      // JOINED QUERY: Accessing nested descriptions via null-safe aliases
       final response = await client.from('grades').select('''
             midterm_grade,
             final_grade,
@@ -60,18 +61,19 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
         final List<Map<String, dynamic>> fetched =
             List<Map<String, dynamic>>.from(response);
 
-        // Derive unique semesters from the data
         final Set<String> semesterSet = {};
         for (var row in fetched) {
-          final sem = row['study_loads']['semesters']['description'];
-          final year = row['study_loads']['academic_years']['description'];
-          semesterSet.add("$sem $year");
+          // FIX: Added null-aware access to prevent "[] called on null" error
+          final loads = row['study_loads'] as Map?;
+          final semDesc =
+              loads?['semesters']?['description'] ?? "Unknown Semester";
+          final yearDesc = loads?['academic_years']?['description'] ?? "N/A";
+          semesterSet.add("$semDesc $yearDesc");
         }
 
         setState(() {
           _allGrades = fetched;
-          _semesters = semesterSet.toList()
-            ..sort((a, b) => b.compareTo(a)); // Newest first
+          _semesters = semesterSet.toList()..sort((a, b) => b.compareTo(a));
           if (_semesters.isNotEmpty) {
             _selectedSemester = _semesters.first;
           }
@@ -79,7 +81,7 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
         });
       }
     } catch (e) {
-      debugPrint("Grade Fetch Error: $e");
+      debugPrint("Grade Book Sync Error: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -87,22 +89,25 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
   List<Map<String, dynamic>> _getFilteredGrades() {
     if (_selectedSemester == null) return [];
     return _allGrades.where((g) {
-      final sem = g['study_loads']['semesters']['description'];
-      final year = g['study_loads']['academic_years']['description'];
+      final loads = g['study_loads'] as Map?;
+      final sem = loads?['semesters']?['description'] ?? "Unknown Semester";
+      final year = loads?['academic_years']?['description'] ?? "N/A";
       return "$sem $year" == _selectedSemester;
     }).toList();
   }
 
-  double _calculateGWA(List<Map<String, dynamic>> grades) {
+  double _calculateTermGWA(List<Map<String, dynamic>> grades) {
     if (grades.isEmpty) return 0.0;
     double totalPoints = 0;
     double totalUnits = 0;
+
     for (var g in grades) {
-      final numericGrade =
+      final double numericGrade =
           double.tryParse(g['final_numeric_grade']?.toString() ?? "0.0") ?? 0.0;
-      final units = double.tryParse(
-              g['study_loads']['subjects']['units']?.toString() ?? "0.0") ??
+      final double units = double.tryParse(
+              g['study_loads']?['subjects']?['units']?.toString() ?? "0.0") ??
           0.0;
+
       if (numericGrade > 0) {
         totalPoints += numericGrade * units;
         totalUnits += units;
@@ -110,166 +115,6 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
     }
     return totalUnits == 0 ? 0.0 : totalPoints / totalUnits;
   }
-
-  // --- PDF GENERATION ENGINE (Using Live Data) ---
-  Future<void> _exportGradesPdf() async {
-    final filtered = _getFilteredGrades();
-    if (filtered.isEmpty) return;
-
-    final pdf = pw.Document();
-    final String timestamp = DateTime.now().toString().split('.')[0];
-    final PdfColor brandViolet = PdfColor.fromInt(0xFF7C3AED);
-
-    pw.ImageProvider? logoImage;
-    try {
-      final ByteData data = await rootBundle.load('assets/image/logo (2).png');
-      logoImage = pw.MemoryImage(data.buffer.asUint8List());
-    } catch (_) {}
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(40),
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Row(children: [
-                    if (logoImage != null)
-                      pw.Container(
-                          width: 40, height: 40, child: pw.Image(logoImage)),
-                    pw.SizedBox(width: 12),
-                    pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text("UEMSSP",
-                              style: pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold,
-                                  fontSize: 22,
-                                  color: brandViolet)),
-                          pw.Text("OFFICIAL GRADE REPORTING NODE",
-                              style: pw.TextStyle(
-                                  fontSize: 8, color: PdfColors.grey700)),
-                        ]),
-                  ]),
-                  pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end,
-                      children: [
-                        pw.Text("OFFICIAL DOCUMENT",
-                            style: pw.TextStyle(
-                                fontSize: 8,
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.grey500)),
-                        pw.Text("SCHOLASTIC RECORD",
-                            style: pw.TextStyle(
-                                fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                      ]),
-                ],
-              ),
-              pw.SizedBox(height: 20),
-              pw.Divider(color: brandViolet, thickness: 1.5),
-              pw.SizedBox(height: 25),
-              pw.Container(
-                padding: const pw.EdgeInsets.all(12),
-                decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey300),
-                    borderRadius: pw.BorderRadius.circular(8)),
-                child: pw.Column(children: [
-                  pw.Row(children: [
-                    pw.Expanded(
-                        child: _pdfMetaItem("NAME",
-                            "${widget.studentData['fn']} ${widget.studentData['ln']}")),
-                    pw.Expanded(
-                        child: _pdfMetaItem(
-                            "ID NUMBER", widget.studentData['user_id_number'])),
-                  ]),
-                  pw.SizedBox(height: 10),
-                  pw.Row(children: [
-                    pw.Expanded(
-                        child: _pdfMetaItem(
-                            "ACADEMIC PERIOD", _selectedSemester ?? "N/A")),
-                    pw.Expanded(child: _pdfMetaItem("GENERATED ON", timestamp)),
-                  ]),
-                ]),
-              ),
-              pw.SizedBox(height: 40),
-              pw.Table.fromTextArray(
-                headers: [
-                  "CODE",
-                  "DESCRIPTION",
-                  "UNITS",
-                  "MID",
-                  "FINAL",
-                  "STATUS"
-                ],
-                headerStyle: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold,
-                    fontSize: 8,
-                    color: PdfColors.white),
-                headerDecoration: pw.BoxDecoration(color: brandViolet),
-                cellStyle: pw.TextStyle(fontSize: 8),
-                data: filtered
-                    .map((g) => [
-                          g['study_loads']['subjects']['code'],
-                          g['study_loads']['subjects']['name'],
-                          g['study_loads']['subjects']['units'].toString(),
-                          g['midterm_grade'] ?? '-',
-                          g['final_grade'] ?? '-',
-                          g['status'] ?? 'N/A'
-                        ])
-                    .toList(),
-              ),
-              pw.SizedBox(height: 25),
-              pw.Row(mainAxisAlignment: pw.MainAxisAlignment.end, children: [
-                pw.Text("TERM GWA: ",
-                    style: pw.TextStyle(
-                        fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                pw.Text(_calculateGWA(filtered).toStringAsFixed(2),
-                    style: pw.TextStyle(
-                        fontSize: 14,
-                        fontWeight: pw.FontWeight.bold,
-                        color: brandViolet)),
-              ]),
-              pw.Spacer(),
-              pw.Divider(color: PdfColors.grey300),
-              pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text("AUTHENTICATED VIA SUPABASE CLOUD",
-                        style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold, fontSize: 8)),
-                    pw.Text(
-                        "Verification Hash: ${widget.studentData['id'].toString().substring(0, 8)}",
-                        style: pw.TextStyle(fontSize: 7)),
-                  ]),
-            ],
-          );
-        },
-      ),
-    );
-
-    try {
-      final dir = await getTemporaryDirectory();
-      final file = File(
-          "${dir.path}/Grades_${_selectedSemester?.replaceAll(' ', '_')}.pdf");
-      await file.writeAsBytes(await pdf.save());
-      await OpenFile.open(file.path);
-    } catch (_) {}
-  }
-
-  pw.Widget _pdfMetaItem(String label, String val) =>
-      pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        pw.Text(label,
-            style: pw.TextStyle(
-                fontSize: 7,
-                color: PdfColors.grey600,
-                fontWeight: pw.FontWeight.bold)),
-        pw.Text(val,
-            style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold))
-      ]);
 
   @override
   Widget build(BuildContext context) {
@@ -285,42 +130,23 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
           child: CircularProgressIndicator(color: Color(0xFF8B5CF6)));
 
     final filtered = _getFilteredGrades();
-    final gwa = _calculateGWA(filtered);
+    final gwa = _calculateTermGWA(filtered);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_semesters.isNotEmpty) ...[
-          _buildSemesterSelector(cardColor, textColor),
-          const SizedBox(height: 24),
-          _buildSummaryCard(
-              cardColor, textColor, subTextColor, gwa, filtered.length),
-          const SizedBox(height: 24),
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
-              onPressed: filtered.isEmpty ? null : _exportGradesPdf,
-              icon: const Icon(LucideIcons.fileDown, size: 16),
-              label: const Text("DOWNLOAD PDF"),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B5CF6),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (filtered.isEmpty)
-            Center(
-                child: Text("No records found for this period.",
-                    style: TextStyle(color: subTextColor)))
-          else
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_semesters.isNotEmpty) ...[
+            _buildSemesterSelector(cardColor, textColor),
+            const SizedBox(height: 24),
+            _buildSummaryCard(
+                cardColor, textColor, subTextColor, gwa, filtered.length),
+            const SizedBox(height: 24),
             _buildGradeTable(filtered, cardColor, textColor, subTextColor),
-        ] else
-          _buildEmptyState(subTextColor),
-      ],
+          ] else
+            _buildEmptyState(subTextColor),
+        ],
+      ),
     );
   }
 
@@ -340,11 +166,9 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
           icon: Icon(LucideIcons.chevronDown, color: textColor),
           style: GoogleFonts.inter(
               color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
-          onChanged: (String? newValue) =>
-              setState(() => _selectedSemester = newValue),
+          onChanged: (v) => setState(() => _selectedSemester = v),
           items: _semesters
-              .map<DropdownMenuItem<String>>((String value) =>
-                  DropdownMenuItem<String>(value: value, child: Text(value)))
+              .map((s) => DropdownMenuItem(value: s, child: Text(s)))
               .toList(),
         ),
       ),
@@ -359,17 +183,15 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
           gradient: LinearGradient(
               colors: widget.isDarkMode
                   ? [const Color(0xFF2E1065), const Color(0xFF4C1D95)]
-                  : [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight),
+                  : [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)]),
           borderRadius: BorderRadius.circular(24)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text("GWA Standing",
+            const Text("Institutional GWA",
                 style: TextStyle(color: Colors.white70, fontSize: 12)),
-            Text(gwa.toStringAsFixed(2),
+            Text(gwa == 0 ? "N/A" : gwa.toStringAsFixed(2),
                 style: GoogleFonts.inter(
                     color: Colors.white,
                     fontSize: 32,
@@ -382,24 +204,22 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
                   decoration: BoxDecoration(
                       color: const Color(0xFF69F0AE),
                       borderRadius: BorderRadius.circular(8)),
-                  child: const Text("DEAN'S LISTER",
+                  child: const Text("SCHOLASTIC HONOR",
                       style: TextStyle(
                           color: Color(0xFF1E1B4B),
                           fontSize: 10,
                           fontWeight: FontWeight.bold))),
           ]),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            const Text("Subjects",
+            const Text("Total Units",
                 style: TextStyle(color: Colors.white70, fontSize: 12)),
-            Text(count.toString(),
+            Text("$count Subjects",
                 style: GoogleFonts.inter(
                     color: Colors.white,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text(
-                widget.studentData['status']?.toString().toUpperCase() ??
-                    "ACTIVE",
+            Text("VERIFIED RECORD",
                 style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
@@ -414,7 +234,6 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
   Widget _buildGradeTable(List<Map<String, dynamic>> grades, Color cardColor,
       Color textColor, Color subTextColor) {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
           color: cardColor,
@@ -422,98 +241,81 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
           border: Border.all(
               color: widget.isDarkMode ? Colors.white10 : Colors.black12)),
       child: Table(
-        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         columnWidths: const {
           0: FlexColumnWidth(1.2),
           1: FlexColumnWidth(3),
           2: FlexColumnWidth(0.8),
           3: FlexColumnWidth(0.8),
-          4: FlexColumnWidth(0.8),
-          5: FlexColumnWidth(1.2)
+          4: FlexColumnWidth(1.2)
         },
         children: [
-          TableRow(
-              decoration: BoxDecoration(
-                  border: Border(
-                      bottom:
-                          BorderSide(color: subTextColor.withOpacity(0.1)))),
-              children: [
-                _tableHeader("Code", subTextColor),
-                _tableHeader("Subject", subTextColor),
-                _tableHeader("Units", subTextColor, align: TextAlign.center),
-                _tableHeader("Mid", subTextColor, align: TextAlign.center),
-                _tableHeader("Final", subTextColor, align: TextAlign.center),
-                _tableHeader("Status", subTextColor, align: TextAlign.center),
-              ]),
-          ...grades.map((grade) {
-            final s = grade['study_loads']['subjects'];
-            return TableRow(
-                decoration: BoxDecoration(
-                    border: Border(
-                        bottom:
-                            BorderSide(color: subTextColor.withOpacity(0.05)))),
-                children: [
-                  _tableCell(s['code'], const Color(0xFF8B5CF6), isBold: true),
-                  _tableCell(s['name'], textColor),
-                  _tableCell(s['units'].toString(), textColor,
-                      align: TextAlign.center),
-                  _tableCell(grade['midterm_grade'] ?? '-', textColor,
-                      align: TextAlign.center),
-                  _tableCell(grade['final_grade'] ?? '-', textColor,
-                      align: TextAlign.center),
-                  Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Center(
-                          child: _statusBadge(grade['status'] ?? 'Enrolled'))),
-                ]);
+          TableRow(children: [
+            _header("Code", subTextColor),
+            _header("Subject", subTextColor),
+            _header("Mid", subTextColor, center: true),
+            _header("Fin", subTextColor, center: true),
+            _header("GWA", subTextColor, center: true),
+          ]),
+          ...grades.map((g) {
+            final sub = g['study_loads']['subjects'];
+            final numericGwa = double.tryParse(
+                    g['final_numeric_grade']?.toString() ?? "0.0") ??
+                0.0;
+            return TableRow(children: [
+              _cell(sub['code'], const Color(0xFF8B5CF6), bold: true),
+              _cell(sub['name'], textColor),
+              _cell(g['midterm_grade'] ?? '-', textColor, center: true),
+              _cell(g['final_grade'] ?? '-', textColor, center: true),
+              Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Center(child: _gwaBadge(numericGwa))),
+            ]);
           }),
         ],
       ),
     );
   }
 
-  Widget _tableHeader(String t, Color c, {TextAlign align = TextAlign.left}) =>
+  Widget _header(String t, Color c, {bool center = false}) => Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Text(t.toUpperCase(),
+          textAlign: center ? TextAlign.center : TextAlign.left,
+          style: GoogleFonts.inter(
+              color: c,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1)));
+  Widget _cell(String t, Color c, {bool bold = false, bool center = false}) =>
       Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Text(t.toUpperCase(),
-              textAlign: align,
-              style: GoogleFonts.inter(
-                  color: c,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1)));
-  Widget _tableCell(String t, Color c,
-          {TextAlign align = TextAlign.left, bool isBold = false}) =>
-      Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           child: Text(t,
-              textAlign: align,
+              textAlign: center ? TextAlign.center : TextAlign.left,
               style: GoogleFonts.inter(
                   color: c,
                   fontSize: 13,
-                  fontWeight: isBold ? FontWeight.w700 : FontWeight.w500)));
+                  fontWeight: bold ? FontWeight.w700 : FontWeight.w500)));
 
-  Widget _statusBadge(String status) {
-    final isPassed = status == 'Passed';
-    final color = isPassed
-        ? const Color(0xFF69F0AE)
-        : (status == 'Enrolled' ? const Color(0xFF8B5CF6) : Colors.redAccent);
+  Widget _gwaBadge(double gwa) {
+    if (gwa == 0)
+      return const Text("-", style: TextStyle(color: Colors.blueGrey));
+    final color = gwa <= 3.0 ? const Color(0xFF69F0AE) : Colors.redAccent;
     return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: color.withOpacity(0.2))),
-        child: Text(status.toUpperCase(),
+        child: Text(gwa.toStringAsFixed(2),
             style: GoogleFonts.inter(
-                color: color, fontSize: 10, fontWeight: FontWeight.w900)));
+                color: color, fontSize: 11, fontWeight: FontWeight.w900)));
   }
 
   Widget _buildEmptyState(Color sub) => Center(
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(LucideIcons.inbox, size: 48, color: sub.withOpacity(0.3)),
-        const SizedBox(height: 16),
-        Text("No academic records found in database.",
-            style: TextStyle(color: sub))
-      ]));
+      child: Padding(
+          padding: const EdgeInsets.all(100),
+          child: Column(children: [
+            Icon(LucideIcons.bookOpen, size: 48, color: sub.withOpacity(0.3)),
+            const SizedBox(height: 16),
+            Text("No academic history found.", style: TextStyle(color: sub))
+          ])));
 }
