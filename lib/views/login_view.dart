@@ -429,7 +429,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                                 child: ElevatedButton(
                                   onPressed: _isLoading ? null : _handleLogin,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: sViolet,
+                                    backgroundColor: aViolet,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                         borderRadius:
@@ -470,8 +470,11 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   }
 
   Widget _buildWelcomeLoading() {
+    final bgColor = _isDarkMode ? tDark : const Color(0xFFF1F5F9);
+    final textColor = _isDarkMode ? Colors.white : pViolet;
+
     return Scaffold(
-      backgroundColor: tDark,
+      backgroundColor: bgColor,
       body: Center(
         child: FadeTransition(
           opacity: _welcomeOpacity,
@@ -515,7 +518,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                   style: GoogleFonts.inter(
                       fontSize: 42,
                       fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                      color: textColor,
                       letterSpacing: -2)),
               const SizedBox(height: 16),
               Text(
@@ -534,14 +537,18 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                       borderRadius: BorderRadius.circular(12),
                       child: LinearProgressIndicator(
                         color: aViolet,
-                        backgroundColor: Colors.white.withOpacity(0.05),
+                        backgroundColor: _isDarkMode
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.black.withOpacity(0.05),
                         minHeight: 8,
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text("Synchronizing encrypted academic pipeline...",
+                    Text("Synchronizing encrypted academic pipeline...",
                         style: TextStyle(
-                            color: Colors.blueGrey,
+                            color: _isDarkMode
+                                ? Colors.blueGrey
+                                : pViolet.withOpacity(0.6),
                             fontSize: 13,
                             letterSpacing: 1)),
                   ],
@@ -593,26 +600,29 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     );
   }
 
-  Widget _buildLabel(String t) => Padding(
-        padding: const EdgeInsets.only(bottom: 12, left: 6),
-        child: Text(t.toUpperCase(),
-            style: const TextStyle(
-                color: Colors.blueGrey,
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2.5)),
-      );
+  Widget _buildLabel(String t) {
+    final labelColor = _isDarkMode ? Colors.blueGrey : pViolet.withOpacity(0.7);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12, left: 6),
+      child: Text(t.toUpperCase(),
+          style: TextStyle(
+              color: labelColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2.5)),
+    );
+  }
 
   Widget _buildTextField(TextEditingController c, String h, IconData i,
       {bool obscure = false, Widget? suffix}) {
     final fieldColor = _isDarkMode
         ? Colors.white.withOpacity(0.04)
         : Colors.black.withOpacity(0.02);
-    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
+    final borderColor = _isDarkMode ? Colors.white10 : pViolet.withOpacity(0.1);
 
     return Container(
       decoration: BoxDecoration(
-        color: fieldColor,
+        color: _isDarkMode ? fieldColor : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: borderColor),
       ),
@@ -626,7 +636,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
             fontSize: 16),
         decoration: InputDecoration(
           hintText: h,
-          hintStyle: const TextStyle(
+          hintStyle: TextStyle(
               color: Colors.blueGrey,
               fontSize: 15,
               fontWeight: FontWeight.w400),
