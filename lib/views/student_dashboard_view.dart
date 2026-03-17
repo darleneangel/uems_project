@@ -1,7 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'dart:ui'; // Ensure this file exports a MessagingPanel widget
+import 'dart:ui';
 import '../components/shared/messaging_panel.dart';
 import '../components/dashboard_panel_template.dart';
 import '../components/student_panel_content.dart';
@@ -17,12 +17,10 @@ class StudentDashboardView extends StatefulWidget {
 }
 
 class _StudentDashboardViewState extends State<StudentDashboardView> {
-  // Theme state
   bool _isDarkMode = true;
   bool _isSidebarExpanded = true;
   int _selectedIndex = 0;
 
-  // Database Data State
   List<Map<String, dynamic>> _grades = [];
   List<Map<String, dynamic>> _assessments = [];
   List<Map<String, dynamic>> _requests = [];
@@ -31,7 +29,6 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   double _enrollmentProgress = 0.0;
   bool _isDataLoading = false;
 
-  // Panel mapping (0..6 correspond to sidebar items excluding Logout)
   static const List<String> _panelTypes = [
     'dashboard',
     'subject_load',
@@ -39,95 +36,203 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     'grade_book',
     'profile',
     'offices',
-    'messaging',
+    'messaging'
   ];
 
-  // Standardized Violet Theme Palette
   static const Color primaryViolet = Color(0xFF2E1065);
-  static const Color secondaryViolet = Color(0xFF4C1D95);
-  static const Color surfaceDark = Color(0xFF1E1B4B);
+  static const Color secondaryViolet = Color(0xFF6D28D9);
   static const Color accentViolet = Color(0xFF8B5CF6);
+  static const Color surfaceDark = Color(0xFF1E1B4B);
   static const Color successColor = Color(0xFF69F0AE);
-  static const Color aViolet = Color(0xFF7C3AED);
+  static const Color aViolet = Color(0xFFB794F4);
 
   @override
   void initState() {
     super.initState();
     _loadStudentData();
+    _checkSecurityStatus(); // Mandatory security check on entry
   }
 
   Future<void> _loadStudentData() async {
-    if (widget.userData == null) return;
+    if (!mounted) return;
     setState(() => _isDataLoading = true);
-
-    final client = SupabaseService().client;
-    final studentId = widget.userData!['id'];
-    final now = DateTime.now();
-
     try {
-      // Parallel data fetching for performance
-      final results = await Future.wait([
-        client
-            .from('study_loads')
-            .select('*, subjects(*)')
-            .eq('student_id', studentId),
-        client.from('payments').select().eq('student_id', studentId),
-        client.from('office_requests').select().eq('student_id', studentId),
-        client
-            .from('announcements')
-            .select()
-            .order('created_at', ascending: false)
-            .limit(5),
-        client
-            .from('study_loads')
-            .select('*, subjects(*)')
-            .eq('student_id', studentId)
-            .limit(1)
-            .maybeSingle(),
-        client
-            .from('student_details')
-            .select('enrollment_status')
-            .eq('profile_id', studentId)
-            .maybeSingle(),
-      ]);
+      final client = SupabaseService().client;
+      // Fetch Announcements
+      final annRes = await client
+          .from('announcements')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(5);
+
+      // Determine enrollment progress based on the student's status
+      final details = widget.userData?['student_details'];
+      final String status = (details is List && details.isNotEmpty)
+          ? (details.first['enrollment_status'] ?? "")
+          : (details is Map ? (details['enrollment_status'] ?? "") : "");
 
       if (mounted) {
         setState(() {
-          _grades = List<Map<String, dynamic>>.from(results[0] as List? ?? []);
-          _assessments =
-              List<Map<String, dynamic>>.from(results[1] as List? ?? []);
-          _requests =
-              List<Map<String, dynamic>>.from(results[2] as List? ?? []);
-          _announcements =
-              List<Map<String, dynamic>>.from(results[3] as List? ?? []);
-          _nextClass = results[4] as Map<String, dynamic>?;
-
-          final status =
-              (results[5] as Map<String, dynamic>?)?['enrollment_status'];
-          _enrollmentProgress = status == 'Enrolled' ? 1.0 : 0.5;
-
+          _announcements = List<Map<String, dynamic>>.from(annRes);
+          _enrollmentProgress = status == 'Enrolled' ? 1.0 : 0.75;
           _isDataLoading = false;
         });
       }
     } catch (e) {
-      debugPrint("Student Dashboard Sync Error: $e");
       if (mounted) setState(() => _isDataLoading = false);
     }
   }
 
   Map<String, dynamic> _getCombinedData() {
-    final detailsData = widget.userData?['student_details'];
-    final details = (detailsData is List && detailsData.isNotEmpty)
-        ? detailsData.first
-        : (detailsData is Map ? detailsData : {});
-    return {
-      ...(widget.userData ?? {}),
-      ...details,
-      'grade_book': _grades,
-      'assessment': _assessments,
-      'offices': _requests,
-    };
+    final Map<String, dynamic> data =
+        Map<String, dynamic>.from(widget.userData ?? {});
+    final details = data['student_details'];
+    if (details != null) {
+      if (details is List && details.isNotEmpty) {
+        data.addAll(Map<String, dynamic>.from(details.first));
+      } else if (details is Map) {
+        data.addAll(Map<String, dynamic>.from(details));
+      }
+    }
+    return data;
   }
+
+  /// 🛡️ SECURITY ENGINE: Checks if password_hash matches lowercased last name (the default)
+  void _checkSecurityStatus() {
+    final String currentPass =
+        widget.userData?['password_hash']?.toString() ?? "";
+    final String lastName =
+        widget.userData?['ln']?.toString().toLowerCase().trim() ?? "";
+
+    if (currentPass == lastName && currentPass.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showForcePasswordChangeDialog();
+      });
+    }
+  }
+
+  void _showForcePasswordChangeDialog() {
+    final newPassCtrl = TextEditingController();
+    final confirmPassCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool obscure = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevents bypass
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1B4B),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: const Row(
+            children: [
+              Icon(LucideIcons.shieldAlert, color: Color(0xFF8B5CF6)),
+              SizedBox(width: 12),
+              Text("Security Update Required",
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: SizedBox(
+            width: 400,
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                      "To protect your account, you must replace your temporary password with a secure one.",
+                      style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: newPassCtrl,
+                    obscureText: obscure,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _securityInput("New Password", LucideIcons.lock,
+                        () => setModalState(() => obscure = !obscure), obscure),
+                    validator: (v) {
+                      if (v == null || v.length < 8)
+                        return "Min 8 characters required";
+                      if (!v.contains(RegExp(r'[A-Z]')))
+                        return "Add 1 uppercase letter";
+                      if (!v.contains(RegExp(r'[a-z]')))
+                        return "Add 1 lowercase letter";
+                      if (!v.contains(RegExp(r'[0-9]'))) return "Add 1 number";
+                      if (!v.contains(RegExp(r'[^a-zA-Z0-9]')))
+                        return "Add 1 special character";
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: confirmPassCtrl,
+                    obscureText: obscure,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _securityInput("Confirm Password",
+                        LucideIcons.checkCircle, null, false),
+                    validator: (v) =>
+                        v != newPassCtrl.text ? "Passwords do not match" : null,
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                      "Rules: 8+ Chars, Upper, Lower, Number, & Special Char.",
+                      style: TextStyle(color: Colors.blueGrey, fontSize: 10)),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () async {
+                if (formKey.currentState!.validate()) {
+                  await SupabaseService()
+                      .client
+                      .from('profiles')
+                      .update({
+                        'password_hash': newPassCtrl.text,
+                      })
+                      .eq('id', widget.userData!['id'])
+                      .select();
+
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text("Account Secured! Welcome."),
+                      backgroundColor: Colors.greenAccent));
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF8B5CF6),
+                minimumSize: const Size(double.infinity, 55),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+              ),
+              child: const Text("SAVE & CONTINUE"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _securityInput(
+          String label, IconData icon, VoidCallback? toggle, bool obs) =>
+      InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.blueGrey, fontSize: 12),
+        prefixIcon: Icon(icon, size: 18, color: const Color(0xFF8B5CF6)),
+        suffixIcon: toggle != null
+            ? IconButton(
+                onPressed: toggle,
+                icon:
+                    Icon(obs ? LucideIcons.eyeOff : LucideIcons.eye, size: 16))
+            : null,
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.05),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
+      );
 
   @override
   Widget build(BuildContext context) {

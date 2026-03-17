@@ -16,6 +16,7 @@ class AccountingPanelContent extends StatelessWidget {
   final bool isDarkMode;
   final VoidCallback? onNavigateToFeeManagement;
   final VoidCallback? onGenerateDailyReport;
+  final Map<String, dynamic> userData;
 
   const AccountingPanelContent({
     super.key,
@@ -23,6 +24,7 @@ class AccountingPanelContent extends StatelessWidget {
     required this.isDarkMode,
     this.onNavigateToFeeManagement,
     this.onGenerateDailyReport,
+    required this.userData,
   });
 
   // Theme Constants (matching AdmissionDashboardView)
@@ -43,7 +45,7 @@ class AccountingPanelContent extends StatelessWidget {
           onGenerateDailyReport: onGenerateDailyReport,
         );
       case 1:
-        return FeeManagementPanel(isDarkMode: isDarkMode);
+        return FeeManagementPanel(isDarkMode: isDarkMode, userData: userData);
       case 2:
         return FinancialReportsPanel(isDarkMode: isDarkMode);
       case 3:

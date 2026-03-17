@@ -15,11 +15,13 @@ import 'registrar_panels/audit_trail_panel.dart';
 class RegistrarPanelContent extends StatelessWidget {
   final String panelType;
   final bool isDarkMode;
+  final Map<String, dynamic> userData;
 
   const RegistrarPanelContent({
     super.key,
     required this.panelType,
     required this.isDarkMode,
+    required this.userData,
   });
 
   @override
@@ -42,9 +44,10 @@ class RegistrarPanelContent extends StatelessWidget {
           isDarkMode: isDarkMode,
         );
       case 'enrollment':
-        return EnrollmentRegistrationPanel(
+        return RegistrarEnrollmentPanel(
           key: const ValueKey('enrollment'),
           isDarkMode: isDarkMode,
+          userData: userData,
         );
       case 'grades':
         return GradesManagementPanel(

@@ -5,10 +5,13 @@ import '../components/accounting_panels/fee_management_panel.dart';
 import '../components/accounting_panels/payroll_panel.dart';
 import '../components/accounting_panels/financial_reports_panel.dart';
 import '../components/accounting_panels/accounting_overview_panel.dart';
+import '../components/accounting_panels/registration_payment_panel.dart';
 
 class AccountingDashboardView extends StatefulWidget {
+  final Map<String, dynamic> userData;
   final VoidCallback onLogout;
-  const AccountingDashboardView({super.key, required this.onLogout});
+  const AccountingDashboardView(
+      {super.key, required this.onLogout, required this.userData});
 
   @override
   State<AccountingDashboardView> createState() =>
@@ -58,11 +61,17 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
   Widget _getActivePanel() {
     switch (_selectedIndex) {
       case 1:
-        return FeeManagementPanel(isDarkMode: _isDarkMode);
+        return FeeManagementPanel(
+          isDarkMode: _isDarkMode,
+          userData: widget.userData,
+        );
       case 3:
         return PayrollPanel(isDarkMode: _isDarkMode);
       case 2:
         return FinancialReportsPanel(isDarkMode: _isDarkMode);
+      case 4:
+        return RegistrationPaymentPanel(
+            isDarkMode: _isDarkMode, userData: widget.userData);
       case 0:
       default:
         return AccountingOverviewPanel(isDarkMode: _isDarkMode);
@@ -144,6 +153,7 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
                 _sidebarHeader("COLLECTIONS"),
                 _menuItem(LucideIcons.receipt, "Fee Management", 1),
                 _menuItem(LucideIcons.pieChart, "Fiscal Reports", 2),
+                _menuItem(LucideIcons.piggyBank, "Enrollment Payment", 4),
                 _sidebarHeader("INTERNAL"),
                 _menuItem(LucideIcons.users, "Institution Payroll", 3),
                 _menuItem(LucideIcons.shoppingCart, "Disbursements", 4),

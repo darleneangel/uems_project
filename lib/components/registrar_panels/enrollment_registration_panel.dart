@@ -1,302 +1,336 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:mailer/mailer.dart';
+import 'package:mailer/smtp_server.dart';
 import '../../services/supabase_service.dart';
 
-class EnrollmentRegistrationPanel extends StatefulWidget {
+class RegistrarEnrollmentPanel extends StatefulWidget {
   final bool isDarkMode;
-  const EnrollmentRegistrationPanel({super.key, required this.isDarkMode});
+  final Map<String, dynamic> userData;
+
+  const RegistrarEnrollmentPanel(
+      {super.key, required this.isDarkMode, required this.userData});
 
   @override
-  State<EnrollmentRegistrationPanel> createState() =>
-      _EnrollmentRegistrationPanelState();
+  State<RegistrarEnrollmentPanel> createState() =>
+      _RegistrarEnrollmentPanelState();
 }
 
-class _EnrollmentRegistrationPanelState
-    extends State<EnrollmentRegistrationPanel> {
-  bool _isProcessing = false;
+class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
+  final SupabaseService _service = SupabaseService();
+  final TextEditingController _searchController = TextEditingController();
 
-  // Standardized Tonal Palette
+  List<Map<String, dynamic>> _queue = [];
+  bool _isLoading = true;
+
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color success = Color(0xFF69F0AE);
+  static const Color surfaceDark = Color(0xFF1E1B4B);
 
-  /// DATABASE ACTION: Finalizes enrollment by updating status
-  Future<void> _approveEnrollment(String profileId, String name) async {
-    setState(() => _isProcessing = true);
+  @override
+  void initState() {
+    super.initState();
+    _fetchClearedApplicants();
+  }
+
+  /// 📧 SMTP NOTIFICATION ENGINE
+  Future<void> _sendEnrollmentEmail({
+    required String recipientEmail,
+    required String studentName,
+    required String studentId,
+    required String tempPassword,
+  }) async {
+    const String senderEmail = 'bright.future.academyUEMSSP@gmail.com';
+    const String appPassword = 'jnea wnbk atjg gyqi';
+    final smtpServer = gmail(senderEmail, appPassword);
+
+    final message = Message()
+      ..from = const Address(senderEmail, 'UEMSSP Registrar Office')
+      ..recipients.add(recipientEmail)
+      ..subject = 'Official Enrollment Confirmation - Bright Future Academy'
+      ..html = """
+        <div style='font-family: sans-serif; max-width: 500px; margin: auto; border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden;'>
+          <div style='background-color: #2E1065; padding: 40px; text-align: center;'>
+            <h1 style='color: white; margin: 0; font-size: 24px;'>WELCOME TO THE ACADEMY</h1>
+          </div>
+          <div style='padding: 30px; background-color: #ffffff;'>
+            <p>Hello <b>$studentName</b>,</p>
+            <p>Your portal access credentials have been generated:</p>
+            <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0; border: 1px dashed #cbd5e1;'>
+              <p style='margin: 0; font-size: 11px; color: #64748b;'>STUDENT ID NUMBER</p>
+              <p style='margin: 5px 0 15px 0; font-size: 22px; font-weight: bold; color: #8B5CF6;'>$studentId</p>
+              <p style='margin: 0; font-size: 11px; color: #64748b;'>TEMPORARY PASSWORD</p>
+              <p style='margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #1e293b;'>$tempPassword</p>
+            </div>
+            <p style='font-size: 13px; color: #475569;'>You are required to change this password immediately upon logging in for the first time.</p>
+          </div>
+        </div>
+      """;
     try {
-      await SupabaseService().client.from('student_details').update(
-          {'enrollment_status': 'Enrolled'}).eq('profile_id', profileId);
+      await send(message, smtpServer);
+    } catch (e) {
+      debugPrint('SMTP Error: $e');
+    }
+  }
+
+  Future<void> _fetchClearedApplicants() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      final response = await _service.client
+          .from('applicants')
+          .select('*, courses(*)')
+          .or('status.eq.Ready for Registration,status.eq.Admitted')
+          .order('created_at', ascending: true);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              backgroundColor: success,
-              content: Text("Student $name officially Enrolled.")),
-        );
+        setState(() {
+          _queue = List<Map<String, dynamic>>.from(response);
+          _isLoading = false;
+        });
       }
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            backgroundColor: Colors.redAccent,
-            content: Text("Approval Error: $e")));
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<String> _generateStudentId() async {
+    final int currentYear = DateTime.now().year;
+    final response = await _service.client
+        .from('profiles')
+        .select('id')
+        .eq('role', 'student');
+    final List list = response as List;
+    return "$currentYear${(list.length + 1).toString().padLeft(5, '0')}";
+  }
+
+  Future<void> _finalizeRegistration(
+      Map<String, dynamic> app, String yearLevelId) async {
+    setState(() => _isLoading = true);
+    try {
+      final String studentIdNum = await _generateStudentId();
+      final nameParts = app['full_name'].toString().split(', ');
+      final String ln = nameParts[0].trim();
+      final String remainingNames = nameParts.length > 1 ? nameParts[1] : "";
+      final firstNameParts = remainingNames.trim().split(' ');
+      final String fn = firstNameParts[0];
+      final String mn = firstNameParts.length > 1 ? firstNameParts[1] : "";
+
+      final String defaultPassword = ln.toLowerCase();
+
+      // 1. Create official Profile
+      // FIXED: Removed 'is_first_login' column because it does not exist in the DB schema.
+      // The system will instead use 'password_hash == ln.toLowerCase()' as the trigger.
+      final profileRes = await _service.client
+          .from('profiles')
+          .insert({
+            'user_id_number': studentIdNum,
+            'password_hash': defaultPassword,
+            'role': 'student',
+            'fn': fn,
+            'mn': mn,
+            'ln': ln,
+            'email': app['email'],
+          })
+          .select()
+          .single();
+
+      final String newProfileId = profileRes['id'];
+
+      // 2. Create Student Details
+      await _service.client.from('student_details').insert({
+        'profile_id': newProfileId,
+        'course_id': app['target_course_id'],
+        'year_level_id': yearLevelId,
+        'student_type': app['applicant_type'],
+        'enrollment_status': 'Enrolled',
+        'section_block': '',
+      });
+
+      // 3. Update Applicant status
+      await _service.client
+          .from('applicants')
+          .update({'status': 'Enrolled'}).eq('id', app['id']);
+
+      _sendEnrollmentEmail(
+          recipientEmail: app['email'],
+          studentName: "$fn $ln",
+          studentId: studentIdNum,
+          tempPassword: defaultPassword);
+      _showSuccessDialog(studentIdNum, app['full_name'], app['email']);
+      _fetchClearedApplicants();
+    } catch (e) {
+      _showToast("Registration Error: $e", Colors.redAccent);
+      setState(() => _isLoading = false);
+    }
+  }
+
+  List<Map<String, dynamic>> get _filteredQueue {
+    final query = _searchController.text.toLowerCase();
+    if (query.isEmpty) return _queue;
+    return _queue
+        .where((item) =>
+            item['full_name'].toString().toLowerCase().contains(query))
+        .toList();
+  }
+
+  void _showRegistrationForm(Map<String, dynamic> app) {
+    String? selectedYearLevelId;
+    List<Map<String, dynamic>> yearLevels = [];
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(builder: (context, setModalState) {
+        final Future<dynamic> fetchFuture = yearLevels.isEmpty
+            ? _service.client.from('year_levels').select('*')
+            : Future.value(yearLevels);
+        return FutureBuilder<dynamic>(
+            future: fetchFuture,
+            builder: (context, snapshot) {
+              if (snapshot.hasData && yearLevels.isEmpty)
+                yearLevels =
+                    List<Map<String, dynamic>>.from(snapshot.data as List);
+              return AlertDialog(
+                backgroundColor: surfaceDark,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28)),
+                title: const Text("Official Enrollment",
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: selectedYearLevelId,
+                      dropdownColor: surfaceDark,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                          labelText: "Year Level",
+                          labelStyle: TextStyle(color: Colors.blueGrey)),
+                      items: yearLevels
+                          .map((y) => DropdownMenuItem(
+                              value: y['id'].toString(),
+                              child: Text(y['definition'])))
+                          .toList(),
+                      onChanged: (v) =>
+                          setModalState(() => selectedYearLevelId = v),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("CANCEL")),
+                  ElevatedButton(
+                    onPressed: selectedYearLevelId == null
+                        ? null
+                        : () {
+                            Navigator.pop(context);
+                            _finalizeRegistration(app, selectedYearLevelId!);
+                          },
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: success,
+                        foregroundColor: Colors.black),
+                    child: const Text("ENROLL STUDENT"),
+                  ),
+                ],
+              );
+            });
+      }),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color textColor =
+    final textColor =
         widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
-    final Color cardColor =
-        widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
-    final Color subTextColor =
-        widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
-
+    final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader(textColor, subTextColor),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text("Enrollment Verification",
+                style: GoogleFonts.inter(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: textColor)),
+            IconButton(
+                onPressed: _fetchClearedApplicants,
+                icon:
+                    const Icon(LucideIcons.refreshCcw, color: Colors.blueGrey)),
+          ],
+        ),
         const SizedBox(height: 24),
-        if (_isProcessing)
-          const Padding(
-              padding: EdgeInsets.only(bottom: 16),
-              child: LinearProgressIndicator(color: aViolet)),
         Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Left Side: Live Approval Queue from Supabase
-              Expanded(
-                flex: 6,
-                child: _buildQueueList(cardColor, textColor, subTextColor),
-              ),
-              const SizedBox(width: 20),
-              // Right Side: Quick Actions & Stats
-              Expanded(
-                flex: 4,
-                child:
-                    _buildEnrollmentStats(cardColor, textColor, subTextColor),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeader(Color textColor, Color subTextColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("Registration Validation Hub",
-            style: GoogleFonts.inter(
-                fontSize: 22, fontWeight: FontWeight.w900, color: textColor)),
-        Text(
-            "Confirm block assignments and finalize official enrollment for cleared students.",
-            style: TextStyle(color: subTextColor, fontSize: 13)),
-      ],
-    );
-  }
-
-  Widget _buildQueueList(Color cardColor, Color textColor, Color subTextColor) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-            color: widget.isDarkMode ? Colors.white10 : Colors.black12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Registration Approval Queue",
-              style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold, color: textColor)),
-          const SizedBox(height: 20),
-          Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              // FETCH: Students who are 'Unenrolled' (Cleard by Admission/Accounting)
-              stream: SupabaseService()
-                  .client
-                  .from('student_details')
-                  .stream(primaryKey: ['profile_id']).eq(
-                      'enrollment_status', 'Unenrolled'),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData)
-                  return const Center(
-                      child: CircularProgressIndicator(color: aViolet));
-                final list = snapshot.data!;
-
-                if (list.isEmpty)
-                  return Center(
-                      child: Text("No pending registrations.",
-                          style: TextStyle(color: subTextColor)));
-
-                return ListView.builder(
-                  itemCount: list.length,
-                  itemBuilder: (context, index) {
-                    final student = list[index];
-                    return _queueTile(student, textColor, subTextColor);
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _queueTile(
-      Map<String, dynamic> item, Color textColor, Color subTextColor) {
-    return FutureBuilder(
-      // Joining profile data to get the name
-      future: SupabaseService()
-          .client
-          .from('profiles')
-          .select('fn, ln, user_id_number')
-          .eq('id', item['profile_id'])
-          .single(),
-      builder: (context, snap) {
-        final String name = snap.hasData
-            ? "${snap.data!['fn']} ${snap.data!['ln']}"
-            : "Loading Identity...";
-        final String idNum =
-            snap.hasData ? snap.data!['user_id_number'] : "...";
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.03),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white10)),
-          child: Row(
-            children: [
-              CircleAvatar(
-                  backgroundColor: aViolet.withOpacity(0.1),
-                  child:
-                      const Icon(LucideIcons.user, size: 16, color: aViolet)),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name,
-                        style: TextStyle(
-                            color: textColor, fontWeight: FontWeight.bold)),
-                    Text("$idNum • ${item['section_block'] ?? 'NO BLOCK'}",
-                        style: TextStyle(color: subTextColor, fontSize: 12)),
-                  ],
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Container(
+                  decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white10)),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(24),
+                    itemCount: _filteredQueue.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(color: Colors.white10),
+                    itemBuilder: (context, i) {
+                      final app = _filteredQueue[i];
+                      return ListTile(
+                        title: Text(app['full_name'],
+                            style: TextStyle(
+                                color: textColor, fontWeight: FontWeight.bold)),
+                        subtitle: Text(
+                            "ID: ${app['application_no']} • ${app['courses']?['code'] ?? ''}",
+                            style: const TextStyle(color: Colors.blueGrey)),
+                        trailing: ElevatedButton(
+                            onPressed: () => _showRegistrationForm(app),
+                            child: const Text("FINALIZE")),
+                      );
+                    },
+                  ),
                 ),
-              ),
-              ElevatedButton(
-                onPressed: () => _approveEnrollment(item['profile_id'], name),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: success.withOpacity(0.1),
-                    foregroundColor: success,
-                    elevation: 0),
-                child: const Text("FINALIZE",
-                    style:
-                        TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildEnrollmentStats(
-      Color cardColor, Color textColor, Color subTextColor) {
-    return Column(
-      children: [
-        _actionCard("GENERATE CLASS ROSTER", LucideIcons.users, aViolet,
-            cardColor, textColor),
-        const SizedBox(height: 16),
-        _actionCard("ADD/DROP WORKFLOW", LucideIcons.gitPullRequest,
-            Colors.orangeAccent, cardColor, textColor),
-        const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white10)),
-          child: StreamBuilder<List<Map<String, dynamic>>>(
-            stream: SupabaseService()
-                .client
-                .from('student_details')
-                .stream(primaryKey: ['profile_id']),
-            builder: (context, snapshot) {
-              int total = snapshot.hasData
-                  ? snapshot.data!
-                      .where((s) => s['enrollment_status'] == 'Enrolled')
-                      .length
-                  : 0;
-              int pending = snapshot.hasData
-                  ? snapshot.data!
-                      .where((s) => s['enrollment_status'] == 'Unenrolled')
-                      .length
-                  : 0;
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Global Statistics",
-                      style: GoogleFonts.inter(
-                          fontWeight: FontWeight.bold, color: textColor)),
-                  const SizedBox(height: 20),
-                  _statRow("Total Enrolled", total.toString(), success),
-                  _statRow("Pending Validation", pending.toString(),
-                      Colors.orangeAccent),
-                  _statRow("Dropped/Withdrawn", "0", textColor),
-                ],
-              );
-            },
-          ),
         ),
       ],
     );
   }
 
-  Widget _actionCard(
-      String label, IconData icon, Color color, Color cardBg, Color textColor) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white10)),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 16),
-          Text(label,
-              style: TextStyle(
-                  color: textColor, fontWeight: FontWeight.bold, fontSize: 13)),
-          const Spacer(),
-          const Icon(LucideIcons.chevronRight, size: 16, color: Colors.white24),
-        ],
-      ),
-    );
+  Widget _infoText(String l, String v) => Row(children: [
+        Text(l, style: const TextStyle(color: Colors.blueGrey, fontSize: 13)),
+        const SizedBox(width: 8),
+        Text(v,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold))
+      ]);
+
+  void _showSuccessDialog(String id, String name, String email) {
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+            backgroundColor: surfaceDark,
+            content: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(LucideIcons.partyPopper, color: success, size: 64),
+              const SizedBox(height: 24),
+              Text("Registration Successful",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+              Text(id,
+                  style: GoogleFonts.orbitron(fontSize: 28, color: aViolet)),
+              const SizedBox(height: 16),
+              Text("Credentials sent to $email",
+                  style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("DONE"))
+            ])));
   }
 
-  Widget _statRow(String label, String value, Color valColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label,
-              style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
-          Text(value,
-              style: TextStyle(
-                  color: valColor, fontWeight: FontWeight.bold, fontSize: 14)),
-        ],
-      ),
-    );
-  }
+  void _showToast(String m, Color c) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(m), backgroundColor: c));
 }

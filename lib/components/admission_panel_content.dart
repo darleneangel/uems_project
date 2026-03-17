@@ -1,60 +1,60 @@
 import 'package:flutter/material.dart';
-import '../components/admission_panels/applicant_management_panel.dart';
-import '../components/admission_panels/document_verification_panel.dart';
-import '../components/admission_panels/admission_workflow_panel.dart';
-import '../components/admission_panels/admission_messaging_panel.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'admission_panels/admission_overview_panel.dart';
+import 'admission_panels/applicant_management_panel.dart';
+import 'admission_panels/document_verification_panel.dart';
+import 'shared/messaging_panel.dart';
+import 'admission_panels/enrollment_verification_panel.dart';
+import 'admission_panels/admission_transactions_panel.dart';
 
 class AdmissionPanelContent extends StatelessWidget {
   final int selectedIndex;
   final bool isDarkMode;
+  final Map<String, dynamic> userData;
 
   const AdmissionPanelContent({
     super.key,
     required this.selectedIndex,
     required this.isDarkMode,
+    required this.userData,
   });
-
-  // Theme Constants
-  static const Color aViolet = Color(0xFF8B5CF6);
-  static const Color success = Color(0xFF69F0AE);
-  static const Color surfaceDark = Color(0xFF1E1B4B);
 
   @override
   Widget build(BuildContext context) {
-    // Map the selected index from the sidebar to the correct live module
+    // Modular Routing for Admission Officer Workspace
     switch (selectedIndex) {
-      case 1: // "Applications" menu item
-        return ApplicantManagementPanel(isDarkMode: isDarkMode);
-      case 3: // "Document Verification" menu item
-        return DocumentVerificationPanel(isDarkMode: isDarkMode);
-      case 4: // "Messaging" menu item
-        return AdmissionMessagingPanel(isDarkMode: isDarkMode);
-      case 6: // "Workflow" menu item
-        return AdmissionWorkflowPanel(isDarkMode: isDarkMode);
-      case 0: // "Overview"
+      case 0:
+        return AdmissionOverviewPanel(
+            isDarkMode: isDarkMode, userData: userData);
+      case 1:
+        return ApplicationsManagementPanel(
+            isDarkMode: isDarkMode, userData: userData);
+      case 2:
+        // INTEGRATED: Transaction Ledger & Report Generation
+        return AdmissionTransactionsPanel(
+            isDarkMode: isDarkMode, userData: userData);
+      case 3:
+        return DocumentVerificationPanel(
+            isDarkMode: isDarkMode, userData: userData);
+      case 4:
+        return MessagingPanel(isDarkMode: isDarkMode, userData: userData);
+      case 6:
+        return EnrollmentVerificationPanel(
+            isDarkMode: isDarkMode, userData: userData);
       default:
-        return _buildOverviewPlaceholder();
+        return _buildPlaceholder();
     }
   }
 
-  Widget _buildOverviewPlaceholder() {
+  Widget _buildPlaceholder() {
     return Center(
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(LucideIcons.layoutDashboard,
-              size: 64, color: aViolet.withOpacity(0.2)),
+          Icon(Icons.folder_shared_outlined,
+              size: 64, color: isDarkMode ? Colors.white24 : Colors.black12),
           const SizedBox(height: 16),
-          Text("ADMISSIONS CONTROL CENTER",
-              style: GoogleFonts.orbitron(
-                  color: Colors.white24,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2)),
-          const Text(
-              "Select a management module from the sidebar to begin processing.",
-              style: TextStyle(color: Colors.white10, fontSize: 12)),
+          const Text("Academic Module Selected",
+              style: TextStyle(color: Colors.blueGrey)),
         ],
       ),
     );

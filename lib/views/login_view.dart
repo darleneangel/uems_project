@@ -195,13 +195,17 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       case 'admin_dashboard':
         return AdminDashboardView(onLogout: _resetToLogin);
       case 'admission_dashboard':
-        return AdmissionDashboardView(onLogout: _resetToLogin);
+        return AdmissionDashboardView(
+            userData: _loggedInUserData!, onLogout: _resetToLogin);
+      case 'login':
+        return _buildSplitLogin();
       case 'registrar_dashboard':
         return RegistrarDashboardView(onLogout: _resetToLogin);
       case 'hr_dashboard':
         return HrDashboardView(onLogout: _resetToLogin);
       case 'accounting_dashboard':
-        return AccountingDashboardView(onLogout: _resetToLogin);
+        return AccountingDashboardView(
+            userData: _loggedInUserData!, onLogout: _resetToLogin);
       case 'teacher_dashboard':
         return TeacherDashboardView(
             userData: _loggedInUserData!, onLogout: _resetToLogin);

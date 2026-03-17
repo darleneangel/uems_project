@@ -1,17 +1,14 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/pdf.dart';
 import '../../services/supabase_service.dart';
 
 class DocumentVerificationPanel extends StatefulWidget {
   final bool isDarkMode;
-  const DocumentVerificationPanel({super.key, required this.isDarkMode});
+  final Map<String, dynamic> userData;
+
+  const DocumentVerificationPanel(
+      {super.key, required this.isDarkMode, required this.userData});
 
   @override
   State<DocumentVerificationPanel> createState() =>
@@ -19,376 +16,375 @@ class DocumentVerificationPanel extends StatefulWidget {
 }
 
 class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
-  // Theme Palette
-  static const Color pViolet = Color(0xFF2E1065);
-  static const Color aViolet = Color(0xFF8B5CF6);
-  static const Color surfaceDark = Color(0xFF1E1B4B);
-  static const Color success = Color(0xFF69F0AE);
-
-  final Map<String, List<Map<String, dynamic>>> _localDocState = {};
-
-  List<Map<String, dynamic>> _getDefaultDocs() => [
-        {"name": "PSA Birth Certificate", "status": false},
-        {"name": "Form 138 (Report Card)", "status": false},
-        {"name": "Certificate of Good Moral", "status": false},
-        {"name": "Medical Certificate", "status": false},
-        {"name": "Entrance Exam Results", "status": false},
-      ];
-
-  double _calculateProgress(String applicantId) {
-    final docs = _localDocState[applicantId] ?? _getDefaultDocs();
-    int verified = docs.where((d) => d['status'] == true).length;
-    return verified / docs.length;
-  }
-
-  void _toggleDoc(String applicantId, int docIndex) {
-    setState(() {
-      if (!_localDocState.containsKey(applicantId)) {
-        _localDocState[applicantId] = _getDefaultDocs();
-      }
-      _localDocState[applicantId]![docIndex]['status'] =
-          !_localDocState[applicantId]![docIndex]['status'];
-    });
-  }
-
-  // --- DATABASE ACTIONS ---
-
-  /// ACTION: Verification Approved -> Redirect to Accounting
-  Future<void> _finalizeVerification(Map<String, dynamic> applicant) async {
-    try {
-      await SupabaseService()
-          .client
-          .from('applicants')
-          .update({'status': 'For Payment'}).eq('id', applicant['id']);
-
-      await _generateAdmissionSlip(applicant);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              backgroundColor: success,
-              content: Text(
-                  "Approved. Student directed to Accounting for Payment.")),
-        );
-      }
-    } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            backgroundColor: Colors.redAccent, content: Text("Error: $e")));
-    }
-  }
-
-  // --- PDF ENGINE ---
-  Future<void> _generateAdmissionSlip(Map<String, dynamic> applicant) async {
-    final pdf = pw.Document();
-    final String timestamp = DateTime.now().toString().split('.')[0];
-    final PdfColor brandViolet = PdfColor.fromInt(0xFF7C3AED);
-
-    pw.ImageProvider? logoImage;
-    try {
-      final ByteData data = await rootBundle.load('assets/image/logo (2).png');
-      logoImage = pw.MemoryImage(data.buffer.asUint8List());
-    } catch (e) {
-      logoImage = null;
-    }
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(40),
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Row(children: [
-                    if (logoImage != null)
-                      pw.Container(
-                          width: 40, height: 40, child: pw.Image(logoImage)),
-                    pw.SizedBox(width: 12),
-                    pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text("UEMSSP",
-                              style: pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold,
-                                  fontSize: 22,
-                                  color: brandViolet)),
-                          pw.Text("OFFICE OF ADMISSIONS",
-                              style: pw.TextStyle(
-                                  fontSize: 8, color: PdfColors.grey700)),
-                        ]),
-                  ]),
-                  pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end,
-                      children: [
-                        pw.Text("OFFICIAL DOCUMENT",
-                            style: pw.TextStyle(
-                                fontSize: 8,
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.grey500)),
-                        pw.Text("ADMISSION SLIP",
-                            style: pw.TextStyle(
-                                fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                      ]),
-                ],
-              ),
-              pw.SizedBox(height: 20),
-              pw.Divider(color: brandViolet, thickness: 1.5),
-              pw.SizedBox(height: 25),
-              pw.Container(
-                padding: const pw.EdgeInsets.all(12),
-                decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey300),
-                    borderRadius: pw.BorderRadius.circular(8)),
-                child: pw.Column(children: [
-                  pw.Row(children: [
-                    pw.Expanded(
-                        child: _pdfMetaItem(
-                            "STUDENT NAME", applicant['full_name'])),
-                    pw.Expanded(
-                        child: _pdfMetaItem(
-                            "APPLICATION ID", applicant['application_no'])),
-                  ]),
-                ]),
-              ),
-              pw.SizedBox(height: 40),
-              pw.Text("DOCUMENTATION STATUS: CLEARANCE OBTAINED",
-                  style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.green700,
-                      fontSize: 12)),
-              pw.SizedBox(height: 12),
-              pw.Text(
-                  "The applicant is cleared for final institutional enrollment steps.",
-                  style: pw.TextStyle(fontSize: 10)),
-              pw.Spacer(),
-              pw.Divider(color: PdfColors.grey300),
-              pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text("AUTHENTICATED BY ADMISSIONS CORE",
-                        style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold, fontSize: 8)),
-                    pw.Text("Ref: $timestamp",
-                        style: pw.TextStyle(fontSize: 7)),
-                  ]),
-            ],
-          );
-        },
-      ),
-    );
-
-    try {
-      final dir = await getTemporaryDirectory();
-      final file =
-          File("${dir.path}/Admission_Slip_${applicant['application_no']}.pdf");
-      await file.writeAsBytes(await pdf.save());
-      await OpenFile.open(file.path);
-    } catch (_) {}
-  }
-
-  pw.Widget _pdfMetaItem(String label, String val) =>
-      pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        pw.Text(label,
-            style: pw.TextStyle(
-                fontSize: 7,
-                color: PdfColors.grey600,
-                fontWeight: pw.FontWeight.bold)),
-        pw.Text(val,
-            style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold))
-      ]);
+  final SupabaseService _service = SupabaseService();
+  String? _selectedApplicantId;
+  String? _selectedApplicantName;
+  List<Map<String, dynamic>> _pendingApplicants = [];
+  List<Map<String, dynamic>> _requirements = [];
+  bool _isLoading = true;
+  bool _isActionLoading = false;
 
   @override
-  Widget build(BuildContext context) {
-    final Color textColor = widget.isDarkMode ? Colors.white : pViolet;
-    final Color cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
-    final Color subTextColor =
-        widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
-
-    return DefaultTabController(
-      length: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Verification Hub",
-                style: GoogleFonts.inter(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    color: textColor,
-                    letterSpacing: -1)),
-            const Text(
-                "Audit applicant requirements before handover to Accounting.",
-                style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
-            const SizedBox(height: 24),
-            _buildTabBar(),
-            const SizedBox(height: 32),
-            SizedBox(
-              height: 700,
-              child: TabBarView(
-                children: [
-                  _buildQueueStream(
-                      cardColor, textColor, subTextColor, 'Pending'),
-                  _buildQueueStream(
-                      cardColor, textColor, subTextColor, 'For Payment'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void initState() {
+    super.initState();
+    _loadPendingApplicants();
   }
 
-  Widget _buildTabBar() => Container(
-        height: 50,
-        decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12)),
-        child: TabBar(
-          indicator: BoxDecoration(
-              borderRadius: BorderRadius.circular(10), color: aViolet),
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.blueGrey,
-          labelStyle:
-              GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11),
-          tabs: const [
-            Tab(text: "1. VERIFICATION QUEUE"),
-            Tab(text: "2. SENT TO ACCOUNTING")
-          ],
-        ),
-      );
-
-  Widget _buildQueueStream(
-      Color cardBg, Color text, Color subText, String status) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: SupabaseService()
-          .client
+  /// 🛰️ DATABASE: Load applicants who are currently in 'Pending' status
+  Future<void> _loadPendingApplicants() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _service.client
           .from('applicants')
-          .stream(primaryKey: ['id']).eq('status', status),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData)
-          return const Center(child: CircularProgressIndicator(color: aViolet));
-        final list = snapshot.data!;
-        if (list.isEmpty) return _emptyState(subText);
+          .select('id, full_name, application_no')
+          .eq('status', 'Pending')
+          .order('created_at', ascending: true);
 
-        return ListView.builder(
-          shrinkWrap: true,
-          itemCount: list.length,
-          itemBuilder: (context, index) {
-            final applicant = list[index];
-            final progress = _calculateProgress(applicant['id']);
-            return _buildVerificationCard(applicant, progress, cardBg, text,
-                subText, status == 'For Payment');
-          },
-        );
-      },
-    );
+      if (mounted) {
+        setState(() {
+          _pendingApplicants = List<Map<String, dynamic>>.from(response);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Load Applicants Error: $e");
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
-  Widget _buildVerificationCard(Map<String, dynamic> applicant, double progress,
-      Color cardBg, Color text, Color subText, bool isAccounting) {
-    bool isComplete = progress == 1.0;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white10)),
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        leading: Stack(alignment: Alignment.center, children: [
-          CircularProgressIndicator(
-              value: isAccounting ? 1.0 : progress,
-              backgroundColor: Colors.white10,
-              color: (isAccounting || isComplete) ? success : aViolet),
-          if (isAccounting || isComplete)
-            const Icon(LucideIcons.check, size: 16, color: success),
-        ]),
-        title: Text(applicant['full_name'],
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: text)),
-        subtitle: Text(
-            "${applicant['application_no']} • ${applicant['applicant_type']}",
-            style: TextStyle(color: subText, fontSize: 12)),
-        trailing: isAccounting
-            ? _badge("IN ACCOUNTING", success)
-            : _badge("${(progress * 100).toInt()}%", Colors.blueGrey),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Divider(height: 32, color: Colors.white10),
-                const Text("REQUIREMENT CHECKLIST",
-                    style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blueGrey,
-                        letterSpacing: 1)),
-                const SizedBox(height: 16),
-                ...List.generate(
-                    5,
-                    (i) => _buildDocRow(
-                        applicant['id'],
-                        i,
-                        (_localDocState[applicant['id']] ??
-                            _getDefaultDocs())[i],
-                        text,
-                        isAccounting)),
-                if (isComplete && !isAccounting) ...[
-                  const SizedBox(height: 24),
-                  SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton.icon(
-                          onPressed: () => _finalizeVerification(applicant),
-                          icon: const Icon(LucideIcons.shieldCheck),
-                          label: const Text("APPROVE & DIRECT TO ACCOUNTING"),
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: aViolet))),
-                ],
-              ],
-            ),
+  /// 🛰️ DATABASE: Load the checklist for the chosen applicant
+  Future<void> _loadRequirements(String applicantId, String name) async {
+    setState(() {
+      _isLoading = true;
+      _selectedApplicantName = name;
+    });
+    try {
+      final response = await _service.client
+          .from('applicant_requirements')
+          .select('*')
+          .eq('applicant_id', applicantId)
+          .order('requirement_name', ascending: true);
+
+      if (mounted) {
+        setState(() {
+          _requirements = List<Map<String, dynamic>>.from(response);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Load Requirements Error: $e");
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// 🛰️ DATABASE: Toggle individual document verification
+  Future<void> _toggleRequirement(String reqId, bool val) async {
+    try {
+      await _service.client.from('applicant_requirements').update({
+        'is_verified': val,
+        'verified_at': val ? DateTime.now().toIso8601String() : null
+      }).eq('id', reqId);
+
+      // Local refresh for the checklist
+      _loadRequirements(_selectedApplicantId!, _selectedApplicantName!);
+    } catch (e) {
+      debugPrint("Toggle Error: $e");
+    }
+  }
+
+  /// 🛰️ DATABASE: Finalize verification and move to Enrollment Verification
+  Future<void> _completeVerification() async {
+    if (_selectedApplicantId == null) return;
+
+    setState(() => _isActionLoading = true);
+    try {
+      // Update applicant status to 'Verified'
+      // This makes them appear in the EnrollmentVerificationPanel queue
+      await _service.client
+          .from('applicants')
+          .update({'status': 'Verified'}).eq('id', _selectedApplicantId!);
+
+      if (mounted) {
+        _showSuccessDialog();
+        setState(() {
+          _selectedApplicantId = null;
+          _selectedApplicantName = null;
+          _requirements = [];
+          _isActionLoading = false;
+        });
+        _loadPendingApplicants();
+      }
+    } catch (e) {
+      debugPrint("Finalize Error: $e");
+      if (mounted) setState(() => _isActionLoading = false);
+    }
+  }
+
+  bool get _canFinalize =>
+      _requirements.isNotEmpty &&
+      _requirements.every((req) => req['is_verified'] == true);
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1B4B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(LucideIcons.checkCircle, color: Color(0xFF69F0AE)),
+            SizedBox(width: 12),
+            Text("Verification Complete",
+                style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: Text(
+            "$_selectedApplicantName has been moved to the Enrollment Verification queue.",
+            style: const TextStyle(color: Colors.white70)),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF8B5CF6)),
+            child: const Text("PROCEED"),
           )
         ],
       ),
     );
   }
 
-  Widget _buildDocRow(
-      String appId, int i, Map<String, dynamic> doc, Color t, bool readOnly) {
-    bool done = readOnly || doc['status'];
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: InkWell(
-        onTap: readOnly ? null : () => _toggleDoc(appId, i),
-        child: Row(children: [
-          Icon(done ? LucideIcons.checkCircle : LucideIcons.circle,
-              color: done ? success : Colors.blueGrey, size: 18),
-          const SizedBox(width: 12),
-          Text(doc['name'],
-              style: TextStyle(color: done ? t : Colors.blueGrey, fontSize: 13))
-        ]),
-      ),
+  @override
+  Widget build(BuildContext context) {
+    final textColor =
+        widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
+    final cardColor =
+        widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // --- LEFT SIDE: PENDING ROSTER ---
+        Expanded(
+          flex: 4,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Verification Queue",
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                      fontSize: 16)),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white10)),
+                  child: _isLoading && _pendingApplicants.isEmpty
+                      ? const Center(child: CircularProgressIndicator())
+                      : _pendingApplicants.isEmpty
+                          ? const Center(
+                              child: Text("All documents cleared.",
+                                  style: TextStyle(color: Colors.blueGrey)))
+                          : ListView.builder(
+                              itemCount: _pendingApplicants.length,
+                              itemBuilder: (context, i) {
+                                final app = _pendingApplicants[i];
+                                final isSelected =
+                                    _selectedApplicantId == app['id'];
+                                return ListTile(
+                                  selected: isSelected,
+                                  selectedTileColor:
+                                      const Color(0xFF8B5CF6).withOpacity(0.1),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 8),
+                                  leading: CircleAvatar(
+                                    backgroundColor: isSelected
+                                        ? const Color(0xFF8B5CF6)
+                                        : Colors.white10,
+                                    child: Icon(LucideIcons.fileText,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : Colors.blueGrey,
+                                        size: 16),
+                                  ),
+                                  title: Text(app['full_name'],
+                                      style: TextStyle(
+                                          color: textColor,
+                                          fontWeight: isSelected
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                          fontSize: 14)),
+                                  subtitle: Text(app['application_no'],
+                                      style: const TextStyle(
+                                          color: Colors.blueGrey,
+                                          fontSize: 11)),
+                                  onTap: () {
+                                    setState(
+                                        () => _selectedApplicantId = app['id']);
+                                    _loadRequirements(
+                                        app['id'], app['full_name']);
+                                  },
+                                );
+                              },
+                            ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 24),
+
+        // --- RIGHT SIDE: DOCUMENT CHECKLIST ---
+        Expanded(
+          flex: 6,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Submission Compliance",
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                      fontSize: 16)),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white10)),
+                  child: _selectedApplicantId == null
+                      ? const Center(
+                          child: Text(
+                              "Select an applicant from the queue to start verification.",
+                              style: TextStyle(color: Colors.blueGrey)))
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_selectedApplicantName!,
+                                        style: GoogleFonts.inter(
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 20,
+                                            color: textColor)),
+                                    const Text("Required Academic Credentials",
+                                        style: TextStyle(
+                                            color: Colors.blueGrey,
+                                            fontSize: 12)),
+                                  ],
+                                ),
+                                if (_canFinalize)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                        color: const Color(0xFF69F0AE)
+                                            .withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8)),
+                                    child: const Text("READY",
+                                        style: TextStyle(
+                                            color: Color(0xFF69F0AE),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 10)),
+                                  ),
+                              ],
+                            ),
+                            const Divider(height: 48, color: Colors.white10),
+                            Expanded(
+                              child: _isLoading
+                                  ? const Center(
+                                      child: CircularProgressIndicator())
+                                  : ListView.builder(
+                                      itemCount: _requirements.length,
+                                      itemBuilder: (context, i) {
+                                        final req = _requirements[i];
+                                        final bool verified =
+                                            req['is_verified'] ?? false;
+                                        return Container(
+                                          margin:
+                                              const EdgeInsets.only(bottom: 12),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                Colors.white.withOpacity(0.03),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: CheckboxListTile(
+                                            title: Text(req['requirement_name'],
+                                                style: TextStyle(
+                                                    color: textColor,
+                                                    fontSize: 14,
+                                                    fontWeight: verified
+                                                        ? FontWeight.bold
+                                                        : FontWeight.normal)),
+                                            subtitle: Text(
+                                                verified
+                                                    ? "Verified on ${req['verified_at'].toString().split('T')[0]}"
+                                                    : "Awaiting submission",
+                                                style: const TextStyle(
+                                                    fontSize: 10,
+                                                    color: Colors.blueGrey)),
+                                            value: verified,
+                                            activeColor:
+                                                const Color(0xFF8B5CF6),
+                                            onChanged: (v) =>
+                                                _toggleRequirement(
+                                                    req['id'], v!),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                            ),
+                            const SizedBox(height: 32),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 60,
+                              child: ElevatedButton.icon(
+                                onPressed: (_canFinalize && !_isActionLoading)
+                                    ? _completeVerification
+                                    : null,
+                                icon: _isActionLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white))
+                                    : const Icon(LucideIcons.checkCircle),
+                                label: const Text(
+                                    "DONE - COMPLETE VERIFICATION",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF8B5CF6),
+                                  disabledBackgroundColor:
+                                      Colors.white.withOpacity(0.05),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _emptyState(Color sub) => Center(
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(LucideIcons.inbox, size: 48, color: sub.withOpacity(0.2)),
-        const SizedBox(height: 16),
-        Text("Queue is clear.", style: TextStyle(color: sub))
-      ]));
-  Widget _badge(String t, Color c) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-          color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-      child: Text(t,
-          style:
-              TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold)));
+  void _showToast(String m, Color c) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(m), backgroundColor: c));
+  }
 }

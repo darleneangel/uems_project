@@ -6,7 +6,9 @@ import '../components/admission_panel_content.dart';
 
 class AdmissionDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
-  const AdmissionDashboardView({super.key, required this.onLogout});
+  final Map<String, dynamic> userData;
+  const AdmissionDashboardView(
+      {super.key, required this.onLogout, required this.userData});
 
   @override
   State<AdmissionDashboardView> createState() => _AdmissionDashboardViewState();
@@ -121,6 +123,7 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
                               key: ValueKey(_selectedIndex),
                               selectedIndex: _selectedIndex,
                               isDarkMode: _isDarkMode,
+                              userData: widget.userData,
                             ),
                           ),
                         ),
@@ -252,7 +255,9 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
                 _sidebarHeader("ENROLLMENT"),
                 _menuItem(LucideIcons.userCheck, "Enrollment Verification", 6),
                 _sidebarHeader("COMMUNICATIONS"),
-                _menuItem(LucideIcons.mail, "Admission Letters", 4),
+                _menuItem(LucideIcons.mail, "Messaging", 4),
+                _sidebarHeader("TRANSACTIONS"),
+                _menuItem(LucideIcons.mail, "Transaction History", 2),
               ],
             ),
           ),

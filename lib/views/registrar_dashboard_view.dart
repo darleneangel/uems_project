@@ -95,6 +95,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
                     child: RegistrarPanelContent(
                       isDarkMode: _isDarkMode,
                       panelType: _panelTypes[_selectedIndex],
+                      userData: {}, // Replace with actual user data if available
                     ),
                   ),
                 ),
