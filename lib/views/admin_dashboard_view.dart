@@ -11,6 +11,7 @@ import '../components/department_management_panel.dart';
 import '../components/course_management_panel.dart';
 import '../components/administrative_account_management_panel.dart';
 import '../components/academic_account_management_panel.dart';
+import '../services/admin_user_management_service.dart';
 
 class AdminDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -24,6 +25,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
   bool _isSidebarExpanded = true;
   bool _isDarkMode = true;
   int _activeModuleIndex = 0;
+  final AdminUserManagementService _adminService = AdminUserManagementService();
+  late Future<AdminAnalyticsSnapshot> _dbAnalyticsFuture;
 
   // Panel mapping
   final List<String> _panelTypes = [
@@ -44,11 +47,17 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color surfaceDark = Color(0xFF1E1B4B); // Lighter surface
   static const Color success = Color(0xFF69F0AE);
-  
+
   // Light mode colors - lighter and softer
   static const Color lBg = Color(0xFFF8FAFC);
   static const Color lSurface = Color(0xFFF1F5F9);
   static const Color lCard = Color(0xFFFFFFFF);
+
+  @override
+  void initState() {
+    super.initState();
+    _dbAnalyticsFuture = _adminService.fetchDatabaseAnalytics();
+  }
 
   void _toggleTheme() => setState(() => _isDarkMode = !_isDarkMode);
 
@@ -70,11 +79,13 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         break;
       case 1:
         panelTitle = 'Announcements Management';
-        panelContent = AdminPanelContent(panelType: _panelTypes[1], isDarkMode: _isDarkMode);
+        panelContent = AdminPanelContent(
+            panelType: _panelTypes[1], isDarkMode: _isDarkMode);
         break;
       case 2:
         panelTitle = 'Office Admin - Service Requests';
-        panelContent = AdminPanelContent(panelType: _panelTypes[2], isDarkMode: _isDarkMode);
+        panelContent = AdminPanelContent(
+            panelType: _panelTypes[2], isDarkMode: _isDarkMode);
         break;
       case 3:
         panelTitle = 'Program Chair Administration';
@@ -82,11 +93,13 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         break;
       case 4:
         panelTitle = 'Study Loads Management';
-        panelContent = AdminPanelContent(panelType: _panelTypes[4], isDarkMode: _isDarkMode);
+        panelContent = AdminPanelContent(
+            panelType: _panelTypes[4], isDarkMode: _isDarkMode);
         break;
       case 5:
         panelTitle = 'Grade Recording System';
-        panelContent = AdminPanelContent(panelType: _panelTypes[5], isDarkMode: _isDarkMode);
+        panelContent = AdminPanelContent(
+            panelType: _panelTypes[5], isDarkMode: _isDarkMode);
         break;
       case 6:
         panelTitle = 'Human Resources';
@@ -110,7 +123,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         break;
       case 12:
         panelTitle = 'Administrative Account Management';
-        panelContent = AdministrativeAccountManagementPanel(isDarkMode: _isDarkMode);
+        panelContent =
+            AdministrativeAccountManagementPanel(isDarkMode: _isDarkMode);
         break;
       case 13:
         panelTitle = 'Academic Account Management';
@@ -161,7 +175,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  Widget _buildTopBar(Color sideColor, Color textColor, Color subTextColor, String panelTitle) {
+  Widget _buildTopBar(
+      Color sideColor, Color textColor, Color subTextColor, String panelTitle) {
     return Container(
       height: 80,
       padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -305,22 +320,28 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 ),
                 const SizedBox(height: 20),
                 _sidebarHeader("OFFICE MANAGEMENT", subTextColor),
-                _sidebarItem(LucideIcons.briefcase, "Office Admin", 2, textColor),
-                _sidebarItem(LucideIcons.userCheck, "Program Chair", 3, textColor),
+                _sidebarItem(
+                    LucideIcons.briefcase, "Office Admin", 2, textColor),
+                _sidebarItem(
+                    LucideIcons.userCheck, "Program Chair", 3, textColor),
                 _sidebarItem(LucideIcons.users, "HR", 6, textColor),
                 const SizedBox(height: 20),
                 _sidebarHeader("ACADEMIC MANAGEMENT", subTextColor),
-                _sidebarItem(LucideIcons.building, "Departments", 10, textColor),
+                _sidebarItem(
+                    LucideIcons.building, "Departments", 10, textColor),
                 _sidebarItem(LucideIcons.bookOpen, "Courses", 11, textColor),
                 const SizedBox(height: 20),
                 _sidebarHeader("ACCOUNT MANAGEMENT", subTextColor),
-                _sidebarItem(LucideIcons.userCog, "Administrative Accounts", 12, textColor),
-                _sidebarItem(LucideIcons.graduationCap, "Academic Accounts", 13, textColor),
+                _sidebarItem(LucideIcons.userCog, "Administrative Accounts", 12,
+                    textColor),
+                _sidebarItem(LucideIcons.graduationCap, "Academic Accounts", 13,
+                    textColor),
                 const SizedBox(height: 20),
                 _sidebarHeader("UTILITIES", subTextColor),
-                _sidebarItem(LucideIcons.messageSquare, "Messaging", 7, textColor),
-                _sidebarItem(LucideIcons.alertTriangle, "Reports", 8, textColor),
-
+                _sidebarItem(
+                    LucideIcons.messageSquare, "Messaging", 7, textColor),
+                _sidebarItem(
+                    LucideIcons.alertTriangle, "Reports", 8, textColor),
               ],
             ),
           ),
@@ -365,7 +386,10 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           children: [
             Icon(Icons.logout, color: Colors.redAccent, size: 24),
             const SizedBox(width: 12),
-            Text('Confirm Logout', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w700)),
+            Text('Confirm Logout',
+                style: GoogleFonts.inter(
+                    color: _isDarkMode ? Colors.white : pViolet,
+                    fontWeight: FontWeight.w700)),
           ],
         ),
         content: Column(
@@ -374,12 +398,16 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           children: [
             Text(
               'Are you sure you want to log out of the system?',
-              style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87, fontSize: 16),
+              style: GoogleFonts.inter(
+                  color: _isDarkMode ? Colors.white70 : Colors.black87,
+                  fontSize: 16),
             ),
             const SizedBox(height: 12),
             Text(
               'Any unsaved changes will be lost.',
-              style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54, fontSize: 14),
+              style: GoogleFonts.inter(
+                  color: _isDarkMode ? Colors.white54 : Colors.black54,
+                  fontSize: 14),
             ),
           ],
         ),
@@ -390,7 +418,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               backgroundColor: _isDarkMode ? Colors.white10 : Colors.black12,
             ),
-            child: Text('Cancel', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black54)),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(
+                    color: _isDarkMode ? Colors.white70 : Colors.black54)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -401,7 +431,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               backgroundColor: Colors.redAccent,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
-            child: Text('Logout', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+            child: Text('Logout',
+                style: GoogleFonts.inter(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
           ),
         ],
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -436,7 +468,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             ? Text(
                 label,
                 style: GoogleFonts.inter(
-                  color: isDestructive ? Colors.redAccent : textColor.withOpacity(0.6),
+                  color: isDestructive
+                      ? Colors.redAccent
+                      : textColor.withOpacity(0.6),
                   fontWeight: FontWeight.w500,
                   fontSize: 13,
                 ),
@@ -447,101 +481,256 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
   }
 
   Widget _buildDashboardIntelligence(Color textColor, Color subTextColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            _buildStatCard(
-              "Total Enrollment",
-              "4,291",
-              LucideIcons.users,
-              aViolet,
-              textColor,
-              onTap: () {
-                // Open Study Loads for enrollment details
-                setState(() => _activeModuleIndex = 4);
-              },
-            ),
-            _buildStatCard(
-              "Active Courses",
-              "128",
-              LucideIcons.book,
-              Colors.blueAccent,
-              textColor,
-              onTap: () {
-                setState(() => _activeModuleIndex = 4); // Study Loads
-              },
-            ),
-            _buildStatCard(
-              "Financial Clearances",
-              "92%",
-              LucideIcons.wallet,
-              success,
-              textColor,
-              onTap: () {
-                // Route to Office Admin requests (covers accounting now)
-                setState(() => _activeModuleIndex = 2);
-              },
-            ),
-            _buildStatCard(
-              "System Health",
-              "Optimal",
-              LucideIcons.activity,
-              Colors.orangeAccent,
-              textColor,
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
+    return ValueListenableBuilder<List<AdminManagedAccount>>(
+      valueListenable: _adminService.notifier,
+      builder: (context, _, __) {
+        final local = _adminService.getLocalAnalytics();
 
-        // ANALYTICS ROW 1: Pie and Bar
-        Row(
-          children: [
-            Expanded(
-              flex: 4,
-              child: _buildAnalyticsCard(
-                "Enrollment Distribution",
-                _buildPieChart(),
-                textColor,
-              ),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              flex: 6,
-              child: _buildAnalyticsCard(
-                "Office Transaction Volume",
-                _buildBarChart(),
-                textColor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-
-        // ANALYTICS ROW 2: Histogram and Logs
-        Row(
+        return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              flex: 6,
-              child: _buildAnalyticsCard(
-                "Grade Frequency Distribution (Histogram)",
-                _buildHistogram(),
-                textColor,
-              ),
+            Row(
+              children: [
+                _buildStatCard(
+                  "Students",
+                  local.students.toString(),
+                  LucideIcons.graduationCap,
+                  aViolet,
+                  textColor,
+                  onTap: () => setState(() => _activeModuleIndex = 13),
+                ),
+                _buildStatCard(
+                  "Teachers",
+                  local.teachers.toString(),
+                  LucideIcons.bookOpen,
+                  Colors.blueAccent,
+                  textColor,
+                  onTap: () => setState(() => _activeModuleIndex = 13),
+                ),
+                _buildStatCard(
+                  "Program Chairs",
+                  local.programChairs.toString(),
+                  LucideIcons.userCheck,
+                  Colors.orangeAccent,
+                  textColor,
+                  onTap: () => setState(() => _activeModuleIndex = 13),
+                ),
+                _buildStatCard(
+                  "Admin + HR",
+                  (local.adminStaff + local.hr).toString(),
+                  LucideIcons.briefcase,
+                  success,
+                  textColor,
+                  onTap: () => setState(() => _activeModuleIndex = 12),
+                ),
+              ],
             ),
-            const SizedBox(width: 24),
-            Expanded(
-              flex: 4,
-              child: _buildAnalyticsCard(
-                "System Efficiency Logs",
-                _buildSimpleLogs(textColor),
-                textColor,
-              ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                _buildStatCard(
+                  "Active Accounts",
+                  local.active.toString(),
+                  LucideIcons.shieldCheck,
+                  success,
+                  textColor,
+                  onTap: () => setState(() => _activeModuleIndex = 12),
+                ),
+                _buildStatCard(
+                  "Suspended Accounts",
+                  local.suspended.toString(),
+                  LucideIcons.ban,
+                  Colors.redAccent,
+                  textColor,
+                  onTap: () => setState(() => _activeModuleIndex = 12),
+                ),
+                _buildStatCard(
+                  "Total Managed",
+                  local.totalAccounts.toString(),
+                  LucideIcons.users,
+                  aViolet,
+                  textColor,
+                ),
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: _isDarkMode ? surfaceDark : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: _isDarkMode ? Colors.white10 : Colors.black12,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Generate Reports',
+                          style: GoogleFonts.inter(
+                            color: textColor,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: () => _showPopulationReport(local),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: aViolet,
+                          ),
+                          icon: const Icon(LucideIcons.fileBarChart2),
+                          label: const Text('Population Report'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 6,
+                  child: _buildAnalyticsCard(
+                    "Live Role Distribution",
+                    _buildRoleDistribution(local, textColor),
+                    textColor,
+                  ),
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  flex: 4,
+                  child: _buildAnalyticsCard(
+                    "Database Analytics Snapshot",
+                    FutureBuilder<AdminAnalyticsSnapshot>(
+                      future: _dbAnalyticsFuture,
+                      builder: (context, snapshot) {
+                        final data = snapshot.data ?? local;
+                        return _buildSimpleLogsFromSnapshot(data, textColor);
+                      },
+                    ),
+                    textColor,
+                  ),
+                ),
+              ],
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showPopulationReport(AdminAnalyticsSnapshot snapshot) {
+    final report = _adminService.generatePopulationReport(snapshot);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _isDarkMode ? surfaceDark : Colors.white,
+        title: Text(
+          'Generated Population Report',
+          style: GoogleFonts.inter(
+            color: _isDarkMode ? Colors.white : pViolet,
+            fontWeight: FontWeight.w700,
+          ),
         ),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            report,
+            style: GoogleFonts.inter(
+              color: _isDarkMode ? Colors.white70 : Colors.black87,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Close',
+              style: GoogleFonts.inter(color: aViolet),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleDistribution(
+      AdminAnalyticsSnapshot snapshot, Color textColor) {
+    final items = snapshot.byRole.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    if (items.isEmpty) {
+      return Text(
+        'No analytics data available.',
+        style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : pViolet),
+      );
+    }
+
+    return ListView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length > 7 ? 7 : items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final ratio = snapshot.totalAccounts == 0
+            ? 0.0
+            : item.value / snapshot.totalAccounts;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    item.key,
+                    style: GoogleFonts.inter(color: textColor, fontSize: 13),
+                  ),
+                  Text(
+                    item.value.toString(),
+                    style: GoogleFonts.inter(
+                      color: aViolet,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: ratio,
+                  minHeight: 10,
+                  backgroundColor:
+                      _isDarkMode ? Colors.white12 : Colors.black12,
+                  valueColor: const AlwaysStoppedAnimation(aViolet),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSimpleLogsFromSnapshot(
+    AdminAnalyticsSnapshot snapshot,
+    Color textColor,
+  ) {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        _logRow('Total Profiles: ${snapshot.totalAccounts}', 'live',
+            isSuccess: true),
+        _logRow('Students: ${snapshot.students}', 'live', isSuccess: true),
+        _logRow('Teachers: ${snapshot.teachers}', 'live'),
+        _logRow('Program Chairs: ${snapshot.programChairs}', 'live'),
+        _logRow('Admin Staff: ${snapshot.adminStaff}', 'live', isSuccess: true),
+        _logRow('HR: ${snapshot.hr}', 'live', isSuccess: true),
+        _logRow('Suspended: ${snapshot.suspended}', 'live'),
       ],
     );
   }
@@ -913,9 +1102,8 @@ class _SearchDialogState extends State<SearchDialog> {
           color: widget.isDarkMode ? sideColor : Color(0xFFEDE9FE),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: widget.isDarkMode
-                ? Colors.white10
-                : aViolet.withOpacity(0.2),
+            color:
+                widget.isDarkMode ? Colors.white10 : aViolet.withOpacity(0.2),
           ),
         ),
         child: Padding(
@@ -1201,10 +1389,10 @@ class PieChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-  
+
   @override
   bool hitTest(Offset position) => false;
-  
+
   @override
   SemanticsBuilderCallback? get semanticsBuilder => null;
 }

@@ -1,40 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../services/admin_user_management_service.dart';
+
 class AcademicAccountManagementPanel extends StatefulWidget {
   const AcademicAccountManagementPanel({super.key, this.isDarkMode = true});
   final bool isDarkMode;
 
   @override
-  State<AcademicAccountManagementPanel> createState() => _AcademicAccountManagementPanelState();
+  State<AcademicAccountManagementPanel> createState() =>
+      _AcademicAccountManagementPanelState();
 }
 
-class _AcademicAccountManagementPanelState extends State<AcademicAccountManagementPanel> {
-  final List<Map<String, String>> _accounts = [];
-  late TextEditingController _nameCtl;
-  late TextEditingController _emailCtl;
-  late TextEditingController _studentIdCtl;
-  late TextEditingController _departmentCtl;
-  late TextEditingController _phoneCtl;
-  late TextEditingController _roleCtl;
-  late TextEditingController _specializationCtl;
-  int? _editingIndex;
+class _AcademicAccountManagementPanelState
+    extends State<AcademicAccountManagementPanel> {
+  final _service = AdminUserManagementService();
 
-  // Light mode colors
-  static const Color lCard = Color(0xFFFFFFFF);
-  
-  // Theme colors (matching student dashboard)
+  late final TextEditingController _nameCtl;
+  late final TextEditingController _emailCtl;
+  late final TextEditingController _idCtl;
+  late final TextEditingController _departmentCtl;
+  late final TextEditingController _phoneCtl;
+  late final TextEditingController _roleCtl;
+  late final TextEditingController _specializationCtl;
+
+  String? _editingId;
+
   static const Color pViolet = Color(0xFF2E1065);
-  static const Color tDark = Color(0xFF0F071D);
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color surfaceDark = Color(0xFF1E1033);
   static const Color success = Color(0xFF69F0AE);
-  
+
   late bool _isDarkMode;
 
-  final List<String> _departments = ['Computer Science', 'Business Administration', 'Mathematics', 'Engineering', 'Arts & Sciences'];
+  final List<String> _departments = [
+    'Computer Science',
+    'Business Administration',
+    'Mathematics',
+    'Engineering',
+    'Arts & Sciences',
+  ];
+
   final List<String> _roles = ['Program Chair', 'Teacher', 'Student'];
-  final List<String> _statuses = ['Active', 'Inactive', 'Suspended', 'Graduated'];
+  final List<String> _statuses = [
+    'Active',
+    'Inactive',
+    'Suspended',
+    'Graduated'
+  ];
 
   @override
   void initState() {
@@ -42,167 +55,159 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
     _isDarkMode = widget.isDarkMode;
     _nameCtl = TextEditingController();
     _emailCtl = TextEditingController();
-    _studentIdCtl = TextEditingController();
+    _idCtl = TextEditingController();
     _departmentCtl = TextEditingController();
     _phoneCtl = TextEditingController();
     _roleCtl = TextEditingController();
     _specializationCtl = TextEditingController();
-    _seedDemoAccounts();
   }
 
-  void _seedDemoAccounts() {
-    _accounts.addAll([
-      {
-        'name': 'Dr. Robert Anderson',
-        'email': 'robert.anderson@uems.edu',
-        'studentId': 'STF001',
-        'department': 'Computer Science',
-        'phone': '+1-555-0201',
-        'role': 'Program Chair',
-        'specialization': 'Artificial Intelligence',
-        'status': 'Active',
-        'timestamp': DateTime.now().subtract(const Duration(days: 45)).toString(),
-      },
-      {
-        'name': 'Prof. Maria Rodriguez',
-        'email': 'maria.rodriguez@uems.edu',
-        'studentId': 'STF002',
-        'department': 'Mathematics',
-        'phone': '+1-555-0202',
-        'role': 'Teacher',
-        'specialization': 'Calculus',
-        'status': 'Active',
-        'timestamp': DateTime.now().subtract(const Duration(days: 40)).toString(),
-      },
-      {
-        'name': 'James Wilson',
-        'email': 'james.wilson@uems.edu',
-        'studentId': 'STD001',
-        'department': 'Business Administration',
-        'phone': '+1-555-0203',
-        'role': 'Student',
-        'specialization': 'Finance',
-        'status': 'Active',
-        'timestamp': DateTime.now().subtract(const Duration(days: 35)).toString(),
-      },
-      {
-        'name': 'Lisa Thompson',
-        'email': 'lisa.thompson@uems.edu',
-        'studentId': 'STD002',
-        'department': 'Engineering',
-        'phone': '+1-555-0204',
-        'role': 'Student',
-        'specialization': 'Mechanical Engineering',
-        'status': 'Active',
-        'timestamp': DateTime.now().subtract(const Duration(days: 30)).toString(),
-      },
-      {
-        'name': 'Dr. David Kim',
-        'email': 'david.kim@uems.edu',
-        'studentId': 'STF003',
-        'department': 'Arts & Sciences',
-        'phone': '+1-555-0205',
-        'role': 'Program Chair',
-        'specialization': 'Literature',
-        'status': 'Active',
-        'timestamp': DateTime.now().subtract(const Duration(days: 25)).toString(),
-      },
-    ]);
+  @override
+  void dispose() {
+    _nameCtl.dispose();
+    _emailCtl.dispose();
+    _idCtl.dispose();
+    _departmentCtl.dispose();
+    _phoneCtl.dispose();
+    _roleCtl.dispose();
+    _specializationCtl.dispose();
+    super.dispose();
   }
+
+  List<AdminManagedAccount> get _accounts =>
+      _service.getAccounts(category: 'academic');
 
   void _clearForm() {
     _nameCtl.clear();
     _emailCtl.clear();
-    _studentIdCtl.clear();
+    _idCtl.clear();
     _departmentCtl.clear();
     _phoneCtl.clear();
     _roleCtl.clear();
     _specializationCtl.clear();
-    setState(() => _editingIndex = null);
+    setState(() => _editingId = null);
   }
 
-  void _addAccount() {
-    if (_nameCtl.text.isEmpty || _emailCtl.text.isEmpty || _studentIdCtl.text.isEmpty || 
-        _departmentCtl.text.isEmpty || _phoneCtl.text.isEmpty || _roleCtl.text.isEmpty || _specializationCtl.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill all fields', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: Colors.redAccent),
-      );
+  void _saveAccount() {
+    if (_nameCtl.text.trim().isEmpty ||
+        _emailCtl.text.trim().isEmpty ||
+        _idCtl.text.trim().isEmpty ||
+        _departmentCtl.text.trim().isEmpty ||
+        _phoneCtl.text.trim().isEmpty ||
+        _roleCtl.text.trim().isEmpty ||
+        _specializationCtl.text.trim().isEmpty) {
+      _snack('Please fill all fields', isError: true);
       return;
     }
 
-    final newAccount = {
-      'name': _nameCtl.text,
-      'email': _emailCtl.text,
-      'studentId': _studentIdCtl.text,
-      'department': _departmentCtl.text,
-      'phone': _phoneCtl.text,
-      'role': _roleCtl.text,
-      'specialization': _specializationCtl.text,
-      'status': 'Active',
-      'timestamp': DateTime.now().toString(),
-    };
-
-    setState(() {
-      if (_editingIndex != null) {
-        _accounts[_editingIndex!] = newAccount;
-        _editingIndex = null;
-      } else {
-        _accounts.insert(0, newAccount);
-      }
-    });
+    if (_editingId == null) {
+      _service.createAccount(
+        fullName: _nameCtl.text.trim(),
+        email: _emailCtl.text.trim(),
+        idNumber: _idCtl.text.trim(),
+        department: _departmentCtl.text.trim(),
+        phone: _phoneCtl.text.trim(),
+        role: _roleCtl.text.trim(),
+        category: 'academic',
+        specialization: _specializationCtl.text.trim(),
+      );
+      _snack('Academic account created');
+    } else {
+      _service.updateAccount(
+        id: _editingId!,
+        fullName: _nameCtl.text.trim(),
+        email: _emailCtl.text.trim(),
+        idNumber: _idCtl.text.trim(),
+        department: _departmentCtl.text.trim(),
+        phone: _phoneCtl.text.trim(),
+        role: _roleCtl.text.trim(),
+        category: 'academic',
+        specialization: _specializationCtl.text.trim(),
+      );
+      _snack('Academic account updated');
+    }
 
     _clearForm();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_editingIndex == null ? 'Account created' : 'Account updated', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: success),
-    );
   }
 
-  void _startEdit(int idx) {
-    final account = _accounts[idx];
+  void _startEdit(AdminManagedAccount account) {
     setState(() {
-      _nameCtl.text = account['name'] ?? '';
-      _emailCtl.text = account['email'] ?? '';
-      _studentIdCtl.text = account['studentId'] ?? '';
-      _departmentCtl.text = account['department'] ?? '';
-      _phoneCtl.text = account['phone'] ?? '';
-      _roleCtl.text = account['role'] ?? '';
-      _specializationCtl.text = account['specialization'] ?? '';
-      _editingIndex = idx;
+      _editingId = account.id;
+      _nameCtl.text = account.fullName;
+      _emailCtl.text = account.email;
+      _idCtl.text = account.idNumber;
+      _departmentCtl.text = account.department;
+      _phoneCtl.text = account.phone;
+      _roleCtl.text = account.role;
+      _specializationCtl.text = account.specialization ?? '';
     });
   }
 
-  void _deleteAccount(int idx) {
+  void _deleteAccount(AdminManagedAccount account) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _isDarkMode ? surfaceDark : Colors.white,
-        title: Text('Delete Account?', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w700)),
-        content: Text('This action cannot be undone. The account will be permanently deleted.', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
+        title: Text(
+          'Delete Account?',
+          style: GoogleFonts.inter(
+            color: _isDarkMode ? Colors.white : pViolet,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          'This account will be removed permanently.',
+          style: GoogleFonts.inter(
+            color: _isDarkMode ? Colors.white70 : Colors.black87,
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(
+                color: _isDarkMode ? Colors.white54 : Colors.black54,
+              ),
+            ),
+          ),
           TextButton(
             onPressed: () {
-              setState(() => _accounts.removeAt(idx));
+              _service.deleteAccount(account.id);
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Account deleted', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: Colors.redAccent),
-              );
+              _snack('Account deleted', isError: true);
             },
-            child: Text('Delete', style: GoogleFonts.inter(color: Colors.redAccent)),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.inter(color: Colors.redAccent),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _updateStatus(int idx, String newStatus) {
-    setState(() => _accounts[idx]['status'] = newStatus);
+  void _setStatus(AdminManagedAccount account, String status) {
+    if (status == 'Suspended') {
+      _service.suspendAccount(account.id);
+    } else if (status == 'Active') {
+      _service.activateAccount(account.id);
+    } else {
+      _service.setStatus(account.id, status);
+    }
+    _snack('Account status updated to $status');
+  }
+
+  void _snack(String text, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Account status updated to $newStatus', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: success),
+      SnackBar(
+        content: Text(text, style: GoogleFonts.inter(color: Colors.white)),
+        backgroundColor: isError ? Colors.redAccent : success,
+      ),
     );
   }
 
-  Color _getStatusColor(String status) {
+  Color _statusColor(String status) {
     switch (status) {
       case 'Active':
         return success;
@@ -217,7 +222,7 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
     }
   }
 
-  Color _getRoleColor(String role) {
+  Color _roleColor(String role) {
     switch (role) {
       case 'Program Chair':
         return const Color(0xFFDC2626);
@@ -230,306 +235,373 @@ class _AcademicAccountManagementPanelState extends State<AcademicAccountManageme
     }
   }
 
-  Widget _buildAccountDetails(Map<String, String> account) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: _getStatusColor(account['status'] ?? 'Active').withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
-                child: Text(account['status'] ?? 'Active', style: GoogleFonts.inter(color: _getStatusColor(account['status'] ?? 'Active'), fontWeight: FontWeight.w600)),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: _getRoleColor(account['role'] ?? 'Student').withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
-                child: Text(account['role'] ?? '', style: GoogleFonts.inter(color: _getRoleColor(account['role'] ?? 'Student'), fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text('Name: ${account['name']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Text('Email: ${account['email']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
-          const SizedBox(height: 8),
-          Text('ID: ${account['studentId']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
-          const SizedBox(height: 8),
-          Text('Department: ${account['department']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
-          const SizedBox(height: 8),
-          Text('Phone: ${account['phone']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
-          const SizedBox(height: 8),
-          Text('Specialization: ${account['specialization']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
-          const SizedBox(height: 12),
-          Text('Created: ${account['timestamp']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54, fontSize: 12)),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Theme-aware colors
-    final cardColor = _isDarkMode ? surfaceDark : lCard;
+    final cardColor = _isDarkMode ? surfaceDark : Colors.white;
     final textColor = _isDarkMode ? Colors.white : pViolet;
     final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
     final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
     final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
-    
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
+
+    return ValueListenableBuilder<List<AdminManagedAccount>>(
+      valueListenable: _service.notifier,
+      builder: (context, _, __) {
+        final accounts = _accounts;
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Left panel: Create/Edit Account
                 Expanded(
-                  flex: 1,
                   child: Container(
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: borderColor),
+                    ),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Academic Account Management', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700, fontSize: 18)),
+                        Text(
+                          'Create / Update Academic Account',
+                          style: GoogleFonts.inter(
+                            color: textColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                          ),
+                        ),
                         const SizedBox(height: 16),
-                        TextField(
+                        _input(
                           controller: _nameCtl,
-                          style: TextStyle(color: textColor),
-                          decoration: InputDecoration(
-                            labelText: 'Full Name',
-                            labelStyle: TextStyle(color: subTextColor),
-                            hintText: 'e.g., Dr. Robert Anderson',
-                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
-                            filled: true,
-                            fillColor: fillColor,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
-                          ),
+                          label: 'Full Name',
+                          hint: 'e.g., Dr. Robert Anderson',
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          borderColor: borderColor,
+                          fillColor: fillColor,
                         ),
                         const SizedBox(height: 12),
-                        TextField(
+                        _input(
                           controller: _emailCtl,
-                          style: TextStyle(color: textColor),
-                          decoration: InputDecoration(
-                            labelText: 'Email Address',
-                            labelStyle: TextStyle(color: subTextColor),
-                            hintText: 'e.g., robert.anderson@uems.edu',
-                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
-                            filled: true,
-                            fillColor: fillColor,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
-                          ),
+                          label: 'Email Address',
+                          hint: 'e.g., robert.anderson@uems.edu',
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          borderColor: borderColor,
+                          fillColor: fillColor,
                         ),
                         const SizedBox(height: 12),
-                        TextField(
-                          controller: _studentIdCtl,
-                          style: TextStyle(color: textColor),
-                          decoration: InputDecoration(
-                            labelText: 'ID Number',
-                            labelStyle: TextStyle(color: subTextColor),
-                            hintText: 'e.g., STF001 or STD001',
-                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
-                            filled: true,
-                            fillColor: fillColor,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
-                          ),
+                        _input(
+                          controller: _idCtl,
+                          label: 'ID Number',
+                          hint: 'e.g., STF001 / STD001',
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          borderColor: borderColor,
+                          fillColor: fillColor,
                         ),
                         const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          initialValue: _departmentCtl.text.isEmpty ? null : _departmentCtl.text,
-                          items: _departments.map((dept) => DropdownMenuItem(value: dept, child: Text(dept, style: GoogleFonts.inter()))).toList(),
-                          onChanged: (v) => setState(() => _departmentCtl.text = v ?? ''),
-                          decoration: InputDecoration(
-                            labelText: 'Department',
-                            labelStyle: TextStyle(color: subTextColor),
-                            hintText: 'Select Department',
-                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
-                            filled: true,
-                            fillColor: fillColor,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
-                          ),
-                          style: TextStyle(color: textColor),
-                          dropdownColor: cardColor,
+                        _dropdown(
+                          value: _departmentCtl.text.isEmpty
+                              ? null
+                              : _departmentCtl.text,
+                          items: _departments,
+                          label: 'Department',
+                          hint: 'Select department',
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          borderColor: borderColor,
+                          fillColor: fillColor,
+                          cardColor: cardColor,
+                          onChanged: (v) => setState(() {
+                            _departmentCtl.text = v ?? '';
+                          }),
                         ),
                         const SizedBox(height: 12),
-                        TextField(
+                        _input(
                           controller: _phoneCtl,
-                          style: TextStyle(color: textColor),
-                          decoration: InputDecoration(
-                            labelText: 'Phone Number',
-                            labelStyle: TextStyle(color: subTextColor),
-                            hintText: 'e.g., +1-555-0201',
-                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
-                            filled: true,
-                            fillColor: fillColor,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
-                          ),
+                          label: 'Phone Number',
+                          hint: 'e.g., +1-555-0201',
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          borderColor: borderColor,
+                          fillColor: fillColor,
                         ),
                         const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          initialValue: _roleCtl.text.isEmpty ? null : _roleCtl.text,
-                          items: _roles.map((role) => DropdownMenuItem(value: role, child: Text(role, style: GoogleFonts.inter()))).toList(),
-                          onChanged: (v) => setState(() => _roleCtl.text = v ?? ''),
-                          decoration: InputDecoration(
-                            labelText: 'Role',
-                            labelStyle: TextStyle(color: subTextColor),
-                            hintText: 'Select Role',
-                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
-                            filled: true,
-                            fillColor: fillColor,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
-                          ),
-                          style: TextStyle(color: textColor),
-                          dropdownColor: cardColor,
+                        _dropdown(
+                          value: _roleCtl.text.isEmpty ? null : _roleCtl.text,
+                          items: _roles,
+                          label: 'Role',
+                          hint: 'Select role',
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          borderColor: borderColor,
+                          fillColor: fillColor,
+                          cardColor: cardColor,
+                          onChanged: (v) => setState(() {
+                            _roleCtl.text = v ?? '';
+                          }),
                         ),
                         const SizedBox(height: 12),
-                        TextField(
+                        _input(
                           controller: _specializationCtl,
-                          style: TextStyle(color: textColor),
-                          decoration: InputDecoration(
-                            labelText: 'Specialization',
-                            labelStyle: TextStyle(color: subTextColor),
-                            hintText: 'e.g., Artificial Intelligence, Calculus',
-                            hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
-                            filled: true,
-                            fillColor: fillColor,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
-                          ),
+                          label: 'Specialization',
+                          hint: 'e.g., Artificial Intelligence',
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          borderColor: borderColor,
+                          fillColor: fillColor,
                         ),
                         const SizedBox(height: 16),
-                        Row(children: [
-                          ElevatedButton(
-                            onPressed: _addAccount,
-                            style: ElevatedButton.styleFrom(backgroundColor: aViolet),
-                            child: Text(_editingIndex == null ? 'Create Account' : 'Update Account', style: GoogleFonts.inter(color: Colors.white)),
-                          ),
-                          const SizedBox(width: 12),
-                          OutlinedButton(
-                            onPressed: _clearForm,
-                            style: OutlinedButton.styleFrom(side: BorderSide(color: borderColor)),
-                            child: Text('Clear', style: GoogleFonts.inter(color: subTextColor)),
-                          ),
-                        ]),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            ElevatedButton(
+                              onPressed: _saveAccount,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: aViolet,
+                              ),
+                              child: Text(
+                                _editingId == null
+                                    ? 'Create Account'
+                                    : 'Update Account',
+                                style: GoogleFonts.inter(color: Colors.white),
+                              ),
+                            ),
+                            OutlinedButton(
+                              onPressed: _clearForm,
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: borderColor),
+                              ),
+                              child: Text(
+                                'Clear',
+                                style: GoogleFonts.inter(color: subTextColor),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(width: 24),
-                // Right panel: Accounts List
                 Expanded(
-                  flex: 1,
                   child: Container(
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: borderColor),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Academic Accounts (${_accounts.length})', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700, fontSize: 18)),
+                        Text(
+                          'Academic Accounts (${accounts.length})',
+                          style: GoogleFonts.inter(
+                            color: textColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                          ),
+                        ),
                         const SizedBox(height: 16),
-                        ConstrainedBox(
-                          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.6),
-                          child: _accounts.isEmpty
-                              ? Center(child: Text('No accounts yet', style: GoogleFonts.inter(color: subTextColor)))
-                              : ListView.builder(
-                                  shrinkWrap: true,
-                                  itemCount: _accounts.length,
-                                  itemBuilder: (ctx, idx) {
-                                    final account = _accounts[idx];
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 12),
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.grey.shade50, borderRadius: BorderRadius.circular(8)),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                                Text(account['name'] ?? '', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600)),
-                                                Text('${account['email']} • ${account['studentId']}', style: GoogleFonts.inter(color: subTextColor, fontSize: 12)),
-                                              ]),
-                                              Row(children: [
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                  decoration: BoxDecoration(color: _getStatusColor(account['status'] ?? 'Active').withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-                                                  child: Text(account['status'] ?? '', style: GoogleFonts.inter(color: _getStatusColor(account['status'] ?? 'Active'), fontSize: 11, fontWeight: FontWeight.w600)),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                  decoration: BoxDecoration(color: _getRoleColor(account['role'] ?? 'Student').withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-                                                  child: Text(account['role'] ?? '', style: GoogleFonts.inter(color: _getRoleColor(account['role'] ?? 'Student'), fontSize: 11, fontWeight: FontWeight.w600)),
-                                                ),
-                                              ]),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text('${account['department']} • ${account['specialization']}', style: GoogleFonts.inter(color: subTextColor, fontSize: 12)),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(account['timestamp'] ?? '', style: GoogleFonts.inter(color: subTextColor, fontSize: 10)),
-                                              Row(
-                                                children: [
-                                                  IconButton(
-                                                    onPressed: () => showDialog(
-                                                      context: context,
-                                                      builder: (ctx) => AlertDialog(
-                                                        backgroundColor: cardColor,
-                                                        title: Text('Account Details', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700)),
-                                                        content: SizedBox(width: 400, child: _buildAccountDetails(account)),
-                                                        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Close', style: GoogleFonts.inter(color: subTextColor)))],
-                                                      ),
-                                                    ),
-                                                    icon: Icon(Icons.info, color: subTextColor, size: 18),
-                                                  ),
-                                                  IconButton(onPressed: () => _startEdit(idx), icon: Icon(Icons.edit, color: subTextColor, size: 18)),
-                                                  PopupMenuButton(
-                                                    onSelected: (status) => _updateStatus(idx, status),
-                                                    itemBuilder: (ctx) => _statuses.map((s) => PopupMenuItem(value: s, child: Text(s, style: GoogleFonts.inter()))).toList(),
-                                                    child: Icon(Icons.more_vert, color: subTextColor, size: 18),
-                                                  ),
-                                                  IconButton(onPressed: () => _deleteAccount(idx), icon: Icon(Icons.delete, color: Colors.redAccent, size: 18)),
-                                                ],
+                        if (accounts.isEmpty)
+                          Text(
+                            'No accounts found',
+                            style: GoogleFonts.inter(color: subTextColor),
+                          )
+                        else
+                          ...accounts.map((account) {
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: _isDarkMode
+                                    ? Colors.white10
+                                    : Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              account.fullName,
+                                              style: GoogleFonts.inter(
+                                                color: textColor,
+                                                fontWeight: FontWeight.w600,
                                               ),
-                                            ],
+                                            ),
+                                            Text(
+                                              '${account.email} • ${account.idNumber}',
+                                              style: GoogleFonts.inter(
+                                                color: subTextColor,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      PopupMenuButton<String>(
+                                        icon: Icon(
+                                          Icons.more_vert,
+                                          color: subTextColor,
+                                        ),
+                                        onSelected: (value) {
+                                          if (value == 'edit') {
+                                            _startEdit(account);
+                                            return;
+                                          }
+                                          if (value == 'delete') {
+                                            _deleteAccount(account);
+                                            return;
+                                          }
+                                          _setStatus(account, value);
+                                        },
+                                        itemBuilder: (ctx) => [
+                                          const PopupMenuItem(
+                                            value: 'edit',
+                                            child: Text('Edit'),
+                                          ),
+                                          const PopupMenuItem(
+                                            value: 'delete',
+                                            child: Text('Delete'),
+                                          ),
+                                          const PopupMenuDivider(),
+                                          ..._statuses.map(
+                                            (s) => PopupMenuItem(
+                                              value: s,
+                                              child: Text(s),
+                                            ),
                                           ),
                                         ],
                                       ),
-                                    );
-                                  },
-                                ),
-                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      _chip(
+                                        account.status,
+                                        _statusColor(account.status),
+                                      ),
+                                      _chip(
+                                        account.role,
+                                        _roleColor(account.role),
+                                      ),
+                                      _chip(account.department, aViolet),
+                                      if ((account.specialization ?? '')
+                                          .isNotEmpty)
+                                        _chip(account.specialization!,
+                                            Colors.teal),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
                       ],
                     ),
                   ),
                 ),
               ],
             ),
-          ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _input({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required Color textColor,
+    required Color subTextColor,
+    required Color borderColor,
+    required Color fillColor,
+  }) {
+    return TextField(
+      controller: controller,
+      style: TextStyle(color: textColor),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: subTextColor),
+        hintText: hint,
+        hintStyle: TextStyle(color: subTextColor.withValues(alpha: 0.6)),
+        filled: true,
+        fillColor: fillColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: borderColor),
         ),
       ),
     );
   }
 
-  @override
-  void dispose() {
-    _nameCtl.dispose();
-    _emailCtl.dispose();
-    _studentIdCtl.dispose();
-    _departmentCtl.dispose();
-    _phoneCtl.dispose();
-    _roleCtl.dispose();
-    _specializationCtl.dispose();
-    super.dispose();
+  Widget _dropdown({
+    required String? value,
+    required List<String> items,
+    required String label,
+    required String hint,
+    required Color textColor,
+    required Color subTextColor,
+    required Color borderColor,
+    required Color fillColor,
+    required Color cardColor,
+    required void Function(String?) onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      items: items
+          .map((e) => DropdownMenuItem<String>(value: e, child: Text(e)))
+          .toList(),
+      onChanged: onChanged,
+      style: TextStyle(color: textColor),
+      dropdownColor: cardColor,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: subTextColor),
+        hintText: hint,
+        hintStyle: TextStyle(color: subTextColor.withValues(alpha: 0.6)),
+        filled: true,
+        fillColor: fillColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: borderColor),
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.inter(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 }

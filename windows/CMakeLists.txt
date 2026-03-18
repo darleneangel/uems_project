@@ -9,6 +9,11 @@ set(BINARY_NAME "uems_project")
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
+if(POLICY CMP0175)
+  # webview_windows 0.4.0 uses add_custom_command(TARGET ... DEPENDS ...).
+  # Keep OLD behavior until the plugin's CMakeLists is updated.
+  cmake_policy(SET CMP0175 OLD)
+endif()
 
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
