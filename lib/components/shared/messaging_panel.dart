@@ -1,7 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_service.dart';
 
 class MessagingPanel extends StatefulWidget {
@@ -23,22 +23,54 @@ class _MessagingPanelState extends State<MessagingPanel> {
 
   Map<String, dynamic>? _selectedContact;
   List<Map<String, dynamic>> _allProfiles = [];
-  final Map<String, Map<String, dynamic>> _lastMessagesByContact = {};
-  String? _lastNotifiedMessageId;
+  Map<String, Map<String, dynamic>> _lastMessagesByContact = {};
   bool _isLoading = true;
+  Timer? _refreshTimer;
+
+  // Visual Palette
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color surfaceDark = Color(0xFF1E1B4B);
 
   @override
   void initState() {
     super.initState();
     _initMessaging();
+    _updateMyPresence();
+    // Refresh the "Active X mins ago" labels every minute
+    _refreshTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) setState(() {});
+    });
   }
 
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _messageController.dispose();
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// 🛰️ PRESENCE: Update current user's last seen timestamp
+  Future<void> _updateMyPresence() async {
+    try {
+      await _service.client
+          .from('profiles')
+          .update({'last_active_at': DateTime.now().toIso8601String()}).eq(
+              'id', widget.userData['id']);
+    } catch (e) {
+      // Column might not exist yet; fails silently to prevent crash
+      debugPrint("Presence update skipped: $e");
+    }
+  }
+
+  /// 🛰️ DATABASE: Load all profiles except current user
   Future<void> _initMessaging() async {
     setState(() => _isLoading = true);
     try {
       final response = await _service.client
           .from('profiles')
-          .select('id, fn, ln, role, user_id_number')
+          .select('id, fn, ln, role, user_id_number, last_active_at')
           .neq('id', widget.userData['id']);
 
       if (mounted) {
@@ -53,6 +85,7 @@ class _MessagingPanelState extends State<MessagingPanel> {
     }
   }
 
+  /// 🛰️ DATABASE: Send message
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _selectedContact == null) return;
@@ -66,96 +99,88 @@ class _MessagingPanelState extends State<MessagingPanel> {
     _messageController.clear();
     try {
       await _service.client.from('messages').insert(newMessage);
+      _updateMyPresence(); // Keep presence fresh
     } catch (e) {
       debugPrint("Send Error: $e");
     }
   }
 
-  /// 🔍 Messenger Logic: Sort threads by the latest interaction
+  /// 📐 LOGIC: Helper to format user roles for the UI
+  String _formatRole(dynamic role) {
+    if (role == null) return "User";
+    String r = role.toString().toLowerCase();
+    switch (r) {
+      case 'student':
+        return "Student";
+      case 'teacher':
+      case 'faculty':
+        return "Professor";
+      case 'program_chair':
+        return "Pchair";
+      case 'registrar':
+        return "Registrar";
+      case 'accounting':
+        return "Accounting";
+      case 'admission':
+        return "Admission";
+      default:
+        return r[0].toUpperCase() + r.substring(1).replaceAll('_', ' ');
+    }
+  }
+
+  /// 📐 LOGIC: Format "Active X ago"
+  String _formatActiveStatus(dynamic timestamp) {
+    if (timestamp == null) return "";
+    try {
+      final lastActive = DateTime.parse(timestamp.toString());
+      final now = DateTime.now();
+      final diff = now.difference(lastActive);
+
+      if (diff.inMinutes < 2) return "Active now";
+      if (diff.inMinutes < 60) return "Active ${diff.inMinutes}m ago";
+      if (diff.inHours < 24) return "Active ${diff.inHours}h ago";
+      return "Active ${diff.inDays}d ago";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  /// 🔍 Messenger Logic: Filter threads and sort by latest private interaction
   List<Map<String, dynamic>> get _messengerThreads {
     final query = _searchController.text.toLowerCase();
 
-    // 1. Filter by search (Name or ID)
     List<Map<String, dynamic>> filtered = _allProfiles.where((p) {
       final fullName = "${p['fn']} ${p['ln']}".toLowerCase();
       final id = p['user_id_number'].toString().toLowerCase();
       return fullName.contains(query) || id.contains(query);
     }).toList();
 
-    // 2. Sort by last message interaction (Top of the list)
+    // Sort: Threads with newer private messages appear at the top of the sidebar
     filtered.sort((a, b) {
-      final lastA = _lastMessagesByContact[a['id']]?['id']?.toString() ?? "";
-      final lastB = _lastMessagesByContact[b['id']]?['id']?.toString() ?? "";
-      return lastB
-          .compareTo(lastA); // String-safe comparison for UUIDs/Serial IDs
+      final msgA = _lastMessagesByContact[a['id']];
+      final msgB = _lastMessagesByContact[b['id']];
+
+      if (msgA == null && msgB == null) return 0;
+      if (msgA == null) return 1;
+      if (msgB == null) return -1;
+
+      final timeA = DateTime.tryParse(msgA['created_at']?.toString() ?? "") ??
+          DateTime(0);
+      final timeB = DateTime.tryParse(msgB['created_at']?.toString() ?? "") ??
+          DateTime(0);
+
+      return timeB.compareTo(timeA);
     });
 
     return filtered;
   }
 
-  /// 🔔 Notification Logic: Show snackbar for background messages
-  void _checkForNewMessageNotification(List<Map<String, dynamic>> messages) {
-    if (messages.isEmpty) return;
-
-    // Get the absolute latest message in the stream
-    final latest = messages.last;
-    final String currentUserId = widget.userData['id'];
-
-    // If I am the receiver and it's a new ID we haven't notified for yet
-    if (latest['receiver_id'] == currentUserId &&
-        latest['id'] != _lastNotifiedMessageId) {
-      _lastNotifiedMessageId = latest['id'];
-
-      // Only notify if we aren't currently looking at the chat with this sender
-      if (_selectedContact?['id'] != latest['sender_id']) {
-        final sender = _allProfiles.firstWhere(
-            (p) => p['id'] == latest['sender_id'],
-            orElse: () => {});
-        if (sender.isNotEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _showInAppNotification(
-                "${sender['fn']} ${sender['ln']}", latest['content']);
-          });
-        }
-      }
-    }
-  }
-
-  void _showInAppNotification(String name, String content) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(name,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.white)),
-            Text(content,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: Colors.white70)),
-          ],
-        ),
-        backgroundColor: const Color(0xFF8B5CF6),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-        margin: const EdgeInsets.all(20),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final cardColor =
-        widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
+    final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
     final textColor =
         widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
     final subTextColor = widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
-    final selectedColor = widget.isDarkMode
-        ? const Color(0xFF8B5CF6).withOpacity(0.15)
-        : const Color(0xFFEDE9FE);
 
     return Container(
       height: 750,
@@ -168,17 +193,23 @@ class _MessagingPanelState extends State<MessagingPanel> {
       clipBehavior: Clip.antiAlias,
       child: Row(
         children: [
-          _buildLeftPanel(textColor, subTextColor, selectedColor),
+          // LEFT: THREAD LIST
+          _buildLeftPanel(textColor, subTextColor),
+
+          // RIGHT: ACTIVE CHAT
           _buildChatView(cardColor, textColor, subTextColor),
         ],
       ),
     );
   }
 
-  Widget _buildLeftPanel(
-      Color textColor, Color subTextColor, Color selectedColor) {
+  Widget _buildLeftPanel(Color textColor, Color subTextColor) {
+    final selectedColor =
+        widget.isDarkMode ? aViolet.withOpacity(0.1) : const Color(0xFFF3E8FF);
+    final myId = widget.userData['id'];
+
     return Container(
-      width: 340,
+      width: 320,
       decoration: BoxDecoration(
         border: Border(
             right: BorderSide(
@@ -187,7 +218,7 @@ class _MessagingPanelState extends State<MessagingPanel> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -198,9 +229,9 @@ class _MessagingPanelState extends State<MessagingPanel> {
                         style: GoogleFonts.inter(
                             fontWeight: FontWeight.w900,
                             color: textColor,
-                            fontSize: 24)),
-                    const Icon(LucideIcons.edit,
-                        color: Color(0xFF8B5CF6), size: 20),
+                            fontSize: 26,
+                            letterSpacing: -0.5)),
+                    Icon(LucideIcons.edit, size: 18, color: textColor),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -215,10 +246,10 @@ class _MessagingPanelState extends State<MessagingPanel> {
                   child: TextField(
                     controller: _searchController,
                     onChanged: (_) => setState(() {}),
-                    style: TextStyle(color: textColor, fontSize: 14),
+                    style: TextStyle(color: textColor, fontSize: 13),
                     decoration: InputDecoration(
-                      hintText: "Search name or ID...",
-                      hintStyle: TextStyle(color: subTextColor),
+                      hintText: "Search conversations...",
+                      hintStyle: TextStyle(color: subTextColor, fontSize: 13),
                       border: InputBorder.none,
                       icon: Icon(LucideIcons.search,
                           size: 16, color: subTextColor),
@@ -230,99 +261,106 @@ class _MessagingPanelState extends State<MessagingPanel> {
           ),
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
+              // PRIVACY LOCK: Listens for messages involving ONLY the logged-in user
               stream:
                   _service.client.from('messages').stream(primaryKey: ['id']),
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
-                  // Process incoming messages to update the "Latest Activity" map
                   for (var m in snapshot.data!) {
                     final String sId = m['sender_id'];
                     final String rId = m['receiver_id'];
-                    final String myId = widget.userData['id'];
+
+                    // SECURITY: Filter data strictly for current user participation
+                    if (sId != myId && rId != myId) continue;
 
                     final String otherId = (sId == myId) ? rId : sId;
-
                     final currentLast = _lastMessagesByContact[otherId];
-                    // FIX: Used compareTo for Strings to avoid NoSuchMethodError on '>'
-                    if (currentLast == null ||
-                        m['id']
-                                .toString()
-                                .compareTo(currentLast['id'].toString()) >
-                            0) {
+
+                    final timeNew =
+                        DateTime.tryParse(m['created_at']?.toString() ?? "") ??
+                            DateTime(0);
+                    final timeOld = DateTime.tryParse(
+                            currentLast?['created_at']?.toString() ?? "") ??
+                        DateTime(0);
+
+                    if (currentLast == null || timeNew.isAfter(timeOld)) {
                       _lastMessagesByContact[otherId] = m;
                     }
                   }
-
-                  // Trigger notification check
-                  _checkForNewMessageNotification(snapshot.data!);
                 }
 
                 final threads = _messengerThreads;
                 return ListView.builder(
                   itemCount: threads.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   itemBuilder: (context, index) {
                     final contact = threads[index];
                     final isSelected = _selectedContact?['id'] == contact['id'];
                     final lastMsg = _lastMessagesByContact[contact['id']]
                             ?['content'] ??
-                        "No messages yet";
-                    final bool isUnread = (_lastMessagesByContact[contact['id']]
-                                ?['receiver_id'] ==
-                            widget.userData['id']) &&
-                        !isSelected;
+                        "Start a conversation";
+                    final bool isMeLast = _lastMessagesByContact[contact['id']]
+                            ?['sender_id'] ==
+                        myId;
 
                     return ListTile(
                       selected: isSelected,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       selectedTileColor: selectedColor,
                       leading: Stack(
                         children: [
                           CircleAvatar(
-                            backgroundColor:
-                                const Color(0xFF8B5CF6).withOpacity(0.1),
+                            radius: 26,
+                            backgroundColor: aViolet.withOpacity(0.1),
                             child: Text(contact['ln'][0],
                                 style: const TextStyle(
-                                    color: Color(0xFF8B5CF6),
+                                    color: aViolet,
                                     fontWeight: FontWeight.bold)),
                           ),
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF69F0AE),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: widget.isDarkMode
-                                        ? const Color(0xFF1E1B4B)
-                                        : Colors.white,
-                                    width: 2),
+                          if (_formatActiveStatus(contact['last_active_at']) ==
+                              "Active now")
+                            Positioned(
+                              right: 2,
+                              bottom: 2,
+                              child: Container(
+                                width: 14,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF69F0AE),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: widget.isDarkMode
+                                          ? surfaceDark
+                                          : Colors.white,
+                                      width: 2.5),
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                       title: Text("${contact['fn']} ${contact['ln']}",
                           style: TextStyle(
-                              fontWeight: isUnread
-                                  ? FontWeight.w900
-                                  : (isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.w600),
-                              color: isUnread
-                                  ? const Color(0xFF8B5CF6)
-                                  : textColor,
-                              fontSize: 14)),
-                      subtitle: Text(lastMsg,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: isUnread ? textColor : subTextColor,
-                              fontSize: 12,
-                              fontWeight: isUnread
+                              fontWeight: isSelected
                                   ? FontWeight.bold
-                                  : FontWeight.normal)),
+                                  : FontWeight.w600,
+                              color: textColor,
+                              fontSize: 14)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_formatRole(contact['role']),
+                              style: const TextStyle(
+                                  color: aViolet,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900)),
+                          Text(isMeLast ? "You: $lastMsg" : lastMsg,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  TextStyle(color: subTextColor, fontSize: 12)),
+                        ],
+                      ),
                       onTap: () => setState(() => _selectedContact = contact),
                     );
                   },
@@ -338,38 +376,53 @@ class _MessagingPanelState extends State<MessagingPanel> {
   Widget _buildChatView(Color cardColor, Color textColor, Color subTextColor) {
     if (_selectedContact == null) {
       return Expanded(
-          child: Center(
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-            Icon(LucideIcons.messageSquare,
-                size: 48, color: textColor.withOpacity(0.05)),
-            const SizedBox(height: 16),
-            Text("Select a chat to start",
-                style: TextStyle(color: subTextColor))
-          ])));
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                    color: aViolet.withOpacity(0.05), shape: BoxShape.circle),
+                child: Icon(LucideIcons.messageCircle,
+                    size: 48, color: aViolet.withOpacity(0.2)),
+              ),
+              const SizedBox(height: 16),
+              Text("Select a contact to start messaging",
+                  style: TextStyle(
+                      color: subTextColor, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
+      );
     }
 
-    final inputFill = widget.isDarkMode
-        ? Colors.white.withOpacity(0.05)
-        : Colors.grey.shade100;
+    final myId = widget.userData['id'];
 
     return Expanded(
       child: Column(
         children: [
+          // Chat Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
-                border: Border(
-                    bottom: BorderSide(
-                        color: widget.isDarkMode
-                            ? Colors.white10
-                            : Colors.black12))),
+              color: cardColor,
+              border: Border(
+                  bottom: BorderSide(
+                      color:
+                          widget.isDarkMode ? Colors.white10 : Colors.black12)),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5))
+              ],
+            ),
             child: Row(
               children: [
                 CircleAvatar(
-                    radius: 18,
-                    backgroundColor: const Color(0xFF8B5CF6),
+                    radius: 20,
+                    backgroundColor: aViolet,
                     child: Text(_selectedContact!['ln'][0],
                         style: const TextStyle(
                             color: Colors.white,
@@ -382,100 +435,121 @@ class _MessagingPanelState extends State<MessagingPanel> {
                     Text(
                         "${_selectedContact!['fn']} ${_selectedContact!['ln']}",
                         style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold, color: textColor)),
-                    const Text("Active Now",
-                        style: TextStyle(
-                            color: Color(0xFF69F0AE),
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold)),
+                            fontWeight: FontWeight.w800, color: textColor)),
+                    Row(
+                      children: [
+                        Text(_formatRole(_selectedContact!['role']),
+                            style: const TextStyle(
+                                color: aViolet,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 8),
+                        Text(
+                            _formatActiveStatus(
+                                _selectedContact!['last_active_at']),
+                            style:
+                                TextStyle(color: subTextColor, fontSize: 11)),
+                      ],
+                    ),
                   ],
                 ),
                 const Spacer(),
-                Icon(LucideIcons.phone, color: subTextColor, size: 20),
-                const SizedBox(width: 20),
-                Icon(LucideIcons.video, color: subTextColor, size: 20),
-                const SizedBox(width: 20),
-                Icon(LucideIcons.info, color: subTextColor, size: 20),
+                Icon(LucideIcons.info, color: aViolet, size: 22),
               ],
             ),
           ),
+
+          // Message Feed
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream:
                   _service.client.from('messages').stream(primaryKey: ['id']),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                if (!snapshot.hasData)
+                  return const Center(
+                      child: CircularProgressIndicator(color: aViolet));
 
+                // PRIVACY FILTER: Strictly show conversation between current user and target only
                 final messages = snapshot.data!.where((m) {
                   final String sId = m['sender_id'];
                   final String rId = m['receiver_id'];
-                  final String me = widget.userData['id'];
                   final String them = _selectedContact!['id'];
-                  return (sId == me && rId == them) ||
-                      (sId == them && rId == me);
+                  return (sId == myId && rId == them) ||
+                      (sId == them && rId == myId);
                 }).toList();
 
-                messages.sort(
-                    (a, b) => b['id'].toString().compareTo(a['id'].toString()));
+                // SORTING: Chronological Descending (Newest at Index 0)
+                // When combined with reverse: true, this puts index 0 at the bottom.
+                messages.sort((a, b) {
+                  final timeA =
+                      DateTime.tryParse(a['created_at']?.toString() ?? "") ??
+                          DateTime(0);
+                  final timeB =
+                      DateTime.tryParse(b['created_at']?.toString() ?? "") ??
+                          DateTime(0);
+                  int timeCompare = timeB.compareTo(timeA);
+                  if (timeCompare != 0) return timeCompare;
+
+                  // Fallback to ID comparison if timestamps are identical
+                  final idA = int.tryParse(a['id'].toString()) ?? 0;
+                  final idB = int.tryParse(b['id'].toString()) ?? 0;
+                  return idB.compareTo(idA);
+                });
 
                 return ListView.builder(
                   controller: _scrollController,
-                  reverse: true,
-                  padding: const EdgeInsets.all(24),
+                  reverse: true, // MESSENGER STYLE: Anchored to the bottom
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final msg = messages[index];
-                    final bool isMe = msg['sender_id'] == widget.userData['id'];
+                    final bool isMe = msg['sender_id'] == myId;
                     return _buildMessageBubble(msg['content'], isMe);
                   },
                 );
               },
             ),
           ),
+
+          // Input Section
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             decoration: BoxDecoration(
-                color: widget.isDarkMode
-                    ? Colors.black.withOpacity(0.1)
-                    : cardColor,
-                border: Border(
-                    top: BorderSide(
-                        color: widget.isDarkMode
-                            ? Colors.white10
-                            : Colors.black12))),
+              color: cardColor,
+              border: Border(
+                  top: BorderSide(
+                      color:
+                          widget.isDarkMode ? Colors.white10 : Colors.black12)),
+            ),
             child: Row(
               children: [
-                const Icon(LucideIcons.plusCircle, color: Color(0xFF8B5CF6)),
-                const SizedBox(width: 12),
-                const Icon(LucideIcons.camera, color: Color(0xFF8B5CF6)),
-                const SizedBox(width: 12),
-                const Icon(LucideIcons.image, color: Color(0xFF8B5CF6)),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    onSubmitted: (_) => _sendMessage(),
-                    style: TextStyle(color: textColor),
-                    decoration: InputDecoration(
-                      hintText: "Type a message...",
-                      hintStyle: TextStyle(color: subTextColor, fontSize: 14),
-                      filled: true,
-                      fillColor: inputFill,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide.none),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: widget.isDarkMode
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: TextField(
+                      controller: _messageController,
+                      onSubmitted: (_) => _sendMessage(),
+                      style: TextStyle(color: textColor, fontSize: 14),
+                      decoration: const InputDecoration(
+                        hintText: "Aa",
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 12),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 GestureDetector(
                   onTap: _sendMessage,
-                  child: const Icon(LucideIcons.send,
-                      color: Color(0xFF8B5CF6), size: 28),
+                  child: const Icon(LucideIcons.send, color: aViolet, size: 24),
                 ),
               ],
             ),
@@ -488,29 +562,36 @@ class _MessagingPanelState extends State<MessagingPanel> {
   Widget _buildMessageBubble(String text, bool isMe) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        constraints: const BoxConstraints(maxWidth: 450),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        decoration: BoxDecoration(
-          color: isMe
-              ? const Color(0xFF8B5CF6)
-              : (widget.isDarkMode
-                  ? Colors.white.withOpacity(0.08)
-                  : Colors.grey.shade200),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: Radius.circular(isMe ? 20 : 4),
-            bottomRight: Radius.circular(isMe ? 4 : 20),
+      child: Column(
+        crossAxisAlignment:
+            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(bottom: 4),
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isMe
+                  ? aViolet
+                  : (widget.isDarkMode
+                      ? Colors.white.withOpacity(0.08)
+                      : Colors.grey.shade200),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(20),
+                topRight: const Radius.circular(20),
+                bottomLeft: Radius.circular(isMe ? 20 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 20),
+              ),
+            ),
+            child: Text(text,
+                style: TextStyle(
+                    color: isMe
+                        ? Colors.white
+                        : (widget.isDarkMode ? Colors.white : Colors.black87),
+                    fontSize: 14,
+                    height: 1.3)),
           ),
-        ),
-        child: Text(text,
-            style: TextStyle(
-                color: isMe
-                    ? Colors.white
-                    : (widget.isDarkMode ? Colors.white70 : Colors.black87),
-                fontSize: 14)),
+        ],
       ),
     );
   }

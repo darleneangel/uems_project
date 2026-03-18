@@ -6,6 +6,8 @@ import '../components/accounting_panels/payroll_panel.dart';
 import '../components/accounting_panels/financial_reports_panel.dart';
 import '../components/accounting_panels/accounting_overview_panel.dart';
 import '../components/accounting_panels/registration_payment_panel.dart';
+import '../components/shared/messaging_panel.dart';
+import '../components/accounting_panels/tuition_assessment_panel.dart';
 
 class AccountingDashboardView extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -71,6 +73,12 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
         return FinancialReportsPanel(isDarkMode: _isDarkMode);
       case 4:
         return RegistrationPaymentPanel(
+            isDarkMode: _isDarkMode, userData: widget.userData);
+      case 5:
+        return TuitionAssessmentPanel(
+            isDarkMode: _isDarkMode, userData: widget.userData);
+      case 6:
+        return MessagingPanel(
             isDarkMode: _isDarkMode, userData: widget.userData);
       case 0:
       default:
@@ -152,11 +160,13 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
                 _menuItem(LucideIcons.layoutDashboard, "Overview", 0),
                 _sidebarHeader("COLLECTIONS"),
                 _menuItem(LucideIcons.receipt, "Fee Management", 1),
-                _menuItem(LucideIcons.pieChart, "Fiscal Reports", 2),
+                _menuItem(LucideIcons.pieChart, "Tuition Assessment", 5),
                 _menuItem(LucideIcons.piggyBank, "Enrollment Payment", 4),
                 _sidebarHeader("INTERNAL"),
                 _menuItem(LucideIcons.users, "Institution Payroll", 3),
                 _menuItem(LucideIcons.shoppingCart, "Disbursements", 4),
+                _sidebarHeader("MESSAGES"),
+                _menuItem(LucideIcons.messageCircle, "Messaging", 6),
               ])),
           const Divider(color: Colors.white10),
           _menuItem(LucideIcons.logOut, "Logout System", 8,

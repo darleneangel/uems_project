@@ -124,8 +124,6 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
   /// 🛰️ SMART AUTO-FILL: Fetches data from the "Master Schedule" (Faculty Load Panel)
   Future<void> _autoFillFromMasterSchedule(String subjectId) async {
     try {
-      // FIX 1: Explicitly used 'profiles!study_loads_professor_id_fkey' to resolve relationship ambiguity
-      // FIX 2: Removed '.order('created_at')' as the column does not exist in the table
       final response = await _service.client
           .from('study_loads')
           .select(
@@ -228,6 +226,8 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
     });
   }
 
+  /// 🛰️ FINALIZATION:
+  /// Now updates status to 'Assessment' to alert Accounting
   Future<void> _finalizeStudyLoads() async {
     if (_assignedSubjects.isEmpty) return;
     setState(() => _isContextLoading = true);
@@ -252,7 +252,17 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
         }
       }
 
+      // 1. Assign the subjects
       await _service.batchAssignSubjects(studyLoads);
+
+      // 2. Transmit to Accounting (Update Status)
+      // FIX: Changed "Pending Assessment" to "Assessment" to resolve DB check constraint violation
+      for (String sId in targetIds) {
+        await _service.client
+            .from('student_details')
+            .update({'enrollment_status': 'Assessment'}).eq('profile_id', sId);
+      }
+
       if (mounted) {
         setState(() {
           _activeStep = 3;
@@ -300,12 +310,10 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
     final bgColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    if (_isContextLoading) {
+    if (_isContextLoading)
       return const Center(child: CircularProgressIndicator(color: aViolet));
-    }
-    if (_errorMessage != null) {
+    if (_errorMessage != null)
       return _buildErrorState(_errorMessage!, textColor);
-    }
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -364,10 +372,9 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
         FutureBuilder<List<Map<String, dynamic>>>(
           future: _service.getStudentQueue(_chairDepartmentId!),
           builder: (context, snapshot) {
-            if (!snapshot.hasData) {
+            if (!snapshot.hasData)
               return const Center(
                   child: CircularProgressIndicator(color: aViolet));
-            }
             final list = snapshot.data!.where((s) {
               return s['fn']
                   .toString()
@@ -556,10 +563,10 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
             color: aViolet.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: aViolet.withOpacity(0.3))),
-        child: const Row(
+        child: Row(
           children: [
-            Icon(LucideIcons.copy, size: 16, color: aViolet),
-            SizedBox(width: 8),
+            const Icon(LucideIcons.copy, size: 16, color: aViolet),
+            const SizedBox(width: 8),
             Text("TEMPLATES",
                 style: TextStyle(
                     color: aViolet, fontSize: 11, fontWeight: FontWeight.bold)),
@@ -625,11 +632,10 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
   }
 
   Widget _buildAssignedList(Color textColor) {
-    if (_assignedSubjects.isEmpty) {
+    if (_assignedSubjects.isEmpty)
       return Center(
           child: Text("No subjects added.",
               style: TextStyle(color: textColor.withOpacity(0.2))));
-    }
     return Column(
       children: List.generate(_assignedSubjects.length, (i) {
         final s = _assignedSubjects[i];

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,16 +25,12 @@ class SubjectLoadPanel extends StatefulWidget {
 }
 
 class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
-  static const Color aViolet = Color(0xFF7C3AED);
+  static const Color aViolet = Color(0xFF8B5CF6);
   static const Color success = Color(0xFF69F0AE);
 
   List<Map<String, dynamic>> _subjects = [];
-  final Map<String, String> _summaryFees = {
-    "Tuition Fee": "P0.00",
-    "Miscellaneous Fees": "P0.00",
-    "Total Fees": "P0.00",
-  };
-  List<Map<String, String>> _miscBreakdownList = [];
+  Map<String, dynamic>? _billingBreakdown;
+  double _totalAmount = 0.0;
   bool _isLoading = true;
 
   @override
@@ -42,15 +39,11 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
     _fetchLiveLoadData();
   }
 
-  /// DATABASE ENGINE: Fetches study loads, assessments, and fee structures
+  /// 🛰️ DATABASE ENGINE: Fetches study loads and the JSON billing breakdown from Accounting
   Future<void> _fetchLiveLoadData() async {
     setState(() => _isLoading = true);
     final client = SupabaseService().client;
     final String profileId = widget.studentData['id'];
-
-    final now = DateTime.now();
-    final timeOnly =
-        "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:00";
 
     try {
       // 1. Fetch official Study Load (Joined with Subjects)
@@ -74,39 +67,32 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
         };
       }).toList();
 
-      // 2. Fetch the current semester's Assessment from Accounting
-      final assessment = await client
-          .from('assessments')
+      // 2. Fetch the actual Assessment released by Accounting from the payments table
+      final paymentRecord = await client
+          .from('payments')
           .select()
           .eq('student_id', profileId)
+          .eq('payment_type', 'Enrollment Assessment')
+          .order('created_at', ascending: false)
+          .limit(1)
           .maybeSingle();
-
-      // 3. Fetch the institutional Miscellaneous Fee library
-      final List<dynamic> miscLibrary =
-          await client.from('miscellaneous_fees').select('name, price');
 
       if (mounted) {
         setState(() {
           _subjects = subjectResults;
-          if (assessment != null) {
-            _summaryFees["Tuition Fee"] =
-                "P${assessment['total_tuition']?.toString() ?? '0.00'}";
-            _summaryFees["Miscellaneous Fees"] =
-                "P${assessment['total_misc']?.toString() ?? '0.00'}";
-            _summaryFees["Total Fees"] =
-                "P${assessment['grand_total']?.toString() ?? '0.00'}";
+          if (paymentRecord != null) {
+            _totalAmount =
+                double.tryParse(paymentRecord['amount']?.toString() ?? "0.0") ??
+                    0.0;
+            if (paymentRecord['remarks'] != null) {
+              _billingBreakdown = jsonDecode(paymentRecord['remarks']);
+            }
           }
-          _miscBreakdownList = miscLibrary
-              .map((m) => {
-                    "name": m['name'].toString(),
-                    "amount": m['price'].toString()
-                  })
-              .toList();
           _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint("Subject Load Fetch Error: $e");
+      debugPrint("Subject Load Sync Error: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -120,17 +106,11 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
     final String timestamp = DateTime.now().toString().split('.')[0];
     const PdfColor brandViolet = PdfColor.fromInt(0xFF7C3AED);
 
-    pw.ImageProvider? logoImage;
-    try {
-      final ByteData data = await rootBundle.load('assets/image/logo (2).png');
-      logoImage = pw.MemoryImage(data.buffer.asUint8List());
-    } catch (_) {}
-
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(35),
-        header: (pw.Context context) => _buildPdfHeader(brandViolet, logoImage),
+        header: (pw.Context context) => _buildPdfHeader(brandViolet),
         build: (pw.Context context) {
           return [
             pw.SizedBox(height: 15),
@@ -165,7 +145,8 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                         fontWeight: pw.FontWeight.bold,
                         fontSize: 8)),
                 pw.Text("Ref: $timestamp",
-                    style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
+                    style: const pw.TextStyle(
+                        fontSize: 7, color: PdfColors.grey600)),
               ],
             ),
           ];
@@ -185,38 +166,16 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
     }
   }
 
-  pw.Widget _buildPdfHeader(PdfColor color, pw.ImageProvider? logo) {
+  pw.Widget _buildPdfHeader(PdfColor color) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        pw.Row(children: [
-          if (logo != null)
-            pw.Container(
-                width: 45,
-                height: 45,
-                child: pw.Image(logo, fit: pw.BoxFit.contain))
-          else
-            pw.Container(
-                width: 40,
-                height: 40,
-                decoration: pw.BoxDecoration(
-                    color: color, borderRadius: pw.BorderRadius.circular(8)),
-                child: pw.Center(
-                    child: pw.Text("U",
-                        style: pw.TextStyle(
-                            color: PdfColors.white,
-                            fontWeight: pw.FontWeight.bold,
-                            fontSize: 24)))),
-          pw.SizedBox(width: 15),
-          pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-            pw.Text("UEMSSP",
-                style: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold,
-                    fontSize: 24,
-                    color: color)),
-            pw.Text("Institutional Core System",
-                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-          ]),
+        pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+          pw.Text("UEMSSP",
+              style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold, fontSize: 24, color: color)),
+          pw.Text("Institutional Core System",
+              style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
         ]),
         pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
           pw.Text("CERTIFICATE OF MATRICULATION",
@@ -297,6 +256,9 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
   }
 
   pw.Widget _buildPdfFinancialSummary(PdfColor color) {
+    if (_billingBreakdown == null)
+      return pw.Text("Assessment Pending",
+          style: const pw.TextStyle(fontSize: 8));
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -304,28 +266,34 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
             style: pw.TextStyle(
                 fontSize: 9, fontWeight: pw.FontWeight.bold, color: color)),
         pw.SizedBox(height: 8),
-        ..._summaryFees.entries.map((e) => pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(e.key,
-                    style: pw.TextStyle(
-                        fontSize: 8,
-                        fontWeight: e.key.contains("Total")
-                            ? pw.FontWeight.bold
-                            : pw.FontWeight.normal)),
-                pw.Text(e.value,
-                    style: pw.TextStyle(
-                        fontSize: 8,
-                        fontWeight: e.key.contains("Total")
-                            ? pw.FontWeight.bold
-                            : pw.FontWeight.normal)),
-              ],
-            )),
+        _pdfFeeRow("Tuition Fee", "P${_billingBreakdown!['tuition']}"),
+        _pdfFeeRow("Laboratory Fee", "P${_billingBreakdown!['lab_fee']}"),
+        pw.Divider(thickness: 0.5),
+        _pdfFeeRow("TOTAL ASSESSMENT", "P${_totalAmount.toStringAsFixed(2)}",
+            isBold: true),
       ],
     );
   }
 
+  pw.Widget _pdfFeeRow(String l, String v, {bool isBold = false}) => pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(l,
+              style: pw.TextStyle(
+                  fontSize: 8,
+                  fontWeight:
+                      isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+          pw.Text(v,
+              style: pw.TextStyle(
+                  fontSize: 8,
+                  fontWeight:
+                      isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+        ],
+      );
+
   pw.Widget _buildPdfMiscBreakdown(PdfColor color) {
+    final misc =
+        _billingBreakdown?['misc_breakdown'] as Map<String, dynamic>? ?? {};
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -333,32 +301,18 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
             style: pw.TextStyle(
                 fontSize: 9, fontWeight: pw.FontWeight.bold, color: color)),
         pw.SizedBox(height: 8),
-        ..._miscBreakdownList
-            .take(8)
-            .map((m) => pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Expanded(
-                        child: pw.Text(m['name']!,
-                            style: const pw.TextStyle(fontSize: 6))),
-                    pw.Text(m['amount']!,
-                        style: pw.TextStyle(
-                            fontSize: 6, fontWeight: pw.FontWeight.bold)),
-                  ],
-                ))
-            ,
+        ...misc.entries.take(10).map((m) => pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Expanded(
+                    child:
+                        pw.Text(m.key, style: const pw.TextStyle(fontSize: 6))),
+                pw.Text("P${m.value}",
+                    style: pw.TextStyle(
+                        fontSize: 6, fontWeight: pw.FontWeight.bold)),
+              ],
+            )),
       ],
-    );
-  }
-
-  pw.Widget _buildPdfPaymentOptions(PdfColor color) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(12),
-      decoration: pw.BoxDecoration(
-          color: PdfColors.grey100, borderRadius: pw.BorderRadius.circular(8)),
-      child: pw.Text(
-          "Note: Settlement can be processed via GCash/PayMongo using the student portal QR.",
-          style: const pw.TextStyle(fontSize: 8)),
     );
   }
 
@@ -371,17 +325,16 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
     final Color subTextColor =
         widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
-    if (_isLoading) {
+    if (_isLoading)
       return const Center(child: CircularProgressIndicator(color: aViolet));
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSummaryHeader(textColor, subTextColor),
+        _buildStatsRibbon(textColor),
         const SizedBox(height: 24),
         Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
               color: cardColor,
               borderRadius: BorderRadius.circular(28),
@@ -395,12 +348,12 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: textColor)),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               _buildSubjectTable(textColor, subTextColor),
               const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32),
+                  padding: EdgeInsets.symmetric(vertical: 40),
                   child: Divider(color: Colors.white10)),
-              _buildFinancialSections(textColor, subTextColor),
+              _buildFeeBreakdownSection(textColor, subTextColor),
             ],
           ),
         ),
@@ -408,7 +361,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
     );
   }
 
-  Widget _buildSummaryHeader(Color textColor, Color subTextColor) {
+  Widget _buildStatsRibbon(Color textColor) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -426,8 +379,8 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
           _statItem(LucideIcons.bookOpen, "Subjects",
               _subjects.length.toString(), textColor),
           _verticalDivider(),
-          _statItem(LucideIcons.wallet, "Assessment",
-              _summaryFees["Total Fees"]!, textColor),
+          _statItem(LucideIcons.wallet, "Total Fees",
+              "₱${_totalAmount.toStringAsFixed(2)}", textColor),
           const Spacer(),
           ElevatedButton.icon(
             onPressed: () => _exportStudyLoad(context),
@@ -437,7 +390,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                 backgroundColor: aViolet,
                 foregroundColor: Colors.white,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12))),
           )
@@ -469,20 +422,124 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
               _tableHeaderCell("UNITS"),
               _tableHeaderCell("BLOCK"),
             ]),
-        ..._subjects
-            .map((s) => TableRow(children: [
-                  _tableDataCell(s['code'], textColor,
-                      isBold: true, color: aViolet),
-                  _tableDataCell(s['title'], textColor),
-                  _tableDataCell(s['room'], subTextColor),
-                  _tableDataCell(s['time'], textColor, isSmall: true),
-                  _tableDataCell(s['hrs/units'], textColor),
-                  _tableDataCell(s['section'], subTextColor, isBold: true),
-                ]))
-            ,
+        ..._subjects.map((s) => TableRow(children: [
+              _tableDataCell(s['code'], textColor,
+                  isBold: true, color: aViolet),
+              _tableDataCell(s['title'], textColor),
+              _tableDataCell(s['room'], subTextColor),
+              _tableDataCell(s['time'], textColor, isSmall: true),
+              _tableDataCell(s['hrs/units'], textColor),
+              _tableDataCell(s['section'], subTextColor, isBold: true),
+            ])),
       ],
     );
   }
+
+  Widget _buildFeeBreakdownSection(Color textColor, Color subTextColor) {
+    if (_billingBreakdown == null) {
+      return Center(
+          child: Text("Fee breakdown pending release by Accounting.",
+              style:
+                  TextStyle(color: subTextColor, fontStyle: FontStyle.italic)));
+    }
+
+    final misc = _billingBreakdown!['misc_breakdown'] as Map<String, dynamic>;
+    final other = _billingBreakdown!['other_breakdown'] as Map<String, dynamic>;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Left: Summary
+        Expanded(
+          flex: 4,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Assessment Summary",
+                  style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: textColor)),
+              const SizedBox(height: 20),
+              _feeRow("Gross Tuition Fee", "₱${_billingBreakdown!['tuition']}",
+                  textColor),
+              _feeRow("Laboratory Fee", "₱${_billingBreakdown!['lab_fee']}",
+                  textColor),
+              const Divider(height: 32, color: Colors.white10),
+              _feeRow("TOTAL NET FEES", "₱${_totalAmount.toStringAsFixed(2)}",
+                  textColor,
+                  isTotal: true),
+            ],
+          ),
+        ),
+        const SizedBox(width: 48),
+        // Right: Itemized Misc
+        Expanded(
+          flex: 5,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Itemized Miscellaneous",
+                  style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: textColor)),
+              const SizedBox(height: 20),
+              Container(
+                height: 250,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20)),
+                child: ListView(
+                  children: [
+                    ...misc.entries.map((e) => _itemizedRow(
+                        e.key, e.value.toString(), subTextColor, textColor)),
+                    const Divider(color: Colors.white10),
+                    ...other.entries.map((e) => _itemizedRow(
+                        e.key, e.value.toString(), subTextColor, textColor)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _itemizedRow(String k, String v, Color sk, Color tk) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(k, style: TextStyle(color: sk, fontSize: 11)),
+            Text("₱$v",
+                style: TextStyle(
+                    color: tk, fontWeight: FontWeight.bold, fontSize: 11)),
+          ],
+        ),
+      );
+
+  Widget _feeRow(String label, String amount, Color textColor,
+          {bool isTotal = false}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label,
+                style: TextStyle(
+                    color: isTotal ? textColor : textColor.withOpacity(0.6),
+                    fontWeight: isTotal ? FontWeight.bold : FontWeight.normal)),
+            Text(amount,
+                style: TextStyle(
+                    color: isTotal ? aViolet : textColor,
+                    fontWeight: isTotal ? FontWeight.w900 : FontWeight.bold,
+                    fontSize: isTotal ? 16 : 13)),
+          ],
+        ),
+      );
 
   Widget _tableHeaderCell(String text) => Padding(
       padding: const EdgeInsets.all(12),
@@ -492,6 +549,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
               fontWeight: FontWeight.w900,
               color: aViolet,
               letterSpacing: 1)));
+
   Widget _tableDataCell(String text, Color textColor,
           {bool isBold = false, bool isSmall = false, Color? color}) =>
       Padding(
@@ -501,83 +559,6 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                   color: color ?? textColor,
                   fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
                   fontSize: isSmall ? 11 : 13)));
-
-  Widget _buildFinancialSections(Color textColor, Color subTextColor) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-            flex: 4,
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text("Assessment Summary",
-                  style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: textColor)),
-              const SizedBox(height: 20),
-              ..._summaryFees.entries
-                  .map((e) => _feeRow(e.key, e.value, textColor))
-                  ,
-            ])),
-        const SizedBox(width: 48),
-        Expanded(
-            flex: 5,
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text("Miscellaneous Items",
-                  style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: textColor)),
-              const SizedBox(height: 20),
-              Container(
-                height: 300,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16)),
-                child: ListView.separated(
-                  itemCount: _miscBreakdownList.length,
-                  separatorBuilder: (c, i) =>
-                      const Divider(color: Colors.white10, height: 12),
-                  itemBuilder: (c, i) => Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                            child: Text(_miscBreakdownList[i]['name']!,
-                                style: TextStyle(
-                                    color: subTextColor, fontSize: 11))),
-                        Text("P${_miscBreakdownList[i]['amount']!}",
-                            style: TextStyle(
-                                color: textColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold)),
-                      ]),
-                ),
-              ),
-            ])),
-      ],
-    );
-  }
-
-  Widget _feeRow(String label, String amount, Color textColor) {
-    bool isTotal = label.contains("Total");
-    return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child:
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(label,
-              style: TextStyle(
-                  color: isTotal ? textColor : textColor.withOpacity(0.6),
-                  fontWeight: isTotal ? FontWeight.bold : FontWeight.normal)),
-          Text(amount,
-              style: TextStyle(
-                  color: isTotal ? aViolet : textColor,
-                  fontWeight: isTotal ? FontWeight.w900 : FontWeight.bold,
-                  fontSize: isTotal ? 16 : 13)),
-        ]));
-  }
 
   Widget _statItem(
           IconData icon, String label, String value, Color textColor) =>
@@ -595,6 +576,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                   fontWeight: FontWeight.bold))
         ])
       ]);
+
   Widget _verticalDivider() => Container(
       height: 30,
       width: 1,
