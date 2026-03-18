@@ -39,7 +39,7 @@ class _StudentMessagingPanelState extends State<StudentMessagingPanel> {
         .order('created_at')
         .listen((data) async {
           if (mounted) {
-            final grouped = await _groupMessagesIntoThreads(data);
+            final grouped = _groupMessagesIntoThreads(data);
             if (mounted) setState(() => _threads = grouped);
           }
         });

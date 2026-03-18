@@ -55,7 +55,7 @@ class CourseCatalogView extends StatelessWidget {
                           color: aViolet.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(Icons.book, color: aViolet, size: 20),
+                        child: const Icon(Icons.book, color: aViolet, size: 20),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

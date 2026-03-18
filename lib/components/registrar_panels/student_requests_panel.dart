@@ -300,14 +300,16 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
               stream: SupabaseService().client.from('office_requests').stream(
                   primaryKey: ['id']).order('date_applied', ascending: false),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(
                       child: CircularProgressIndicator(color: aViolet));
+                }
                 final list = snapshot.data!;
-                if (list.isEmpty)
+                if (list.isEmpty) {
                   return Center(
                       child: Text("Queue is clear.",
                           style: TextStyle(color: subText)));
+                }
 
                 return ListView.separated(
                   itemCount: list.length,
@@ -390,8 +392,9 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
             .eq('id', _selectedRequestId!)
             .single(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final req = snapshot.data!;
           final p = req['profiles'];
 
@@ -680,8 +683,8 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
             Text(msg['content'],
                 style: const TextStyle(color: Colors.white, fontSize: 12)),
             const SizedBox(height: 4),
-            Text("Just now",
-                style: const TextStyle(color: Colors.white54, fontSize: 9)),
+            const Text("Just now",
+                style: TextStyle(color: Colors.white54, fontSize: 9)),
           ],
         ),
       ),

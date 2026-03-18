@@ -49,6 +49,16 @@ class _RequestReceiverState extends State<RequestReceiver> {
     _seedDemoRequests();
   }
 
+  @override
+  void didUpdateWidget(covariant RequestReceiver oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isDarkMode != widget.isDarkMode) {
+      setState(() {
+        _isDarkMode = widget.isDarkMode;
+      });
+    }
+  }
+
   void _seedDemoRequests() {
     // Demo data is automatically seeded when OfficeRequestService is instantiated
     // No need to call _seedDemoData() here as it's private
@@ -68,8 +78,8 @@ class _RequestReceiverState extends State<RequestReceiver> {
   void _approveRequest(int id) {
     _service.approve(id);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Request approved'),
+      const SnackBar(
+        content: Text('Request approved'),
         backgroundColor: success,
       ),
     );
@@ -78,8 +88,8 @@ class _RequestReceiverState extends State<RequestReceiver> {
   void _rejectRequest(int id) {
     _service.reject(id);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Request rejected'),
+      const SnackBar(
+        content: Text('Request rejected'),
         backgroundColor: Colors.redAccent,
       ),
     );
@@ -335,8 +345,10 @@ class _RequestReceiverState extends State<RequestReceiver> {
     // Theme-aware colors
     final textColor = _isDarkMode ? Colors.white : pViolet;
     final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
-    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
-    final fillColor = Colors.white;
+    final cardFillColor = _isDarkMode ? const Color(0xFF24164A) : Colors.white;
+    final detailsFillColor =
+        _isDarkMode ? aViolet.withValues(alpha: 0.08) : Colors.grey.shade50;
+    final mutedTextColor = _isDarkMode ? Colors.white60 : Colors.black54;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -459,10 +471,14 @@ class _RequestReceiverState extends State<RequestReceiver> {
               return Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: _isDarkMode ? aViolet.withOpacity(0.02) : Colors.grey.shade50,
+                  color: _isDarkMode
+                      ? Colors.white.withValues(alpha: 0.02)
+                      : Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: _isDarkMode ? aViolet.withOpacity(0.08) : Colors.grey.shade200,
+                    color: _isDarkMode
+                        ? aViolet.withValues(alpha: 0.16)
+                        : Colors.grey.shade200,
                     width: 1.0,
                   ),
                 ),
@@ -487,7 +503,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                       Text(
                         'All requests have been reviewed',
                         style: GoogleFonts.inter(
-                          color: _isDarkMode ? Colors.white54 : Colors.black54,
+                          color: mutedTextColor,
                           fontSize: 13,
                         ),
                       ),
@@ -510,9 +526,13 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 return Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: fillColor,
+                    color: cardFillColor,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: _isDarkMode ? aViolet.withOpacity(0.08) : Colors.black12),
+                    border: Border.all(
+                      color: _isDarkMode
+                          ? aViolet.withValues(alpha: 0.2)
+                          : Colors.black12,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -581,8 +601,13 @@ class _RequestReceiverState extends State<RequestReceiver> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: fillColor,
+                            color: detailsFillColor,
                             borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _isDarkMode
+                                  ? aViolet.withValues(alpha: 0.16)
+                                  : Colors.black12,
+                            ),
                           ),
                           child: Text(
                             request.details,
@@ -600,7 +625,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                           Text(
                             _formatDateTime(request.createdAt),
                             style: GoogleFonts.inter(
-                              color: _isDarkMode ? Colors.white54 : Colors.black54,
+                              color: mutedTextColor,
                               fontSize: 11,
                             ),
                           ),

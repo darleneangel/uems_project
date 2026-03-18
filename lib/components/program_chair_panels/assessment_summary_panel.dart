@@ -213,7 +213,7 @@ class _AssessmentSummaryPanelState extends State<AssessmentSummaryPanel> {
               pw.Center(
                   child: pw.Text(
                       "OFFICE OF THE PROGRAM CHAIR - ASSESSMENT AUDIT",
-                      style: pw.TextStyle(fontSize: 10))),
+                      style: const pw.TextStyle(fontSize: 10))),
               pw.SizedBox(height: 20),
               pw.Divider(),
               pw.SizedBox(height: 20),
@@ -246,9 +246,9 @@ class _AssessmentSummaryPanelState extends State<AssessmentSummaryPanel> {
               pw.Spacer(),
               pw.Text(
                   "Authorized by: ${widget.userData['fn']} ${widget.userData['ln']}",
-                  style: pw.TextStyle(fontSize: 8)),
+                  style: const pw.TextStyle(fontSize: 8)),
               pw.Text("Generated via UEMSSP Core on $timestamp",
-                  style: pw.TextStyle(fontSize: 8, color: PdfColors.grey)),
+                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey)),
             ],
           ),
         ),
@@ -401,7 +401,7 @@ class _AssessmentSummaryPanelState extends State<AssessmentSummaryPanel> {
                         isSpecial: true),
                 ],
               );
-            }).toList(),
+            }),
             const Divider(height: 48, color: Colors.white10),
             Text("MISCELLANEOUS FEES",
                 style: GoogleFonts.inter(
@@ -414,7 +414,7 @@ class _AssessmentSummaryPanelState extends State<AssessmentSummaryPanel> {
                 .map((e) => _itemRow(
                     e.key, "Fixed Institutional Fee", e.value, text,
                     isMisc: true))
-                .toList(),
+                ,
           ],
         ),
       );
@@ -520,7 +520,7 @@ class _AssessmentSummaryPanelState extends State<AssessmentSummaryPanel> {
           child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 100),
         child: Column(children: [
-          Icon(LucideIcons.user, size: 64, color: Colors.blueGrey),
+          const Icon(LucideIcons.user, size: 64, color: Colors.blueGrey),
           const SizedBox(height: 16),
           Text("Search student ID to generate billing assessment.",
               style: TextStyle(color: t.withOpacity(0.3)))

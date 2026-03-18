@@ -69,7 +69,7 @@ class TaxCompliancePdfService {
                     pw.SizedBox(height: 6),
                     pw.Text(
                       'BIR Form No. 1601-C (January 2008)',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 8,
                         color: FinancialReportService.textMuted,
                       ),
@@ -108,7 +108,7 @@ class TaxCompliancePdfService {
                             pw.SizedBox(height: 2),
                             pw.Text(
                               _getMonthName(forTheMonth),
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                 fontSize: 8,
                                 color: FinancialReportService.textMuted,
                               ),
@@ -129,7 +129,7 @@ class TaxCompliancePdfService {
                             pw.SizedBox(height: 2),
                             pw.Text(
                               forTheYear.toString(),
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                 fontSize: 8,
                                 color: FinancialReportService.textMuted,
                               ),
@@ -150,7 +150,7 @@ class TaxCompliancePdfService {
                             pw.SizedBox(height: 2),
                             pw.Text(
                               tinNumber,
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                 fontSize: 8,
                                 color: FinancialReportService.textMuted,
                               ),
@@ -173,7 +173,7 @@ class TaxCompliancePdfService {
                     pw.SizedBox(height: 2),
                     pw.Text(
                       schoolName,
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 8,
                         color: FinancialReportService.textMuted,
                       ),
@@ -280,7 +280,7 @@ class TaxCompliancePdfService {
               // Signature Block
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(vertical: 12),
-                decoration: pw.BoxDecoration(
+                decoration: const pw.BoxDecoration(
                   border: pw.Border(
                     top: pw.BorderSide(color: FinancialReportService.borderLight),
                   ),
@@ -293,11 +293,11 @@ class TaxCompliancePdfService {
                         pw.SizedBox(height: 30),
                         pw.Text(
                           '_______________________',
-                          style: pw.TextStyle(fontSize: 8),
+                          style: const pw.TextStyle(fontSize: 8),
                         ),
                         pw.Text(
                           'Authorized Signature',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                             fontSize: 8,
                             color: FinancialReportService.textMuted,
                           ),
@@ -309,11 +309,11 @@ class TaxCompliancePdfService {
                         pw.SizedBox(height: 30),
                         pw.Text(
                           '_______________________',
-                          style: pw.TextStyle(fontSize: 8),
+                          style: const pw.TextStyle(fontSize: 8),
                         ),
                         pw.Text(
                           'Date',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                             fontSize: 8,
                             color: FinancialReportService.textMuted,
                           ),
@@ -387,7 +387,7 @@ class TaxCompliancePdfService {
                             ),
                             pw.Text(
                               auditPeriod,
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                 fontSize: 9,
                                 color: FinancialReportService.textLight,
                               ),
@@ -407,7 +407,7 @@ class TaxCompliancePdfService {
                             ),
                             pw.Text(
                               auditedBy,
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                 fontSize: 9,
                                 color: FinancialReportService.textLight,
                               ),
@@ -426,7 +426,7 @@ class TaxCompliancePdfService {
               pw.Container(
                 padding: const pw.EdgeInsets.all(12),
                 decoration: pw.BoxDecoration(
-                  color: PdfColor(0.08, 0.04, 0.12),
+                  color: const PdfColor(0.08, 0.04, 0.12),
                   border: pw.Border.all(color: FinancialReportService.borderGrey),
                 ),
                 child: pw.Column(
@@ -449,7 +449,7 @@ class TaxCompliancePdfService {
                               pw.Expanded(
                                 child: pw.Text(
                                   item.key,
-                                  style: pw.TextStyle(
+                                  style: const pw.TextStyle(
                                     fontSize: 9,
                                     color: FinancialReportService.textLight,
                                   ),
@@ -490,7 +490,7 @@ class TaxCompliancePdfService {
               if (findings.majorFindings.isNotEmpty) ...[
                 pw.Container(
                   padding: const pw.EdgeInsets.all(12),
-                  decoration: pw.BoxDecoration(
+                  decoration: const pw.BoxDecoration(
                     border: pw.Border(
                       left: pw.BorderSide(
                         color: FinancialReportService.errorRed,
@@ -517,7 +517,7 @@ class TaxCompliancePdfService {
                               children: [
                                 pw.Text(
                                   finding,
-                                  style: pw.TextStyle(
+                                  style: const pw.TextStyle(
                                     fontSize: 9,
                                     color: FinancialReportService.textLight,
                                   ),
@@ -534,7 +534,7 @@ class TaxCompliancePdfService {
               // Recommendations
               pw.Container(
                 padding: const pw.EdgeInsets.all(12),
-                decoration: pw.BoxDecoration(
+                decoration: const pw.BoxDecoration(
                   border: pw.Border(
                     left: pw.BorderSide(
                       color: FinancialReportService.borderLight,
@@ -558,7 +558,7 @@ class TaxCompliancePdfService {
                           padding: const pw.EdgeInsets.symmetric(vertical: 5),
                           child: pw.Text(
                             '${entry.key + 1}. ${entry.value}',
-                            style: pw.TextStyle(
+                            style: const pw.TextStyle(
                               fontSize: 9,
                               color: FinancialReportService.textLight,
                             ),
@@ -630,7 +630,7 @@ class TaxCompliancePdfService {
           flex: 2,
           child: pw.Text(
             label,
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
               fontSize: 9,
               color: FinancialReportService.textDark,
             ),
@@ -640,7 +640,7 @@ class TaxCompliancePdfService {
           flex: 1,
           child: pw.Text(
             amount,
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
               fontSize: 9,
               color: FinancialReportService.textDark,
             ),
@@ -718,7 +718,7 @@ class TaxCompliancePdfService {
                     pw.SizedBox(height: 6),
                     pw.Text(
                       'BIR Form No. 1601-C (January 2008)',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 8,
                         color: FinancialReportService.textMuted,
                       ),
@@ -912,7 +912,7 @@ class TaxCompliancePdfService {
                     ],
                   ),
                   pw.TableRow(
-                    decoration: pw.BoxDecoration(
+                    decoration: const pw.BoxDecoration(
                       color: FinancialReportService.surfaceAlt,
                       border: pw.Border(
                         bottom: pw.BorderSide(

@@ -186,8 +186,8 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: const Color(0xFF8B5CF6),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
                     width: 2,
                   ),
                 ),
@@ -223,8 +223,8 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: const Color(0xFF8B5CF6),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
                     width: 2,
                   ),
                 ),
@@ -257,8 +257,8 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: const Color(0xFF8B5CF6),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
                     width: 2,
                   ),
                 ),
@@ -306,8 +306,8 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: const Color(0xFF8B5CF6),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
                     width: 2,
                   ),
                 ),
@@ -341,8 +341,8 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: const Color(0xFF8B5CF6),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
                     width: 2,
                   ),
                 ),
@@ -387,8 +387,8 @@ class _PaymentRequestPanelState extends State<PaymentRequestPanel> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: const Color(0xFF8B5CF6),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF8B5CF6),
                     width: 2,
                   ),
                 ),

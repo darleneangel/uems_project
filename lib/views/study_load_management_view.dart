@@ -289,7 +289,7 @@ class _StudyLoadManagementViewState extends State<StudyLoadManagementView> {
           children: [
             const Text("Select Subject from Catalog", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            Expanded(child: ListView(children: [ /* List courses from course_catalog_view.dart */ ])),
+            Expanded(child: ListView(children: const [ /* List courses from course_catalog_view.dart */ ])),
           ],
         ),
       ),

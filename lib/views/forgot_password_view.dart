@@ -111,7 +111,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView>
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -177,7 +177,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView>
                               width: 2,
                             ),
                           ),
-                          child: Icon(
+                          child: const Icon(
                             LucideIcons.keyRound,
                             color: accentViolet,
                             size: 36,
@@ -255,7 +255,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView>
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
+                                  borderSide: const BorderSide(
                                     color: accentViolet,
                                     width: 2,
                                   ),
@@ -350,7 +350,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView>
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
+                                const Icon(
                                   LucideIcons.arrowLeft,
                                   color: accentViolet,
                                   size: 16,

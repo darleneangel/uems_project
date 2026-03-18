@@ -131,13 +131,15 @@ class FinancialReportsPanel extends StatelessWidget {
             .order('created_at', ascending: false)
             .limit(10),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(
                 child: CircularProgressIndicator(color: aViolet));
+          }
           final logs = snapshot.data!;
-          if (logs.isEmpty)
+          if (logs.isEmpty) {
             return const Center(
                 child: Text("No transactions recorded in current cycle."));
+          }
 
           return ListView.separated(
             padding: const EdgeInsets.all(24),

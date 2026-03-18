@@ -173,7 +173,7 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
               const LinearProgressIndicator(color: Color(0xFF8B5CF6))
             else
               DropdownButtonFormField<Map<String, dynamic>>(
-                value: _selectedDocument,
+                initialValue: _selectedDocument,
                 dropdownColor: cardColor,
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(

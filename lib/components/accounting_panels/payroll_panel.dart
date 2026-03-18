@@ -29,8 +29,9 @@ class PayrollPanel extends StatelessWidget {
                 .from('employee_details')
                 .stream(primaryKey: ['profile_id']),
             builder: (context, snapshot) {
-              if (!snapshot.hasData)
+              if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
+              }
               final employees = snapshot.data!;
 
               return ListView.builder(

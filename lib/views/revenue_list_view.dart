@@ -70,7 +70,7 @@ class RevenueListView extends StatelessWidget {
                                 color: success.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(Icons.trending_up, color: success, size: 20),
+                              child: const Icon(Icons.trending_up, color: success, size: 20),
                             ),
                             const SizedBox(width: 12),
                             Expanded(

@@ -125,9 +125,10 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
     final Color subTextColor =
         widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(
           child: CircularProgressIndicator(color: Color(0xFF8B5CF6)));
+    }
 
     final filtered = _getFilteredGrades();
     final gwa = _calculateTermGWA(filtered);
@@ -219,8 +220,8 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text("VERIFIED RECORD",
-                style: const TextStyle(
+            const Text("VERIFIED RECORD",
+                style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
                     fontSize: 10,
@@ -296,8 +297,9 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
                   fontWeight: bold ? FontWeight.w700 : FontWeight.w500)));
 
   Widget _gwaBadge(double gwa) {
-    if (gwa == 0)
+    if (gwa == 0) {
       return const Text("-", style: TextStyle(color: Colors.blueGrey));
+    }
     final color = gwa <= 3.0 ? const Color(0xFF69F0AE) : Colors.redAccent;
     return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

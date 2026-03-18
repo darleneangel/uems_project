@@ -7,11 +7,11 @@ import 'package:postgres/postgres.dart';
 
 // --- SUPABASE CONNECTION CONFIG ---
 // Get this from Project Settings > Database > Connection String > URI
-final String _dbHost = 'db.ipmkemontxkxzfymidej.supabase.co';
-final int _dbPort = 5432;
-final String _dbName = 'postgres';
-final String _dbUser = 'postgres';
-final String _dbPassword = 'Anime456789928&*&';
+const String _dbHost = 'db.ipmkemontxkxzfymidej.supabase.co';
+const int _dbPort = 5432;
+const String _dbName = 'postgres';
+const String _dbUser = 'postgres';
+const String _dbPassword = 'Anime456789928&*&';
 
 late Connection conn;
 
@@ -26,7 +26,7 @@ void main() async {
         username: _dbUser,
         password: _dbPassword,
       ),
-      settings: ConnectionSettings(sslMode: SslMode.require),
+      settings: const ConnectionSettings(sslMode: SslMode.require),
     );
     print('✅ Connected to Supabase Cloud Engine');
   } catch (e) {
@@ -69,8 +69,9 @@ void main() async {
         parameters: [qrHash, 'Unpaid'],
       );
 
-      if (result.isEmpty)
+      if (result.isEmpty) {
         return Response.notFound('Request not found or already paid');
+      }
 
       final studentId = result.first[0];
       final amountDue = result.first[1] as double;

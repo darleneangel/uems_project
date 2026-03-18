@@ -46,7 +46,7 @@ class FinancialReportService {
           children: [
             pw.Text(
               'As of $date',
-              style: pw.TextStyle(
+              style: const pw.TextStyle(
                 fontSize: 9,
                 color: textMuted,
               ),
@@ -90,7 +90,7 @@ class FinancialReportService {
         children: [
           pw.Container(
             padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: pw.BoxDecoration(
+            decoration: const pw.BoxDecoration(
               color: surfaceAlt,
               border: pw.Border(
                 bottom: pw.BorderSide(color: borderLight),
@@ -130,7 +130,7 @@ class FinancialReportService {
   // Create table header row
   static pw.TableRow buildTableHeaderRow(List<String> headers) {
     return pw.TableRow(
-      decoration: pw.BoxDecoration(
+      decoration: const pw.BoxDecoration(
         color: surfaceAlt,
         border: pw.Border(
           bottom: pw.BorderSide(color: borderLight, width: 1),
@@ -168,7 +168,7 @@ class FinancialReportService {
     if (isTotal) {
       backgroundColor = surfaceAlt;
     } else if (isSubtotal) {
-      backgroundColor = PdfColor(0.92, 0.92, 0.95);
+      backgroundColor = const PdfColor(0.92, 0.92, 0.95);
     }
 
     return pw.TableRow(
@@ -226,7 +226,7 @@ class FinancialReportService {
               children: [
                 pw.Text(
                   'Document: $documentType',
-                  style: pw.TextStyle(
+                  style: const pw.TextStyle(
                     fontSize: 8,
                     color: textMuted,
                   ),
@@ -235,7 +235,7 @@ class FinancialReportService {
                   pw.SizedBox(height: 4),
                   pw.Text(
                     'Notes: $auditNotes',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       fontSize: 8,
                       color: textMuted,
                     ),
@@ -245,7 +245,7 @@ class FinancialReportService {
             ),
             pw.Text(
               'Page __/__',
-              style: pw.TextStyle(
+              style: const pw.TextStyle(
                 fontSize: 8,
                 color: textMuted,
               ),

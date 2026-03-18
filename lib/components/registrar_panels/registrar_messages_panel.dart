@@ -97,8 +97,9 @@ class _RegistrarMessagesPanelState extends State<RegistrarMessagesPanel> {
     final Color subTextColor =
         widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
-    if (_isInitializing)
+    if (_isInitializing) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,

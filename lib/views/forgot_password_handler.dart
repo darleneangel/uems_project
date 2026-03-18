@@ -234,9 +234,9 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
   }
 
   void _handleStepAction() {
-    if (_currentStep == 0)
+    if (_currentStep == 0) {
       _initiateRecovery();
-    else if (_currentStep == 1)
+    } else if (_currentStep == 1)
       _verifyOtp();
     else
       _finalizeReset();

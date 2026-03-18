@@ -212,7 +212,7 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
                     fontWeight: pw.FontWeight.bold, fontSize: 14))),
         pw.Center(
             child: pw.Text("OFFICE OF THE REGISTRAR",
-                style: pw.TextStyle(fontSize: 10))),
+                style: const pw.TextStyle(fontSize: 10))),
         pw.SizedBox(height: 30),
         pw.Text(type.toUpperCase(),
             style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
@@ -243,7 +243,7 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
         pw.Align(
             alignment: pw.Alignment.centerRight,
             child: pw.Text("Digital Registrar Signature Applied",
-                style: pw.TextStyle(fontSize: 8, color: PdfColors.grey))),
+                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey))),
       ],
     ));
 
@@ -403,8 +403,9 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
           .from('profiles')
           .stream(primaryKey: ['id']).eq('role', 'student'),
       builder: (context, snapshot) {
-        if (!snapshot.hasData)
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator(color: aViolet));
+        }
 
         final list = snapshot.data!.where((s) {
           final matchesSearch = _searchController.text.isEmpty ||
@@ -462,14 +463,16 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
         addresses (*)
       ''').eq('id', _selectedStudentId!).single(),
       builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting)
+        if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: aViolet));
-        if (!snap.hasData)
+        }
+        if (!snap.hasData) {
           return const Center(child: Text("Error retrieving student record."));
+        }
 
         final s = snap.data!;
         final details = s['student_details'];
-        final address = s['addresses'] != null ? s['addresses'] : null;
+        final address = s['addresses'];
 
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -510,7 +513,7 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
             Text("${s['fn']} ${s['ln']}",
                 style: GoogleFonts.inter(
                     fontSize: 24, fontWeight: FontWeight.w900, color: t)),
-            Text("Student Profile Record • Authenticated via SSCR-Cloud",
+            const Text("Student Profile Record • Authenticated via SSCR-Cloud",
                 style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
           ],
         ),
@@ -583,21 +586,21 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
             {"label": "Institutional ID", "value": s['user_id_number']},
             {
               "label": "Program / Course",
-              "value": d?['courses']?['name'] ?? "Not Assigned"
+              "value": d['courses']?['name'] ?? "Not Assigned"
             },
             {
               "label": "Year Level",
-              "value": d?['year_levels']?['definition'] ?? "N/A"
+              "value": d['year_levels']?['definition'] ?? "N/A"
             },
             {
               "label": "Current GWA",
-              "value": d?['current_gwa']?.toString() ?? "0.00"
+              "value": d['current_gwa']?.toString() ?? "0.00"
             },
             {
               "label": "Account Balance",
-              "value": "₱${d?['account_balance'] ?? '0.00'}"
+              "value": "₱${d['account_balance'] ?? '0.00'}"
             },
-            {"label": "Student Type", "value": d?['student_type'] ?? "Regular"},
+            {"label": "Student Type", "value": d['student_type'] ?? "Regular"},
           ], textColor),
           const Divider(height: 60, color: Colors.white10),
           _sectionTitle("Personal Identity"),

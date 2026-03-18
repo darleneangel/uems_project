@@ -125,7 +125,7 @@ class IncomeStatementPdfService {
                         pw.SizedBox(height: 4),
                         pw.Text(
                           'Profit After Expenses',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                             fontSize: 8,
                             color: FinancialReportService.textMuted,
                           ),

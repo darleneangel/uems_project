@@ -200,9 +200,9 @@ class _HrDashboardViewState extends State<HrDashboardView> {
             ],
           ),
           const SizedBox(width: 12),
-          CircleAvatar(
+          const CircleAvatar(
             backgroundColor: aViolet,
-            child: const Icon(LucideIcons.user, color: Colors.white, size: 18),
+            child: Icon(LucideIcons.user, color: Colors.white, size: 18),
           ),
         ],
       ),
@@ -443,7 +443,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
               decoration: InputDecoration(
                 hintText: "Search employees...",
                 hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
-                prefixIcon: Icon(LucideIcons.search, color: aViolet),
+                prefixIcon: const Icon(LucideIcons.search, color: aViolet),
                 border: InputBorder.none,
               ),
               style: TextStyle(color: textColor),
@@ -648,15 +648,15 @@ class _HrDashboardViewState extends State<HrDashboardView> {
                     hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.white10),
+                      borderSide: const BorderSide(color: Colors.white10),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.white10),
+                      borderSide: const BorderSide(color: Colors.white10),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: aViolet),
+                      borderSide: const BorderSide(color: aViolet),
                     ),
                   ),
                   style: TextStyle(color: textColor),
@@ -703,7 +703,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: aViolet),
+                          side: const BorderSide(color: aViolet),
                         ),
                       ),
                       child: Text(
@@ -914,7 +914,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
         children: [
           CircleAvatar(
             backgroundColor: aViolet.withOpacity(0.2),
-            child: Icon(LucideIcons.user, color: aViolet, size: 20),
+            child: const Icon(LucideIcons.user, color: aViolet, size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -938,7 +938,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
                 ),
                 Text(
                   employeeId,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: aViolet,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -947,7 +947,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
               ],
             ),
           ),
-          Icon(LucideIcons.chevronRight, color: Colors.white24, size: 16),
+          const Icon(LucideIcons.chevronRight, color: Colors.white24, size: 16),
         ],
       ),
     );
@@ -972,15 +972,15 @@ class _HrDashboardViewState extends State<HrDashboardView> {
             hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white10),
+              borderSide: const BorderSide(color: Colors.white10),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white10),
+              borderSide: const BorderSide(color: Colors.white10),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: aViolet),
+              borderSide: const BorderSide(color: aViolet),
             ),
           ),
           style: TextStyle(color: textColor),
@@ -1029,7 +1029,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
               ],
             ),
           ),
-          Icon(LucideIcons.arrowRight, color: Colors.white24, size: 16),
+          const Icon(LucideIcons.arrowRight, color: Colors.white24, size: 16),
         ],
       ),
     );
@@ -1084,7 +1084,7 @@ class _HrDashboardViewState extends State<HrDashboardView> {
         children: [
           Row(
             children: [
-              Icon(LucideIcons.messageSquare, color: aViolet, size: 16),
+              const Icon(LucideIcons.messageSquare, color: aViolet, size: 16),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

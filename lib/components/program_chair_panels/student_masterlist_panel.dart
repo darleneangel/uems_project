@@ -109,8 +109,9 @@ class _StudentMasterListPanelState extends State<StudentMasterListPanel> {
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),

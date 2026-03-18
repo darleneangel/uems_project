@@ -420,7 +420,7 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
                                                     itemBuilder: (ctx) => _statuses.map((s) => PopupMenuItem(value: s, child: Text(s, style: GoogleFonts.inter()))).toList(),
                                                     child: Icon(Icons.more_vert, color: subTextColor, size: 18),
                                                   ),
-                                                  IconButton(onPressed: () => _deleteCourse(idx), icon: Icon(Icons.delete, color: Colors.redAccent, size: 18)),
+                                                  IconButton(onPressed: () => _deleteCourse(idx), icon: const Icon(Icons.delete, color: Colors.redAccent, size: 18)),
                                                 ],
                                               ),
                                             ],

@@ -23,7 +23,7 @@ class _MessagingPanelState extends State<MessagingPanel> {
 
   Map<String, dynamic>? _selectedContact;
   List<Map<String, dynamic>> _allProfiles = [];
-  Map<String, Map<String, dynamic>> _lastMessagesByContact = {};
+  final Map<String, Map<String, dynamic>> _lastMessagesByContact = {};
   String? _lastNotifiedMessageId;
   bool _isLoading = true;
 
@@ -404,8 +404,9 @@ class _MessagingPanelState extends State<MessagingPanel> {
               stream:
                   _service.client.from('messages').stream(primaryKey: ['id']),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
+                }
 
                 final messages = snapshot.data!.where((m) {
                   final String sId = m['sender_id'];

@@ -264,8 +264,9 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
     final Color textColor = widget.isDarkMode ? Colors.white : pViolet;
     final Color bgColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(40),

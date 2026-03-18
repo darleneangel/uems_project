@@ -225,9 +225,9 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
             ],
           ),
           const SizedBox(width: 12),
-          CircleAvatar(
+          const CircleAvatar(
               backgroundColor: aViolet,
-              child: const Icon(LucideIcons.userPlus,
+              child: Icon(LucideIcons.userPlus,
                   color: Colors.white, size: 18)),
         ],
       ),

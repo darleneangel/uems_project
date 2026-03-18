@@ -318,10 +318,11 @@ class _OfficesPanelState extends State<OfficesPanel>
                   activeColor: aViolet,
                   onChanged: (val) {
                     setState(() {
-                      if (val!)
+                      if (val!) {
                         _selectedDocs.add(item['name']);
-                      else
+                      } else {
                         _selectedDocs.remove(item['name']);
+                      }
                     });
                   },
                 );
@@ -388,10 +389,12 @@ class _OfficesPanelState extends State<OfficesPanel>
       stream: SupabaseService().client.from('office_requests').stream(
           primaryKey: ['id']).eq('student_id', widget.studentData['id']),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: aViolet));
-        if (!snapshot.hasData || snapshot.data!.isEmpty)
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text("No academic requests recorded."));
+        }
 
         final Map<String, List<Map<String, dynamic>>> groups = {};
         for (var req in snapshot.data!) {

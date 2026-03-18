@@ -171,14 +171,14 @@ class BalanceSheetPdfService {
                                         children: [
                                           pw.Text(
                                             e.key,
-                                            style: pw.TextStyle(
+                                            style: const pw.TextStyle(
                                               fontSize: 8,
                                               color: FinancialReportService.textMuted,
                                             ),
                                           ),
                                           pw.Text(
                                             FinancialReportService.formatCurrency(e.value),
-                                            style: pw.TextStyle(
+                                            style: const pw.TextStyle(
                                               fontSize: 8,
                                               color: FinancialReportService.textDark,
                                             ),
@@ -270,7 +270,7 @@ class BalanceSheetPdfService {
                     flex: 2,
                     child: pw.Text(
                       e.key,
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 8,
                         color: FinancialReportService.textMuted,
                       ),
@@ -320,7 +320,7 @@ class BalanceSheetPdfService {
                     flex: 2,
                     child: pw.Text(
                       e.key,
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 8,
                         color: FinancialReportService.textMuted,
                       ),

@@ -203,7 +203,7 @@ class _HRPanelState extends State<HRPanel> {
             controller: _importCtl,
             maxLines: 10,
             style: GoogleFonts.inter(color: Colors.white),
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               hintText: 'Paste CSV here',
               hintStyle: TextStyle(color: Colors.white30),
               filled: true,

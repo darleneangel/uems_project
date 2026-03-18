@@ -104,9 +104,10 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
                   .from('profiles')
                   .stream(primaryKey: ['id']).eq('role', 'student'),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(
                       child: CircularProgressIndicator(color: aViolet));
+                }
                 final list = snapshot.data!
                     .where((s) =>
                         s['user_id_number']
@@ -118,10 +119,11 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
                             .contains(_searchController.text.toUpperCase()))
                     .toList();
 
-                if (list.isEmpty)
+                if (list.isEmpty) {
                   return Center(
                       child: Text("No students found in cloud.",
                           style: TextStyle(color: subTextColor)));
+                }
 
                 return ListView.builder(
                   itemCount: list.length,
@@ -194,14 +196,16 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
                   .eq('study_loads.student_id', _selectedStudentId!)
                   .then((res) => List<Map<String, dynamic>>.from(res)),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
+                }
                 final grades = snapshot.data!;
 
-                if (grades.isEmpty)
+                if (grades.isEmpty) {
                   return Center(
                       child: Text("No grades encoded for this student.",
                           style: TextStyle(color: subTextColor)));
+                }
 
                 return Table(
                   columnWidths: const {
@@ -211,7 +215,7 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
                   },
                   children: [
                     TableRow(
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                           border: Border(
                               bottom: BorderSide(color: Colors.white10))),
                       children: [
@@ -231,7 +235,7 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
                               isBold: true),
                         ],
                       );
-                    }).toList(),
+                    }),
                   ],
                 );
               },

@@ -181,9 +181,10 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
               stream: SupabaseService().client.from('office_requests').stream(
                   primaryKey: ['id']).order('date_applied', ascending: false),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(
                       child: CircularProgressIndicator(color: aViolet));
+                }
 
                 return FutureBuilder<List<dynamic>>(
                     future: SupabaseService()
@@ -193,8 +194,9 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
                             '*, profiles(*, student_details(*, courses(code, name)))')
                         .order('date_applied', ascending: false),
                     builder: (context, futureSnap) {
-                      if (!futureSnap.hasData)
+                      if (!futureSnap.hasData) {
                         return const Center(child: CircularProgressIndicator());
+                      }
 
                       final allData =
                           List<Map<String, dynamic>>.from(futureSnap.data!);

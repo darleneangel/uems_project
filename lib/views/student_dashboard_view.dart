@@ -21,9 +21,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   bool _isSidebarExpanded = true;
   int _selectedIndex = 0;
 
-  List<Map<String, dynamic>> _grades = [];
-  List<Map<String, dynamic>> _assessments = [];
-  List<Map<String, dynamic>> _requests = [];
+  final List<Map<String, dynamic>> _grades = [];
+  final List<Map<String, dynamic>> _assessments = [];
+  final List<Map<String, dynamic>> _requests = [];
   List<Map<String, dynamic>> _announcements = [];
   Map<String, dynamic>? _nextClass;
   double _enrollmentProgress = 0.0;
@@ -152,15 +152,19 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
                     decoration: _securityInput("New Password", LucideIcons.lock,
                         () => setModalState(() => obscure = !obscure), obscure),
                     validator: (v) {
-                      if (v == null || v.length < 8)
+                      if (v == null || v.length < 8) {
                         return "Min 8 characters required";
-                      if (!v.contains(RegExp(r'[A-Z]')))
+                      }
+                      if (!v.contains(RegExp(r'[A-Z]'))) {
                         return "Add 1 uppercase letter";
-                      if (!v.contains(RegExp(r'[a-z]')))
+                      }
+                      if (!v.contains(RegExp(r'[a-z]'))) {
                         return "Add 1 lowercase letter";
+                      }
                       if (!v.contains(RegExp(r'[0-9]'))) return "Add 1 number";
-                      if (!v.contains(RegExp(r'[^a-zA-Z0-9]')))
+                      if (!v.contains(RegExp(r'[^a-zA-Z0-9]'))) {
                         return "Add 1 special character";
+                      }
                       return null;
                     },
                   ),

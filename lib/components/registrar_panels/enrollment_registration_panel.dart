@@ -189,9 +189,10 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
         return FutureBuilder<dynamic>(
             future: fetchFuture,
             builder: (context, snapshot) {
-              if (snapshot.hasData && yearLevels.isEmpty)
+              if (snapshot.hasData && yearLevels.isEmpty) {
                 yearLevels =
                     List<Map<String, dynamic>>.from(snapshot.data as List);
+              }
               return AlertDialog(
                 backgroundColor: surfaceDark,
                 shape: RoundedRectangleBorder(
@@ -203,7 +204,7 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DropdownButtonFormField<String>(
-                      value: selectedYearLevelId,
+                      initialValue: selectedYearLevelId,
                       dropdownColor: surfaceDark,
                       style: const TextStyle(color: Colors.white),
                       decoration: const InputDecoration(
@@ -314,7 +315,7 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
             content: Column(mainAxisSize: MainAxisSize.min, children: [
               const Icon(LucideIcons.partyPopper, color: success, size: 64),
               const SizedBox(height: 24),
-              Text("Registration Successful",
+              const Text("Registration Successful",
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -323,7 +324,7 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
                   style: GoogleFonts.orbitron(fontSize: 28, color: aViolet)),
               const SizedBox(height: 16),
               Text("Credentials sent to $email",
-                  style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
+                  style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
               const SizedBox(height: 24),
               ElevatedButton(
                   onPressed: () => Navigator.pop(context),

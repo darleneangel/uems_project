@@ -196,10 +196,10 @@ class _TeacherDashboardViewState extends State<TeacherDashboardView> {
             ],
           ),
           const SizedBox(width: 12),
-          CircleAvatar(
+          const CircleAvatar(
               backgroundColor: aViolet,
               child:
-                  const Icon(LucideIcons.user, color: Colors.white, size: 18)),
+                  Icon(LucideIcons.user, color: Colors.white, size: 18)),
         ],
       ),
     );

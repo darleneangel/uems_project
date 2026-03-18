@@ -94,7 +94,7 @@ class _CredentialsCertificationPanelState
                       fontWeight: pw.FontWeight.bold, fontSize: 16))),
           pw.Center(
               child: pw.Text("OFFICE OF THE REGISTRAR",
-                  style: pw.TextStyle(fontSize: 12))),
+                  style: const pw.TextStyle(fontSize: 12))),
           pw.SizedBox(height: 50),
           pw.Center(
               child: pw.Text(type.toUpperCase(),
@@ -115,20 +115,20 @@ class _CredentialsCertificationPanelState
               pw.Column(children: [
                 pw.SizedBox(width: 150, child: pw.Divider()),
                 pw.Text("Registrar Signature",
-                    style: pw.TextStyle(fontSize: 10)),
+                    style: const pw.TextStyle(fontSize: 10)),
               ]),
               pw.Container(
                   width: 60,
                   height: 60,
                   color: PdfColors.grey300,
                   child: pw.Center(
-                      child: pw.Text("QR", style: pw.TextStyle(fontSize: 8)))),
+                      child: pw.Text("QR", style: const pw.TextStyle(fontSize: 8)))),
             ],
           ),
           pw.Spacer(),
           pw.Text(
               "Authenticated via UEMS Cloud Service - Ref: ${student['user_id_number']}",
-              style: pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
+              style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
         ],
       ),
     ));

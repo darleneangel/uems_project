@@ -208,7 +208,7 @@ class _VerifyOTPViewState extends State<VerifyOTPView>
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -274,7 +274,7 @@ class _VerifyOTPViewState extends State<VerifyOTPView>
                               width: 2,
                             ),
                           ),
-                          child: Icon(
+                          child: const Icon(
                             LucideIcons.mail,
                             color: accentViolet,
                             size: 36,

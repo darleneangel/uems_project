@@ -208,7 +208,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView>
                   width: 2,
                 ),
               ),
-              child: Icon(
+              child: const Icon(
                 LucideIcons.checkCircle,
                 color: successColor,
                 size: 40,
@@ -272,7 +272,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView>
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -325,7 +325,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView>
                               width: 2,
                             ),
                           ),
-                          child: Icon(
+                          child: const Icon(
                             LucideIcons.lock,
                             color: accentViolet,
                             size: 36,
@@ -550,7 +550,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
+              borderSide: const BorderSide(
                 color: accentViolet,
                 width: 2,
               ),

@@ -220,11 +220,11 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                             children: [
                               pw.Text(
                                 'Issue Date: ${DateFormat('MMMM dd, yyyy').format(_issueDate!)}',
-                                style: pw.TextStyle(fontSize: 10),
+                                style: const pw.TextStyle(fontSize: 10),
                               ),
                               pw.Text(
                                 'Payment Terms: $_paymentTerms',
-                                style: pw.TextStyle(fontSize: 10),
+                                style: const pw.TextStyle(fontSize: 10),
                               ),
                             ],
                           ),
@@ -233,11 +233,11 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                             children: [
                               pw.Text(
                                 'Due Date: ${DateFormat('MMMM dd, yyyy').format(_dueDate!)}',
-                                style: pw.TextStyle(fontSize: 10),
+                                style: const pw.TextStyle(fontSize: 10),
                               ),
                               pw.Text(
                                 'Interest: ${_interestRateController.text}% $_interestType',
-                                style: pw.TextStyle(fontSize: 10),
+                                style: const pw.TextStyle(fontSize: 10),
                               ),
                             ],
                           ),
@@ -251,7 +251,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                 // Main Promise Paragraph
                 pw.Text(
                   'It is hereby promised and agreed that I, the undersigned, promise to pay unconditionally to:',
-                  style: pw.TextStyle(fontSize: 11),
+                  style: const pw.TextStyle(fontSize: 11),
                 ),
                 pw.SizedBox(height: 12),
 
@@ -261,8 +261,8 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                     horizontal: 12,
                     vertical: 10,
                   ),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border(left: const pw.BorderSide(width: 3)),
+                  decoration: const pw.BoxDecoration(
+                    border: pw.Border(left: pw.BorderSide(width: 3)),
                   ),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -285,7 +285,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                       pw.SizedBox(height: 4),
                       pw.Text(
                         _lenderAddressController.text,
-                        style: pw.TextStyle(fontSize: 10),
+                        style: const pw.TextStyle(fontSize: 10),
                       ),
                     ],
                   ),
@@ -312,7 +312,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                       pw.Row(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('PHP ', style: pw.TextStyle(fontSize: 11)),
+                          pw.Text('PHP ', style: const pw.TextStyle(fontSize: 11)),
                           pw.Expanded(
                             child: pw.Text(
                               _amountController.text,
@@ -356,14 +356,14 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                       pw.SizedBox(height: 8),
                       pw.Text(
                         'The undersigned agrees to pay the above principal amount in full on or before ${DateFormat('MMMM dd, yyyy').format(_dueDate!)}.',
-                        style: pw.TextStyle(fontSize: 10),
+                        style: const pw.TextStyle(fontSize: 10),
                       ),
                       if (_interestRateController.text.isNotEmpty)
                         pw.Padding(
                           padding: const pw.EdgeInsets.only(top: 8),
                           child: pw.Text(
                             'Interest Rate: ${_interestRateController.text}% per annum ($_interestType)',
-                            style: pw.TextStyle(fontSize: 10),
+                            style: const pw.TextStyle(fontSize: 10),
                           ),
                         ),
                       if (_securedNote)
@@ -371,7 +371,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                           padding: const pw.EdgeInsets.only(top: 8),
                           child: pw.Text(
                             'This note is secured by collateral as described herein.',
-                            style: pw.TextStyle(fontSize: 10),
+                            style: const pw.TextStyle(fontSize: 10),
                           ),
                         ),
                     ],
@@ -398,7 +398,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                         pw.SizedBox(height: 8),
                         pw.Text(
                           _notesController.text,
-                          style: pw.TextStyle(fontSize: 10),
+                          style: const pw.TextStyle(fontSize: 10),
                         ),
                       ],
                     ),
@@ -429,7 +429,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                         ),
                         pw.Text(
                           'MAKER (BORROWER)',
-                          style: pw.TextStyle(fontSize: 9),
+                          style: const pw.TextStyle(fontSize: 9),
                         ),
                         pw.Text(
                           'Date: ${DateFormat('MM/dd/yyyy').format(_issueDate!)}',
@@ -455,11 +455,11 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                         ),
                         pw.Text(
                           'PAYEE (LENDER)',
-                          style: pw.TextStyle(fontSize: 9),
+                          style: const pw.TextStyle(fontSize: 9),
                         ),
                         pw.Text(
                           'Date: ${DateFormat('MM/dd/yyyy').format(_issueDate!)}',
-                          style: pw.TextStyle(fontSize: 9),
+                          style: const pw.TextStyle(fontSize: 9),
                         ),
                       ],
                     ),
@@ -553,7 +553,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                     color: aViolet.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(LucideIcons.fileText, color: aViolet),
+                  child: const Icon(LucideIcons.fileText, color: aViolet),
                 ),
                 const SizedBox(width: 16),
                 Column(
@@ -738,7 +738,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                     ),
                     child: Row(
                       children: [
-                        Icon(LucideIcons.calendar, size: 18, color: aViolet),
+                        const Icon(LucideIcons.calendar, size: 18, color: aViolet),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -798,7 +798,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                     ),
                     child: Row(
                       children: [
-                        Icon(LucideIcons.calendar, size: 18, color: aViolet),
+                        const Icon(LucideIcons.calendar, size: 18, color: aViolet),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -912,7 +912,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
             children: [
               ElevatedButton.icon(
                 onPressed: _clearForm,
-                icon: Icon(LucideIcons.rotateCcw),
+                icon: const Icon(LucideIcons.rotateCcw),
                 label: const Text('Clear Form'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey.shade600,
@@ -925,7 +925,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
               ),
               ElevatedButton.icon(
                 onPressed: _printPreview,
-                icon: Icon(LucideIcons.eye),
+                icon: const Icon(LucideIcons.eye),
                 label: const Text('View Preview'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: aViolet,
@@ -1061,9 +1061,9 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                 const SizedBox(height: 20),
 
                 // Promise Text
-                Text(
+                const Text(
                   'It is hereby promised and agreed that I, the undersigned, promise to pay unconditionally to:',
-                  style: const TextStyle(fontSize: 11, height: 1.6),
+                  style: TextStyle(fontSize: 11, height: 1.6),
                 ),
                 const SizedBox(height: 12),
 
@@ -1073,7 +1073,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                     horizontal: 12,
                     vertical: 10,
                   ),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     border: Border(left: BorderSide(color: aViolet, width: 3)),
                   ),
                   child: Column(
@@ -1309,7 +1309,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
           // Print Button
           ElevatedButton.icon(
             onPressed: _generatePDF,
-            icon: Icon(LucideIcons.printer),
+            icon: const Icon(LucideIcons.printer),
             label: const Text('Generate & Print PDF'),
             style: ElevatedButton.styleFrom(
               backgroundColor: success,

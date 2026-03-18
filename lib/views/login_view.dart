@@ -640,7 +640,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
             fontSize: 16),
         decoration: InputDecoration(
           hintText: h,
-          hintStyle: TextStyle(
+          hintStyle: const TextStyle(
               color: Colors.blueGrey,
               fontSize: 15,
               fontWeight: FontWeight.w400),

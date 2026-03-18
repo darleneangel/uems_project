@@ -206,7 +206,7 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: aViolet, width: 2),
+              borderSide: const BorderSide(color: aViolet, width: 2),
             ),
           ),
         ),
@@ -226,7 +226,7 @@ class _OfficeRequestFormState extends State<OfficeRequestForm> {
                           details: _descriptionController.text.trim(),
                         );
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+                          const SnackBar(
                             content: Text('Request submitted and pending admin approval'),
                             backgroundColor: Colors.green,
                           ),

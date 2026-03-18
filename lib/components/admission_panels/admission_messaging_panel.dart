@@ -115,7 +115,7 @@ class _AdmissionMessagingPanelState extends State<AdmissionMessagingPanel> {
               pw.Center(
                 child: pw.Text(
                   "OFFICE OF ADMISSIONS",
-                  style: pw.TextStyle(fontSize: 10),
+                  style: const pw.TextStyle(fontSize: 10),
                 ),
               ),
               pw.SizedBox(height: 40),
@@ -280,7 +280,7 @@ class _AdmissionMessagingPanelState extends State<AdmissionMessagingPanel> {
                                 t['lastMsg'],
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.blueGrey,
                                   fontSize: 12,
                                 ),
@@ -492,9 +492,9 @@ class _AdmissionMessagingPanelState extends State<AdmissionMessagingPanel> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: surfaceDark,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

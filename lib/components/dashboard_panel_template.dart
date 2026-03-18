@@ -583,7 +583,7 @@ class _PanelSearchDialogState extends State<_PanelSearchDialog> {
     const Color pViolet = Color(0xFF2E1065);
 
     final bgColor = widget.isDarkMode ? tDark : lBg;
-    final sideColor = widget.isDarkMode ? surfaceDark : Color(0xFFEDE9FE);
+    final sideColor = widget.isDarkMode ? surfaceDark : const Color(0xFFEDE9FE);
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
 
     return Dialog(
@@ -618,7 +618,7 @@ class _PanelSearchDialogState extends State<_PanelSearchDialog> {
                 onChanged: _filterItems,
                 decoration: InputDecoration(
                   hintText: 'Type to search...',
-                  prefixIcon: Icon(LucideIcons.search, color: aViolet),
+                  prefixIcon: const Icon(LucideIcons.search, color: aViolet),
                   filled: true,
                   fillColor: widget.isDarkMode
                       ? Colors.white.withOpacity(0.05)
@@ -699,7 +699,7 @@ class _SmartSearchDelegate extends SearchDelegate<String?> {
   @override
   ThemeData appBarTheme(BuildContext context) {
     return Theme.of(context).copyWith(
-      appBarTheme: AppBarTheme(backgroundColor: pViolet, elevation: 0),
+      appBarTheme: const AppBarTheme(backgroundColor: pViolet, elevation: 0),
       inputDecorationTheme: InputDecorationTheme(
         border: InputBorder.none,
         hintStyle: GoogleFonts.inter(color: Colors.white70),
@@ -760,7 +760,7 @@ class _SmartSearchDelegate extends SearchDelegate<String?> {
     return ListView(
       children: suggestions.map((s) {
         return ListTile(
-          leading: Icon(LucideIcons.search, color: aViolet, size: 18),
+          leading: const Icon(LucideIcons.search, color: aViolet, size: 18),
           title: Text(
             s,
             style: GoogleFonts.inter(

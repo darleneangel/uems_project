@@ -28,7 +28,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
   static const Color success = Color(0xFF69F0AE);
 
   List<Map<String, dynamic>> _subjects = [];
-  Map<String, String> _summaryFees = {
+  final Map<String, String> _summaryFees = {
     "Tuition Fee": "P0.00",
     "Miscellaneous Fees": "P0.00",
     "Total Fees": "P0.00",
@@ -118,7 +118,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
   Future<void> _exportStudyLoad(BuildContext context) async {
     final pdf = pw.Document();
     final String timestamp = DateTime.now().toString().split('.')[0];
-    final PdfColor brandViolet = PdfColor.fromInt(0xFF7C3AED);
+    const PdfColor brandViolet = PdfColor.fromInt(0xFF7C3AED);
 
     pw.ImageProvider? logoImage;
     try {
@@ -165,7 +165,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                         fontWeight: pw.FontWeight.bold,
                         fontSize: 8)),
                 pw.Text("Ref: $timestamp",
-                    style: pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
+                    style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
               ],
             ),
           ];
@@ -215,14 +215,14 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                     fontSize: 24,
                     color: color)),
             pw.Text("Institutional Core System",
-                style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
           ]),
         ]),
         pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
           pw.Text("CERTIFICATE OF MATRICULATION",
               style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
           pw.Text("Term: 2nd Semester SY 2025-2026",
-              style: pw.TextStyle(fontSize: 8)),
+              style: const pw.TextStyle(fontSize: 8)),
         ]),
       ],
     );
@@ -281,7 +281,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
       headerStyle: pw.TextStyle(
           fontWeight: pw.FontWeight.bold, fontSize: 7, color: PdfColors.white),
       headerDecoration: pw.BoxDecoration(color: color),
-      cellStyle: pw.TextStyle(fontSize: 7),
+      cellStyle: const pw.TextStyle(fontSize: 7),
       data: _subjects
           .map((s) => [
                 s['code'],
@@ -340,13 +340,13 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                   children: [
                     pw.Expanded(
                         child: pw.Text(m['name']!,
-                            style: pw.TextStyle(fontSize: 6))),
+                            style: const pw.TextStyle(fontSize: 6))),
                     pw.Text(m['amount']!,
                         style: pw.TextStyle(
                             fontSize: 6, fontWeight: pw.FontWeight.bold)),
                   ],
                 ))
-            .toList(),
+            ,
       ],
     );
   }
@@ -358,7 +358,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
           color: PdfColors.grey100, borderRadius: pw.BorderRadius.circular(8)),
       child: pw.Text(
           "Note: Settlement can be processed via GCash/PayMongo using the student portal QR.",
-          style: pw.TextStyle(fontSize: 8)),
+          style: const pw.TextStyle(fontSize: 8)),
     );
   }
 
@@ -371,8 +371,9 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
     final Color subTextColor =
         widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -478,7 +479,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
                   _tableDataCell(s['hrs/units'], textColor),
                   _tableDataCell(s['section'], subTextColor, isBold: true),
                 ]))
-            .toList(),
+            ,
       ],
     );
   }
@@ -517,7 +518,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
               const SizedBox(height: 20),
               ..._summaryFees.entries
                   .map((e) => _feeRow(e.key, e.value, textColor))
-                  .toList(),
+                  ,
             ])),
         const SizedBox(width: 48),
         Expanded(

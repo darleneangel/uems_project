@@ -112,7 +112,7 @@ class _ApplicationsManagementPanelState
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: selectedCategory,
+                            initialValue: selectedCategory,
                             dropdownColor: const Color(0xFF1E1B4B),
                             style: const TextStyle(color: Colors.white),
                             decoration: _fieldInput("Category"),
@@ -140,7 +140,7 @@ class _ApplicationsManagementPanelState
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: selectedCourseId,
+                      initialValue: selectedCourseId,
                       dropdownColor: const Color(0xFF1E1B4B),
                       style: const TextStyle(color: Colors.white),
                       decoration: _fieldInput("Target Course / Program"),
@@ -196,7 +196,7 @@ class _ApplicationsManagementPanelState
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: gender,
+                            initialValue: gender,
                             dropdownColor: const Color(0xFF1E1B4B),
                             style: const TextStyle(color: Colors.white),
                             decoration: _fieldInput("Gender"),
@@ -216,8 +216,9 @@ class _ApplicationsManagementPanelState
                                   initialDate: DateTime(2005),
                                   firstDate: DateTime(1950),
                                   lastDate: DateTime.now());
-                              if (picked != null)
+                              if (picked != null) {
                                 setModalState(() => dob = picked);
+                              }
                             },
                             child: InputDecorator(
                               decoration: _fieldInput("Birthdate"),

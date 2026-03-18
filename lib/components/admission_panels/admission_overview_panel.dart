@@ -56,8 +56,9 @@ class _AdmissionOverviewPanelState extends State<AdmissionOverviewPanel> {
         widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

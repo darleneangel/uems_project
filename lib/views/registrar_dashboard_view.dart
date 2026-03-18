@@ -95,7 +95,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
                     child: RegistrarPanelContent(
                       isDarkMode: _isDarkMode,
                       panelType: _panelTypes[_selectedIndex],
-                      userData: {}, // Replace with actual user data if available
+                      userData: const {}, // Replace with actual user data if available
                     ),
                   ),
                 ),
@@ -199,9 +199,9 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
             ],
           ),
           const SizedBox(width: 12),
-          CircleAvatar(
+          const CircleAvatar(
             backgroundColor: aViolet,
-            child: const Icon(
+            child: Icon(
               LucideIcons.shieldCheck,
               color: Colors.white,
               size: 18,

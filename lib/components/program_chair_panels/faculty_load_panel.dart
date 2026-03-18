@@ -162,9 +162,9 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
       bool matchesSearch = name.contains(query) || id.contains(query);
       bool matchesLoad = true;
 
-      if (_activeLoadFilter == "Overloaded")
+      if (_activeLoadFilter == "Overloaded") {
         matchesLoad = units > 21;
-      else if (_activeLoadFilter == "Underloaded")
+      } else if (_activeLoadFilter == "Underloaded")
         matchesLoad = units < 12;
       else if (_activeLoadFilter == "Regular")
         matchesLoad = units >= 12 && units <= 21;
@@ -178,8 +178,9 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
     final textColor = widget.isDarkMode ? Colors.white : Colors.black87;
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),

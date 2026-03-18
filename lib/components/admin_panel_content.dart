@@ -515,7 +515,7 @@ class _AdminPanelContentState extends State<AdminPanelContent> {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: ListTile(
-                leading: Icon(LucideIcons.bookOpen, color: aViolet),
+                leading: const Icon(LucideIcons.bookOpen, color: aViolet),
                 title: Text(
                   load.$1,
                   style: GoogleFonts.inter(
@@ -860,12 +860,12 @@ class _AdminPanelContentState extends State<AdminPanelContent> {
                           ),
                           const SizedBox(width: 8),
                           IconButton(
-                            icon: Icon(LucideIcons.check,
+                            icon: const Icon(LucideIcons.check,
                                 color: success, size: 18),
                             onPressed: () {},
                           ),
                           IconButton(
-                            icon: Icon(LucideIcons.x,
+                            icon: const Icon(LucideIcons.x,
                                 color: Colors.redAccent, size: 18),
                             onPressed: () {},
                           ),
@@ -991,15 +991,26 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
   }
 
   @override
+  void didUpdateWidget(covariant OfficeAdminPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isDarkMode != widget.isDarkMode) {
+      setState(() {
+        _isDarkMode = widget.isDarkMode;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Render the Request Receiver directly — tabs removed because actions
     // (Details, Approve, Reject, Archive) are available on each request card.
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-          color: surfaceDark,
+          color: _isDarkMode ? surfaceDark : lCard,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _isDarkMode ? Colors.white : pViolet10)),
+          border:
+              Border.all(color: _isDarkMode ? Colors.white10 : Colors.black12)),
       child: RequestReceiver(isDarkMode: _isDarkMode),
     );
   }
@@ -1011,10 +1022,11 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
         valueListenable: OfficeRequestService.notifier,
         builder: (context, list, _) {
           final pending = list.where((r) => r.status == 'pending').toList();
-          if (pending.isEmpty)
+          if (pending.isEmpty) {
             return Text('No pending requests.',
                 style:
                     TextStyle(color: _isDarkMode ? Colors.white : pViolet70));
+          }
           return ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -1101,9 +1113,10 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
         valueListenable: OfficeRequestService.notifier,
         builder: (context, list, _) {
           final items = list.where((r) => r.status != 'archived').toList();
-          if (items.isEmpty)
+          if (items.isEmpty) {
             return Text('No records to update.',
                 style: GoogleFonts.inter(color: subTextColor));
+          }
           return ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -1169,10 +1182,11 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
         valueListenable: OfficeRequestService.notifier,
         builder: (context, list, _) {
           final items = list.where((r) => r.status == 'archived').toList();
-          if (items.isEmpty)
+          if (items.isEmpty) {
             return Text('No archived items.',
                 style:
                     TextStyle(color: _isDarkMode ? Colors.white : pViolet70));
+          }
           return ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -1284,7 +1298,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
                             : pViolet.withValues(alpha: 0.3))),
                 focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: aViolet, width: 2)),
+                    borderSide: const BorderSide(color: aViolet, width: 2)),
               ),
             ),
             const SizedBox(height: 12),
@@ -1314,7 +1328,7 @@ class _OfficeAdminPanelState extends State<OfficeAdminPanel> {
                             : pViolet.withValues(alpha: 0.3))),
                 focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: aViolet, width: 2)),
+                    borderSide: const BorderSide(color: aViolet, width: 2)),
               ),
             ),
           ],

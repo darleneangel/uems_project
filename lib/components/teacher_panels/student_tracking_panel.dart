@@ -60,12 +60,15 @@ class _StudentTrackingPanelState extends State<StudentTrackingPanel> {
         int completedFields = 0;
 
         // Progress logic: Check if Assignment, Exam, and Project grades are entered
-        if (load['assignment_grade'] != null && load['assignment_grade'] != 0)
+        if (load['assignment_grade'] != null && load['assignment_grade'] != 0) {
           completedFields++;
-        if (load['exam_grade'] != null && load['exam_grade'] != 0)
+        }
+        if (load['exam_grade'] != null && load['exam_grade'] != 0) {
           completedFields++;
-        if (load['project_grade'] != null && load['project_grade'] != 0)
+        }
+        if (load['project_grade'] != null && load['project_grade'] != 0) {
           completedFields++;
+        }
 
         progressValue = completedFields / 3.0;
 
@@ -142,7 +145,7 @@ class _StudentTrackingPanelState extends State<StudentTrackingPanel> {
                         style: pw.TextStyle(
                             fontSize: 10, fontWeight: pw.FontWeight.bold)),
                     pw.Text("Department Faculty Instructor",
-                        style: pw.TextStyle(fontSize: 8)),
+                        style: const pw.TextStyle(fontSize: 8)),
                   ],
                 ),
               ),

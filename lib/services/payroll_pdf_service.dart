@@ -129,7 +129,7 @@ class PayrollPdfService {
         children: [
           pw.Text(
             label,
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
               fontSize: 9,
               color: FinancialReportService.textMuted,
             ),

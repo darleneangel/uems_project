@@ -174,7 +174,7 @@ class CashFlowPdfService {
                           children: [
                             pw.Text(
                               'Beginning Balance',
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                 fontSize: 8,
                                 color: FinancialReportService.textMuted,
                               ),
@@ -190,12 +190,12 @@ class CashFlowPdfService {
                             ),
                           ],
                         ),
-                        pw.Text('+', style: pw.TextStyle(fontSize: 12, color: FinancialReportService.textMuted)),
+                        pw.Text('+', style: const pw.TextStyle(fontSize: 12, color: FinancialReportService.textMuted)),
                         pw.Column(
                           children: [
                             pw.Text(
                               'Net Change',
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                 fontSize: 8,
                                 color: FinancialReportService.textMuted,
                               ),
@@ -211,12 +211,12 @@ class CashFlowPdfService {
                             ),
                           ],
                         ),
-                        pw.Text('=', style: pw.TextStyle(fontSize: 12, color: FinancialReportService.textMuted)),
+                        pw.Text('=', style: const pw.TextStyle(fontSize: 12, color: FinancialReportService.textMuted)),
                         pw.Column(
                           children: [
                             pw.Text(
                               'Ending Balance',
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                 fontSize: 8,
                                 color: FinancialReportService.textMuted,
                               ),

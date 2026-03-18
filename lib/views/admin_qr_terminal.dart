@@ -278,8 +278,8 @@ class _AdminQRTerminalState extends State<AdminQRTerminal>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("STUDENT IDENTITY",
-              style: const TextStyle(
+          const Text("STUDENT IDENTITY",
+              style: TextStyle(
                   color: aViolet,
                   fontWeight: FontWeight.bold,
                   fontSize: 10,

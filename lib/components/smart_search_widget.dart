@@ -275,7 +275,7 @@ class _SmartSearchWidgetState extends State<SmartSearchWidget>
                   children: [
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           LucideIcons.search,
                           color: aViolet,
                           size: 24,
@@ -573,7 +573,7 @@ class _SmartSearchWidgetState extends State<SmartSearchWidget>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(
+          const CircularProgressIndicator(
             color: aViolet,
             strokeWidth: 2,
           ),
@@ -753,7 +753,7 @@ class _SmartSearchWidgetState extends State<SmartSearchWidget>
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       LucideIcons.coins,
                       color: success,
                       size: 14,
@@ -788,7 +788,7 @@ class _SmartSearchWidgetState extends State<SmartSearchWidget>
                     ),
                   ),
                   const Spacer(),
-                  Icon(
+                  const Icon(
                     LucideIcons.arrowRight,
                     color: aViolet,
                     size: 14,

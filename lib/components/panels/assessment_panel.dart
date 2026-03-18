@@ -84,7 +84,7 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
   Future<void> _generatePdfExport(BuildContext context, String type) async {
     final pdf = pw.Document();
     final String timestamp = DateTime.now().toString().split('.')[0];
-    final PdfColor brandViolet = PdfColor.fromInt(0xFF7C3AED);
+    const PdfColor brandViolet = PdfColor.fromInt(0xFF7C3AED);
 
     pw.ImageProvider? logoImage;
     try {
@@ -134,7 +134,7 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
                                   fontSize: 22,
                                   color: brandViolet)),
                           pw.Text("OFFICIAL FINANCIAL RECORDS",
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                   fontSize: 8, color: PdfColors.grey700)),
                         ],
                       ),
@@ -213,7 +213,7 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
                 pw.SizedBox(height: 40),
                 pw.Text(
                   "This permit officially authorizes the student to participate in the examination period. Authenticated via the Unified Education Management System Core.",
-                  style: pw.TextStyle(fontSize: 11, lineSpacing: 4),
+                  style: const pw.TextStyle(fontSize: 11, lineSpacing: 4),
                   textAlign: pw.TextAlign.justify,
                 ),
               ] else if (type == "Assessment Form") ...[
@@ -260,7 +260,7 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
                               color: PdfColors.grey700)),
                       pw.Text(
                           "Verification Hash: ${widget.studentData['id'].toString().substring(0, 8)}",
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                               fontSize: 7, color: PdfColors.grey600)),
                     ],
                   ),
@@ -271,7 +271,7 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
                           border: pw.Border.all(color: PdfColors.grey300)),
                       child: pw.Center(
                           child: pw.Text("QR",
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                   fontSize: 8, color: PdfColors.grey400)))),
                 ],
               ),
@@ -309,7 +309,7 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(label,
-                style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800)),
+                style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey800)),
             pw.Text(amount,
                 style:
                     pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold))
@@ -324,9 +324,10 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
     final Color subTextColor =
         widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(
           child: CircularProgressIndicator(color: Color(0xFF8B5CF6)));
+    }
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),

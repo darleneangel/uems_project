@@ -242,9 +242,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             endIndent: 20,
           ),
           const SizedBox(width: 24),
-          CircleAvatar(
+          const CircleAvatar(
             backgroundColor: aViolet,
-            child: const Icon(
+            child: Icon(
               LucideIcons.shieldCheck,
               color: Colors.white,
               size: 20,
@@ -384,7 +384,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         backgroundColor: _isDarkMode ? surfaceDark : Colors.white,
         title: Row(
           children: [
-            Icon(Icons.logout, color: Colors.redAccent, size: 24),
+            const Icon(Icons.logout, color: Colors.redAccent, size: 24),
             const SizedBox(width: 12),
             Text('Confirm Logout',
                 style: GoogleFonts.inter(
@@ -577,6 +577,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                           onPressed: () => _showPopulationReport(local),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: aViolet,
+                            foregroundColor: Colors.white,
                           ),
                           icon: const Icon(LucideIcons.fileBarChart2),
                           label: const Text('Population Report'),
@@ -1099,7 +1100,7 @@ class _SearchDialogState extends State<SearchDialog> {
       child: Container(
         width: 500,
         decoration: BoxDecoration(
-          color: widget.isDarkMode ? sideColor : Color(0xFFEDE9FE),
+          color: widget.isDarkMode ? sideColor : const Color(0xFFEDE9FE),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color:
@@ -1125,7 +1126,7 @@ class _SearchDialogState extends State<SearchDialog> {
                 onChanged: _filterItems,
                 decoration: InputDecoration(
                   hintText: 'Type to search...',
-                  prefixIcon: Icon(LucideIcons.search, color: aViolet),
+                  prefixIcon: const Icon(LucideIcons.search, color: aViolet),
                   filled: true,
                   fillColor: widget.isDarkMode
                       ? Colors.white.withOpacity(0.05)

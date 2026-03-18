@@ -304,7 +304,7 @@ class _ReportPanelState extends State<ReportPanel> {
 
   String _exportCsv() {
 
-    final headers = 'Office,Category,Description,Status,Priority,Timestamp';
+    const headers = 'Office,Category,Description,Status,Priority,Timestamp';
 
     final rows = _reports.map((r) {
 

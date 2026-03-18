@@ -119,8 +119,9 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
     final Color textColor = widget.isDarkMode ? Colors.white : pViolet;
     final Color bgColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(40),
@@ -166,8 +167,8 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
                 fontWeight: FontWeight.w900,
                 color: t,
                 letterSpacing: -1)),
-        Text("Institutional Ceiling: 95.0 | GWA 1.00 - 5.00 Scale",
-            style: const TextStyle(color: Colors.blueGrey, fontSize: 14)),
+        const Text("Institutional Ceiling: 95.0 | GWA 1.00 - 5.00 Scale",
+            style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
       ]);
 
   Widget _statCard(
