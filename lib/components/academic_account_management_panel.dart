@@ -63,6 +63,16 @@ class _AcademicAccountManagementPanelState
   }
 
   @override
+  void didUpdateWidget(covariant AcademicAccountManagementPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isDarkMode != widget.isDarkMode) {
+      setState(() {
+        _isDarkMode = widget.isDarkMode;
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _nameCtl.dispose();
     _emailCtl.dispose();

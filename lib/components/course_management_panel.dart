@@ -42,6 +42,16 @@ class _CourseManagementPanelState extends State<CourseManagementPanel> {
     _seedDemoCourses();
   }
 
+  @override
+  void didUpdateWidget(covariant CourseManagementPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isDarkMode != widget.isDarkMode) {
+      setState(() {
+        _isDarkMode = widget.isDarkMode;
+      });
+    }
+  }
+
   void _seedDemoCourses() {
     _courses.addAll([
       {

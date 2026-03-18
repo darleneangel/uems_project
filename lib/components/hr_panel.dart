@@ -36,12 +36,23 @@ class _HRPanelState extends State<HRPanel> {
   }
 
   @override
+  void didUpdateWidget(covariant HRPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isDarkMode != widget.isDarkMode) {
+      setState(() {
+        _isDarkMode = widget.isDarkMode;
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _nameCtl.dispose();
     _deptCtl.dispose();
     _emailCtl.dispose();
     _empIdCtl.dispose();
     _roleCtl.dispose();
+    _importCtl.dispose();
     super.dispose();
   }
 
@@ -147,20 +158,23 @@ class _HRPanelState extends State<HRPanel> {
 
   void _showExportDialog() {
     final csv = _exportCsv();
+    final dialogBgColor = _isDarkMode ? const Color(0xFF1E1033) : lCard;
+    final dialogTextColor = _isDarkMode ? Colors.white : pViolet;
+    final dialogSubTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1033),
+        backgroundColor: dialogBgColor,
         title: Text(
           'Export CSV',
-          style: GoogleFonts.inter(color: Colors.white),
+          style: GoogleFonts.inter(color: dialogTextColor),
         ),
         content: SizedBox(
           width: 600,
           child: SingleChildScrollView(
             child: SelectableText(
               csv,
-              style: GoogleFonts.inter(color: Colors.white70),
+              style: GoogleFonts.inter(color: dialogSubTextColor),
             ),
           ),
         ),
@@ -169,7 +183,7 @@ class _HRPanelState extends State<HRPanel> {
             onPressed: () => Navigator.of(c).pop(),
             child: Text(
               'Close',
-              style: GoogleFonts.inter(color: Colors.white70),
+              style: GoogleFonts.inter(color: dialogSubTextColor),
             ),
           ),
           ElevatedButton(
@@ -189,25 +203,30 @@ class _HRPanelState extends State<HRPanel> {
 
   void _showImportDialog() {
     _importCtl.clear();
+    final dialogBgColor = _isDarkMode ? const Color(0xFF1E1033) : lCard;
+    final dialogTextColor = _isDarkMode ? Colors.white : pViolet;
+    final dialogSubTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
+    final inputFillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade100;
+    final inputHintColor = _isDarkMode ? Colors.white30 : Colors.black45;
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1033),
+        backgroundColor: dialogBgColor,
         title: Text(
           'Import CSV',
-          style: GoogleFonts.inter(color: Colors.white),
+          style: GoogleFonts.inter(color: dialogTextColor),
         ),
         content: SizedBox(
           width: 600,
           child: TextField(
             controller: _importCtl,
             maxLines: 10,
-            style: GoogleFonts.inter(color: Colors.white),
-            decoration: const InputDecoration(
+            style: GoogleFonts.inter(color: dialogTextColor),
+            decoration: InputDecoration(
               hintText: 'Paste CSV here',
-              hintStyle: TextStyle(color: Colors.white30),
+              hintStyle: TextStyle(color: inputHintColor),
               filled: true,
-              fillColor: Colors.white10,
+              fillColor: inputFillColor,
             ),
           ),
         ),
@@ -216,7 +235,7 @@ class _HRPanelState extends State<HRPanel> {
             onPressed: () => Navigator.of(c).pop(),
             child: Text(
               'Cancel',
-              style: GoogleFonts.inter(color: Colors.white70),
+              style: GoogleFonts.inter(color: dialogSubTextColor),
             ),
           ),
           ElevatedButton(
@@ -289,13 +308,16 @@ class _HRPanelState extends State<HRPanel> {
   }
 
   void _showEmployeeDetails(Map<String, String> emp) {
+    final dialogBgColor = _isDarkMode ? const Color(0xFF1E1033) : lCard;
+    final dialogTextColor = _isDarkMode ? Colors.white : pViolet;
+    final dialogSubTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1033),
+        backgroundColor: dialogBgColor,
         title: Text(
           emp['name'] ?? '',
-          style: GoogleFonts.inter(color: Colors.white),
+          style: GoogleFonts.inter(color: dialogTextColor),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -303,22 +325,22 @@ class _HRPanelState extends State<HRPanel> {
           children: [
             Text(
               'Department: ${emp['department'] ?? ''}',
-              style: GoogleFonts.inter(color: Colors.white70),
+              style: GoogleFonts.inter(color: dialogSubTextColor),
             ),
             const SizedBox(height: 8),
             Text(
               'Email: ${emp['email'] ?? ''}',
-              style: GoogleFonts.inter(color: Colors.white70),
+              style: GoogleFonts.inter(color: dialogSubTextColor),
             ),
             const SizedBox(height: 8),
             Text(
               'Employee ID: ${emp['employeeId'] ?? ''}',
-              style: GoogleFonts.inter(color: Colors.white70),
+              style: GoogleFonts.inter(color: dialogSubTextColor),
             ),
             const SizedBox(height: 8),
             Text(
               'Role: ${emp['role'] ?? ''}',
-              style: GoogleFonts.inter(color: Colors.white70),
+              style: GoogleFonts.inter(color: dialogSubTextColor),
             ),
           ],
         ),
@@ -327,7 +349,7 @@ class _HRPanelState extends State<HRPanel> {
             onPressed: () => Navigator.of(c).pop(),
             child: Text(
               'Close',
-              style: GoogleFonts.inter(color: Colors.white70),
+              style: GoogleFonts.inter(color: dialogSubTextColor),
             ),
           ),
         ],

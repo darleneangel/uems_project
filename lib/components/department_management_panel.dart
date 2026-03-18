@@ -36,6 +36,16 @@ class _DepartmentManagementPanelState extends State<DepartmentManagementPanel> {
     _seedDemoDepartments();
   }
 
+  @override
+  void didUpdateWidget(covariant DepartmentManagementPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isDarkMode != widget.isDarkMode) {
+      setState(() {
+        _isDarkMode = widget.isDarkMode;
+      });
+    }
+  }
+
   void _seedDemoDepartments() {
     _departments.addAll([
       {

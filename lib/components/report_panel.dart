@@ -82,6 +82,16 @@ class _ReportPanelState extends State<ReportPanel> {
 
   }
 
+  @override
+  void didUpdateWidget(covariant ReportPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isDarkMode != widget.isDarkMode) {
+      setState(() {
+        _isDarkMode = widget.isDarkMode;
+      });
+    }
+  }
+
 
 
   void _seedDemoReports() {

@@ -66,6 +66,16 @@ class _MessagingPanelState extends State<MessagingPanel> {
   }
 
   @override
+  void didUpdateWidget(covariant MessagingPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isDarkMode != widget.isDarkMode) {
+      setState(() {
+        _isDarkMode = widget.isDarkMode;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final conv = _conversations[_selectedConv];
 
