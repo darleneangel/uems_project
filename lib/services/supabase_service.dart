@@ -41,6 +41,35 @@ class SupabaseService {
         .maybeSingle();
   }
 
+  // --- HR & EMPLOYEE MANAGEMENT ---
+
+  /// 📐 LOGIC: Generates a unique 4-digit Employee ID (e.g., 6001, 6002)
+  Future<String> generateEmployeeId() async {
+    final response =
+        await _client.from('profiles').select('id').neq('role', 'student');
+
+    final List list = response as List;
+    // Base 6000 for employees to distinguish from student IDs
+    int nextId = 6000 + list.length + 1;
+    return nextId.toString();
+  }
+
+  /// 🛰️ DATABASE: Atomic onboarding for new Staff/Faculty
+  Future<Map<String, dynamic>> onboardEmployee({
+    required Map<String, dynamic> profileData,
+    required Map<String, dynamic> detailsData,
+  }) async {
+    // 1. Create Profile first
+    final profileRes =
+        await _client.from('profiles').insert(profileData).select().single();
+
+    // 2. Link details with the new UUID
+    detailsData['profile_id'] = profileRes['id'];
+    await _client.from('employee_details').insert(detailsData);
+
+    return profileRes;
+  }
+
   // --- ACADEMIC & FACULTY MANAGEMENT ---
 
   /// UNIVERSAL ACCESS: Fetches specialists in a specific Dept OR global Gen Ed faculty
@@ -49,7 +78,6 @@ class SupabaseService {
         .from('profiles')
         .select(
             'id, fn, ln, employee_details!inner(department_id, faculty_type)')
-        // FIX: Wrapped "Gen Ed" in double quotes to handle the space in the PostgREST parser
         .or('faculty_type.eq."Gen Ed", department_id.eq.$deptId',
             referencedTable: 'employee_details');
   }
@@ -62,7 +90,7 @@ class SupabaseService {
           *, 
           student_details!inner(*, courses!inner(*), year_levels!inner(*)), 
           study_loads!study_loads_student_id_fkey(id)
-        ''') // FIX: Explicitly defined relationship key to avoid PGRST201 ambiguity
+        ''')
         .eq('role', 'student')
         .eq('student_details.enrollment_status', 'Enrolled')
         .eq('student_details.courses.department_id', chairDeptId);
@@ -130,5 +158,96 @@ class SupabaseService {
     return _client
         .from('payments')
         .stream(primaryKey: ['id']).eq('status', 'Pending');
+  }
+
+  Future<List<Map<String, dynamic>>> getLeaveRequests() async {
+    final res = await _client
+        .from('leave_requests')
+        .select('*, profiles!employee_id(fn, ln, user_id_number)')
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(res);
+  }
+
+  /// Updates status of a leave or document request
+  Future<void> updateRequestStatus(
+      String table, String id, String status, String processorId) async {
+    await _client.from(table).update({
+      'status': status,
+      'processed_by': processorId,
+    }).eq('id', id);
+  }
+
+  /// Fetches performance history for an employee
+  Future<List<Map<String, dynamic>>> getPerformanceAppraisals() async {
+    final res = await _client
+        .from('performance_appraisals')
+        .select('*, profiles!employee_id(fn, ln, user_id_number)')
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(res);
+  }
+
+  /// Fetches staff document requests
+  Future<List<Map<String, dynamic>>> getEmployeeServiceRequests() async {
+    final res = await _client
+        .from('employee_service_requests')
+        .select('*, profiles!employee_id(fn, ln, user_id_number)')
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(res);
+  }
+
+  // --- PAYROLL ENGINE ---
+
+  /// Records a released payslip into the institutional ledger
+  Future<void> recordPayroll(Map<String, dynamic> payrollData) async {
+    await _client.from('payroll_ledger').insert(payrollData);
+  }
+
+  // --- ATTENDANCE TRACKING ENGINE ---
+
+  /// Records the system entry time for employees/faculty (SAFE VERSION)
+  Future<void> recordAttendanceLogin(String userId, String role) async {
+    if (role == 'student') return;
+
+    try {
+      final today = DateTime.now().toIso8601String().split('T')[0];
+
+      // Use limit(1) to avoid errors if multiple logs exist for the same day
+      final existingLog = await _client
+          .from('attendance_logs')
+          .select()
+          .eq('employee_id', userId)
+          .gte('check_in', '${today}T00:00:00')
+          .lte('check_in', '${today}T23:59:59')
+          .limit(1)
+          .maybeSingle();
+
+      if (existingLog == null) {
+        await _client.from('attendance_logs').insert({
+          'employee_id': userId,
+          'check_in': DateTime.now().toIso8601String(),
+          'status': 'Present',
+        });
+      }
+    } catch (e) {
+      // Log error to console but don't crash the login process
+      print("Safe Attendance Error (Login): $e");
+    }
+  }
+
+  /// Records the system exit time (Logout) (SAFE VERSION)
+  Future<void> recordAttendanceLogout(String userId) async {
+    try {
+      final today = DateTime.now().toIso8601String().split('T')[0];
+
+      await _client
+          .from('attendance_logs')
+          .update({'check_out': DateTime.now().toIso8601String()})
+          .eq('employee_id', userId)
+          .gte('check_in', '${today}T00:00:00')
+          .filter('check_out', 'is', null);
+    } catch (e) {
+      // Log error to console but don't crash the logout process
+      print("Safe Attendance Error (Logout): $e");
+    }
   }
 }

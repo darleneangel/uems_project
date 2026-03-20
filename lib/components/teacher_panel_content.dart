@@ -4,6 +4,7 @@ import 'teacher_panels/teaching_load_panel.dart';
 import 'teacher_panels/grade_encoding_panel.dart';
 import 'teacher_panels/student_tracking_panel.dart';
 import 'shared/messaging_panel.dart';
+import 'shared/staff_profile_portal.dart';
 
 class TeacherPanelContent extends StatelessWidget {
   final int selectedIndex;
@@ -35,6 +36,8 @@ class TeacherPanelContent extends StatelessWidget {
         return StudentTrackingPanel(isDarkMode: isDarkMode, userData: userData);
       case 4:
         return MessagingPanel(isDarkMode: isDarkMode, userData: userData);
+      case 5:
+        return StaffProfilePortal(isDarkMode: isDarkMode, userData: userData);
       default:
         return _placeholderPanel("Module Under Construction", textColor);
     }

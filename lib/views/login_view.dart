@@ -17,6 +17,7 @@ import 'hr_dashboard_view.dart';
 import '../components/program_chair_dashboard_view.dart'; // Verified Path
 import '../components/teacher_dashboard_view.dart';
 import '../services/supabase_service.dart';
+import '../components/hr_panel_content.dart';
 
 import 'forgot_password_handler.dart';
 
@@ -98,8 +99,8 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     setState(() => _isLoading = true);
 
     try {
-      final client = SupabaseService().client;
-      final results = await client
+      final service = SupabaseService();
+      final results = await service.client
           .from('profiles')
           .select('*, student_details(*), employee_details(*)')
           .ilike('user_id_number', id)
@@ -112,6 +113,11 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         _loggedInUserData = results.first;
         final String role =
             (_loggedInUserData!['role'] as String).toLowerCase();
+
+        // --- ADDED: Record Check-In Timestamp ---
+        // We use the UUID (id) for the attendance link
+        await service.recordAttendanceLogin(_loggedInUserData!['id'], role);
+
         _routeToDashboard(role);
       } else {
         _showError("Identity Mismatch. Please check your credentials.");
@@ -120,6 +126,21 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       if (mounted) setState(() => _isLoading = false);
       _showError("Sync Error: Unable to reach academic core.");
     }
+  }
+
+  void _resetToLogin() async {
+    // --- ADDED: Record Logout Timestamp before clearing data ---
+    if (_loggedInUserData != null) {
+      await SupabaseService().recordAttendanceLogout(_loggedInUserData!['id']);
+    }
+
+    setState(() {
+      _currentView = 'login';
+      _loggedInUserData = null; // Clear session data
+      _idController.clear();
+      _passwordController.clear();
+      _formController.forward(from: 0.0);
+    });
   }
 
   void _routeToDashboard(String role) {
@@ -201,8 +222,9 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         return _buildSplitLogin();
       case 'registrar_dashboard':
         return RegistrarDashboardView(onLogout: _resetToLogin);
-      case 'hr_dashboard':
-        return HrDashboardView(onLogout: _resetToLogin);
+      case 'hr_panel_content':
+      // This case should ideally not be hit if routing is correct.
+      // The HRPanelContent is a sub-component, not a top-level dashboard.
       case 'accounting_dashboard':
         return AccountingDashboardView(
             userData: _loggedInUserData!, onLogout: _resetToLogin);
@@ -213,19 +235,15 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         // THE FIX: Relay the 6001 data to the Dashboard constructor
         return ProgramChairDashboardView(
             userData: _loggedInUserData!, onLogout: _resetToLogin);
+      case 'hr_dashboard': // Corrected routing for HR
+        return HRDashboardView(
+            userData: _loggedInUserData!, onLogout: _resetToLogin);
       case 'welcome_uemssp':
         return _buildWelcomeLoading();
       default:
         return _buildSplitLogin();
     }
   }
-
-  void _resetToLogin() => setState(() {
-        _currentView = 'login';
-        _idController.clear();
-        _passwordController.clear();
-        _formController.forward(from: 0.0);
-      });
 
   Widget _buildSplitLogin() {
     final bgColor = _isDarkMode ? tDark : const Color(0xFFF1F5F9);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'program_chair_panel_content.dart';
+import 'shared/staff_profile_portal.dart';
 
 class ProgramChairDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -170,6 +171,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
                 _menuItem(LucideIcons.fileText, "Final Assessment", 3),
                 _menuItem(LucideIcons.mail, "Student List", 4),
                 _menuItem(LucideIcons.mail, "Messaging", 5),
+                _menuItem(LucideIcons.settings, "Profile", 6),
               ],
             ),
           ),

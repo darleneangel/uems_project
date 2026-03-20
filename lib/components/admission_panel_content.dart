@@ -5,6 +5,7 @@ import 'admission_panels/document_verification_panel.dart';
 import 'shared/messaging_panel.dart';
 import 'admission_panels/enrollment_verification_panel.dart';
 import 'admission_panels/admission_transactions_panel.dart';
+import 'shared/staff_profile_portal.dart';
 
 class AdmissionPanelContent extends StatelessWidget {
   final int selectedIndex;
@@ -37,6 +38,8 @@ class AdmissionPanelContent extends StatelessWidget {
             isDarkMode: isDarkMode, userData: userData);
       case 4:
         return MessagingPanel(isDarkMode: isDarkMode, userData: userData);
+      case 5:
+        return StaffProfilePortal(isDarkMode: isDarkMode, userData: userData);
       case 6:
         return EnrollmentVerificationPanel(
             isDarkMode: isDarkMode, userData: userData);

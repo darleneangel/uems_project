@@ -11,6 +11,8 @@ import 'registrar_panels/reporting_compliance_panel.dart';
 import 'registrar_panels/registrar_messages_panel.dart';
 import 'registrar_panels/student_requests_panel.dart';
 import 'registrar_panels/audit_trail_panel.dart';
+import 'shared/messaging_panel.dart';
+import 'shared/staff_profile_portal.dart';
 
 class RegistrarPanelContent extends StatelessWidget {
   final String panelType;

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../services/supabase_service.dart';
 import '../components/admission_panel_content.dart';
+import '../components/shared/staff_profile_portal.dart';
 
 class AdmissionDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -227,8 +228,7 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
           const SizedBox(width: 12),
           const CircleAvatar(
               backgroundColor: aViolet,
-              child: Icon(LucideIcons.userPlus,
-                  color: Colors.white, size: 18)),
+              child: Icon(LucideIcons.userPlus, color: Colors.white, size: 18)),
         ],
       ),
     );
@@ -256,6 +256,7 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
                 _menuItem(LucideIcons.userCheck, "Enrollment Verification", 6),
                 _sidebarHeader("COMMUNICATIONS"),
                 _menuItem(LucideIcons.mail, "Messaging", 4),
+                _menuItem(LucideIcons.facebook, "Profile", 5),
                 _sidebarHeader("TRANSACTIONS"),
                 _menuItem(LucideIcons.mail, "Transaction History", 2),
               ],

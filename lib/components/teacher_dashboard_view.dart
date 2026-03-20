@@ -157,6 +157,7 @@ class _TeacherDashboardViewState extends State<TeacherDashboardView> {
                 _menuItem(LucideIcons.edit3, "Grade Encoding", 2),
                 _sidebarHeader("COMMUNICATION"),
                 _menuItem(LucideIcons.mail, "Messages", 4),
+                _menuItem(LucideIcons.settings, "Profile", 5),
               ],
             ),
           ),

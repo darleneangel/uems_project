@@ -8,6 +8,7 @@ import '../components/accounting_panels/accounting_overview_panel.dart';
 import '../components/accounting_panels/registration_payment_panel.dart';
 import '../components/shared/messaging_panel.dart';
 import '../components/accounting_panels/tuition_assessment_panel.dart';
+import '../components/shared/staff_profile_portal.dart';
 
 class AccountingDashboardView extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -80,6 +81,11 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
       case 6:
         return MessagingPanel(
             isDarkMode: _isDarkMode, userData: widget.userData);
+      case 7:
+        return StaffProfilePortal(
+          isDarkMode: _isDarkMode,
+          userData: widget.userData,
+        );
       case 0:
       default:
         return AccountingOverviewPanel(isDarkMode: _isDarkMode);
@@ -167,6 +173,7 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
                 _menuItem(LucideIcons.shoppingCart, "Disbursements", 4),
                 _sidebarHeader("MESSAGES"),
                 _menuItem(LucideIcons.messageCircle, "Messaging", 6),
+                _menuItem(LucideIcons.settings, "Profile", 7),
               ])),
           const Divider(color: Colors.white10),
           _menuItem(LucideIcons.logOut, "Logout System", 8,

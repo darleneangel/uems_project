@@ -5,6 +5,7 @@ import 'program_chair_panels/program_overview_panel.dart';
 import 'program_chair_panels/assessment_summary_panel.dart';
 import 'program_chair_panels/student_masterlist_panel.dart';
 import 'shared/messaging_panel.dart';
+import 'shared/staff_profile_portal.dart';
 
 class ProgramChairPanelContent extends StatelessWidget {
   final int selectedIndex;
@@ -58,6 +59,13 @@ class ProgramChairPanelContent extends StatelessWidget {
       case 5:
         // Messaging: Communication hub for student inquiries and faculty coordination
         return MessagingPanel(
+          isDarkMode: isDarkMode,
+          userData: userData,
+        );
+
+      case 6:
+        // Profile: View and edit the Program Chair's own profile
+        return StaffProfilePortal(
           isDarkMode: isDarkMode,
           userData: userData,
         );
