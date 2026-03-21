@@ -7,6 +7,7 @@ import 'shared/staff_profile_portal.dart';
 import 'hr_panels/hr_attendance_panel.dart';
 import 'hr_panels/hr_leave_requests_panel.dart';
 import 'hr_panels/hr_payroll_bridge_panel.dart';
+import 'hr_panels/hr_employee_list_panel.dart';
 
 class HRPanelContent extends StatelessWidget {
   final int selectedIndex;
@@ -44,6 +45,8 @@ class HRPanelContent extends StatelessWidget {
         return HRLeaveRequestPanel(isDarkMode: isDarkMode, userData: userData);
       case 6:
         return HRPayrollBridgePanel(isDarkMode: isDarkMode, userData: userData);
+      case 7:
+        return HrEmployeeListPanel(isDarkMode: isDarkMode, userData: userData);
 
       default:
         return Center(

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../services/supabase_service.dart';
 
 class StaffProfilePortal extends StatefulWidget {
@@ -63,6 +66,144 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
     }
   }
 
+  /// --- PDF GENERATION ENGINE ---
+  /// Creates a formal letter and allows the user to SAVE/DOWNLOAD it
+  Future<void> _generateSickLeavePDF() async {
+    if (_reasonController.text.isEmpty || _selectedDateRange == null) {
+      _showToast("Enter dates and a reason to generate the letter.",
+          Colors.orangeAccent);
+      return;
+    }
+
+    final pdf = pw.Document();
+    final bool isHR = widget.userData['role']?.toString().toLowerCase() == 'hr';
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(48),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Institutional Header
+                pw.Text('BRIGHT FUTURE ACADEMY',
+                    style: pw.TextStyle(
+                        fontSize: 22,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.indigo900)),
+                pw.Text('Institutional Human Resources Office',
+                    style: const pw.TextStyle(
+                        fontSize: 10, color: PdfColors.grey700)),
+                pw.SizedBox(height: 8),
+                pw.Divider(thickness: 1.5),
+                pw.SizedBox(height: 32),
+
+                // Date
+                pw.Align(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text(
+                      'Date: ${DateFormat('MMMM dd, yyyy').format(DateTime.now())}',
+                      style: const pw.TextStyle(fontSize: 11)),
+                ),
+                pw.SizedBox(height: 32),
+
+                // Recipient - Conditional logic for HR department
+                pw.Text(
+                    isHR
+                        ? 'TO: Office of the School Administrator'
+                        : 'TO: Human Resources Management Office',
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                pw.Text('Bright Future Academy',
+                    style: const pw.TextStyle(fontSize: 11)),
+                pw.SizedBox(height: 24),
+
+                // Subject
+                pw.Text('SUBJECT: FORMAL APPLICATION FOR SICK LEAVE',
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 11,
+                        decoration: pw.TextDecoration.underline)),
+                pw.SizedBox(height: 32),
+
+                // Salutation
+                pw.Text('To Whom It May Concern,',
+                    style: const pw.TextStyle(fontSize: 11)),
+                pw.SizedBox(height: 16),
+
+                // Body text
+                pw.Text(
+                    'I am writing to formally request a sick leave of absence from my duties as '
+                    '${_fullDetails?['employee_details']?['position_title'] ?? "Staff Member"} '
+                    'at Bright Future Academy. I will be unable to report to work for a period of '
+                    '${_selectedDateRange!.duration.inDays + 1} day(s), effective from '
+                    '${DateFormat('MMMM dd').format(_selectedDateRange!.start)} to '
+                    '${DateFormat('MMMM dd, yyyy').format(_selectedDateRange!.end)}.',
+                    style: pw.TextStyle(
+                      fontSize: 11,
+                      fontWeight: pw.FontWeight.normal,
+                      height: 1.5,
+                      letterSpacing: 0.5,
+                    )),
+
+                pw.SizedBox(height: 16),
+                pw.Text('REASON FOR ABSENCE:',
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                pw.SizedBox(height: 4),
+                pw.Text(_reasonController.text,
+                    style: const pw.TextStyle(fontSize: 11, lineSpacing: 1.4)),
+                pw.SizedBox(height: 24),
+                pw.Text(
+                  'I have made the necessary arrangements to ensure that my pending tasks are handled or delegated appropriately during this period. I will keep the office updated should there be any changes to my recovery timeline.',
+                  style: const pw.TextStyle(fontSize: 11, lineSpacing: 1.5),
+                  textAlign: pw.TextAlign.justify,
+                ),
+
+                pw.SizedBox(height: 64),
+
+                // Signature block
+                pw.Text('Respectfully yours,',
+                    style: const pw.TextStyle(fontSize: 11)),
+                pw.SizedBox(height: 48),
+                pw.Container(
+                    // Fixed: pw.Container does not have a 'border' parameter directly.
+                    width:
+                        180, // It expects a 'decoration' which takes a pw.BoxDecoration.
+                    decoration: const pw.BoxDecoration(
+                      border: pw.Border(top: pw.BorderSide(width: 1)),
+                    )),
+                pw.Text('${widget.userData['fn']} ${widget.userData['ln']}',
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                pw.Text(
+                    'Employee ID: ${widget.userData['user_id_number'] ?? "N/A"}',
+                    style: const pw.TextStyle(
+                        fontSize: 10, color: PdfColors.grey700)),
+                if (isHR)
+                  pw.Text('Role: HR Department Personnel',
+                      style: const pw.TextStyle(
+                          fontSize: 10, color: PdfColors.red900)),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    try {
+      final bytes = await pdf.save();
+      await Printing.sharePdf(
+          bytes: bytes,
+          filename: 'Sick_Leave_Letter_${widget.userData['ln']}.pdf');
+    } catch (e) {
+      _showToast(
+          "Could not save PDF. Check app permissions.", Colors.redAccent);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final textColor =
@@ -83,7 +224,6 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Left Side: Identity & Details
               Expanded(
                 flex: 3,
                 child: Column(
@@ -145,7 +285,6 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
                 ),
               ),
               const SizedBox(width: 32),
-              // Right Side: Leave Application Form
               Expanded(
                 flex: 2,
                 child: _buildLeaveApplicationForm(cardColor, textColor),
@@ -161,18 +300,15 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Employee Profile Portal",
-          style: GoogleFonts.inter(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: textColor,
-              letterSpacing: -0.5),
-        ),
-        Text(
-          "Manage your digital credentials and administrative requests.",
-          style: TextStyle(color: Colors.blueGrey, fontSize: 14),
-        ),
+        Text("Employee Profile Portal",
+            style: GoogleFonts.inter(
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                color: textColor,
+                letterSpacing: -0.5)),
+        const Text(
+            "Manage your digital credentials and administrative requests.",
+            style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
       ],
     );
   }
@@ -239,18 +375,30 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
   }
 
   Widget _buildLeaveApplicationForm(Color cardColor, Color textColor) {
+    final bool isHR = widget.userData['role']?.toString().toLowerCase() == 'hr';
+
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: widget.isDarkMode
-                ? [surfaceDark, const Color(0xFF1E1033)]
-                : [Colors.white, const Color(0xFFF8FAFC)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: widget.isDarkMode
+              ? LinearGradient(
+                  colors: widget.isDarkMode
+                      ? [surfaceDark, const Color(0xFF1E1033)]
+                      : [Colors.white, const Color(0xFFF8FAFC)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : LinearGradient(
+                  colors: [Colors.white, const Color(0xFFF8FAFC)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
           borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: aViolet.withOpacity(0.2), width: 2),
+          border: Border.all(
+              color: isHR
+                  ? Colors.orangeAccent.withOpacity(0.5)
+                  : aViolet.withOpacity(0.2),
+              width: 2),
           boxShadow: [
             BoxShadow(
                 color: aViolet.withOpacity(0.05),
@@ -264,7 +412,8 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
           children: [
             Row(
               children: [
-                const Icon(LucideIcons.calendarPlus, color: aViolet, size: 24),
+                Icon(isHR ? LucideIcons.shieldAlert : LucideIcons.calendarPlus,
+                    color: isHR ? Colors.orangeAccent : aViolet, size: 24),
                 const SizedBox(width: 12),
                 Text("File Leave Request",
                     style: GoogleFonts.inter(
@@ -273,6 +422,16 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
                         color: textColor)),
               ],
             ),
+            if (isHR)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                    "NOTICE: HR requests are routed to Administration for approval.",
+                    style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: Colors.orangeAccent,
+                        fontWeight: FontWeight.bold)),
+              ),
             const SizedBox(height: 32),
             _buildLabel("Type of Leave"),
             DropdownButtonFormField<String>(
@@ -317,24 +476,44 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
               controller: _reasonController,
               maxLines: 3,
               style: TextStyle(color: textColor),
-              decoration: _inputStyle(hint: "Provide context for HR review..."),
+              decoration: _inputStyle(hint: "Provide context for review..."),
               validator: (v) =>
                   (v == null || v.isEmpty) ? "Reason required" : null,
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 32),
+            if (_leaveType == 'Sick')
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _generateSickLeavePDF,
+                    icon: const Icon(LucideIcons.download, size: 18),
+                    label: const Text("GENERATE & SAVE PDF",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: aViolet,
+                      side: const BorderSide(color: aViolet),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+              ),
             SizedBox(
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
                 onPressed: _submitLeaveRequest,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: aViolet,
+                  backgroundColor: isHR ? Colors.orangeAccent : aViolet,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   elevation: 0,
                 ),
-                child: const Text("SUBMIT TO HR OFFICE",
-                    style: TextStyle(
+                child: Text(isHR ? "SUBMIT TO ADMIN" : "SUBMIT TO HR OFFICE",
+                    style: const TextStyle(
                         fontWeight: FontWeight.w900, letterSpacing: 1)),
               ),
             ),
@@ -374,6 +553,8 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
       return;
     }
 
+    final bool isHR = widget.userData['role']?.toString().toLowerCase() == 'hr';
+
     try {
       await _service.client.from('leave_requests').insert({
         'employee_id': widget.userData['id'],
@@ -382,9 +563,15 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
         'end_date': _selectedDateRange!.end.toIso8601String(),
         'reason': _reasonController.text.trim(),
         'status': 'Pending',
+        // Functional Logic: Tagging this as an HR request so it is ignored by standard HR modules
+        'is_hr_request': isHR,
       });
 
-      _showToast("Leave request submitted successfully.", success);
+      _showToast(
+          isHR
+              ? "Request submitted to Administration."
+              : "Leave request submitted to HR.",
+          success);
       _reasonController.clear();
       setState(() => _selectedDateRange = null);
     } catch (e) {
@@ -420,11 +607,9 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
             borderSide: const BorderSide(color: aViolet)),
       );
 
-  // FIXED: Helper for Container decoration to resolve the argument type error
   BoxDecoration _containerStyle() => BoxDecoration(
-        color: widget.isDarkMode
-            ? Colors.white.withOpacity(0.03)
-            : Colors.black.withOpacity(0.02),
+        color:
+            widget.isDarkMode ? Colors.white10 : Colors.black.withOpacity(0.02),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: aViolet.withOpacity(0.1)),
       );

@@ -3,15 +3,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../services/supabase_service.dart';
 
 class HRLeaveRequestPanel extends StatefulWidget {
   final bool isDarkMode;
   final Map<String, dynamic> userData;
 
-  const HRLeaveRequestPanel(
-      {super.key, required this.isDarkMode, required this.userData});
+  const HRLeaveRequestPanel({
+    super.key,
+    required this.isDarkMode,
+    required this.userData,
+  });
 
   @override
   State<HRLeaveRequestPanel> createState() => _HRLeaveRequestPanelState();
@@ -33,17 +35,25 @@ class _HRLeaveRequestPanelState extends State<HRLeaveRequestPanel> {
   }
 
   Future<void> _fetchData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final res = await _service.client
           .from('leave_requests')
           .select(
               '*, profiles!leave_requests_employee_id_fkey(fn, ln, user_id_number)')
+          // FILTER: Only show requests from regular staff, not HR themselves
+          .eq('is_hr_request', false)
           .order('created_at', ascending: false);
-      _requests = List<Map<String, dynamic>>.from(res);
+
+      if (mounted) {
+        setState(() {
+          _requests = List<Map<String, dynamic>>.from(res);
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       debugPrint("Leave Fetch Error: $e");
-    } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -114,15 +124,9 @@ class _HRLeaveRequestPanelState extends State<HRLeaveRequestPanel> {
 
     return Column(
       children: [
-        _tableHeader([
-          'EMPLOYEE',
-          'TYPE',
-          'REASON',
-          'PERIOD',
-          'DOC',
-          'STATUS',
-          'ACTIONS'
-        ]),
+        // REMOVED 'DOC' from header list
+        _tableHeader(
+            ['EMPLOYEE', 'TYPE', 'REASON', 'PERIOD', 'STATUS', 'ACTIONS']),
         Expanded(
           child: ListView.separated(
             itemCount: filtered.length,
@@ -165,19 +169,12 @@ class _HRLeaveRequestPanelState extends State<HRLeaveRequestPanel> {
                         child: Text(req['reason'] ?? 'No justification',
                             style: const TextStyle(
                                 fontSize: 11, color: Colors.blueGrey),
-                            maxLines: 2)),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis)),
                     Expanded(
                         child:
                             Text(period, style: const TextStyle(fontSize: 11))),
-                    Expanded(
-                        child: req['attachment_url'] != null
-                            ? IconButton(
-                                icon: const Icon(LucideIcons.fileText,
-                                    color: Colors.blue, size: 18),
-                                onPressed: () =>
-                                    _openDoc(req['attachment_url']))
-                            : const Icon(LucideIcons.fileX,
-                                color: Colors.grey, size: 16)),
+                    // REMOVED 'DOC' (attachment_url) UI column from the row
                     Expanded(child: _statusChip(req['status'])),
                     Expanded(
                         child: req['status'] == 'Pending'
@@ -266,12 +263,8 @@ class _HRLeaveRequestPanelState extends State<HRLeaveRequestPanel> {
     _fetchData();
   }
 
-  Future<void> _openDoc(String? url) async {
-    if (url != null && await canLaunchUrl(Uri.parse(url)))
-      await launchUrl(Uri.parse(url));
-  }
-
   String _fmtDate(String d) => DateFormat('MM/dd').format(DateTime.parse(d));
+
   Widget _emptyState() => Center(
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(LucideIcons.calendar,

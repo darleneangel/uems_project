@@ -9,6 +9,10 @@ import '../components/accounting_panels/registration_payment_panel.dart';
 import '../components/shared/messaging_panel.dart';
 import '../components/accounting_panels/tuition_assessment_panel.dart';
 import '../components/shared/staff_profile_portal.dart';
+import '../components/accounting_panels/accounting_payroll_manager_panel.dart';
+import '../services/supabase_service.dart';
+import '../components/accounting_panels/clearance_assessment_terminal_panel.dart';
+import '../components/accounting_panels/student_payment_portal_panel.dart';
 
 class AccountingDashboardView extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -69,7 +73,8 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
           userData: widget.userData,
         );
       case 3:
-        return PayrollPanel(isDarkMode: _isDarkMode);
+        return AccountingPayrollManager(
+            isDarkMode: _isDarkMode, userData: widget.userData);
       case 2:
         return FinancialReportsPanel(isDarkMode: _isDarkMode);
       case 4:
@@ -86,6 +91,12 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
           isDarkMode: _isDarkMode,
           userData: widget.userData,
         );
+      case 8:
+        return StudentPaymentPortal(
+            isDarkMode: _isDarkMode, userData: widget.userData);
+      case 9:
+        return ClearanceAssessmentTerminal(
+            isDarkMode: _isDarkMode, userData: widget.userData);
       case 0:
       default:
         return AccountingOverviewPanel(isDarkMode: _isDarkMode);
@@ -168,12 +179,13 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
                 _menuItem(LucideIcons.receipt, "Fee Management", 1),
                 _menuItem(LucideIcons.pieChart, "Tuition Assessment", 5),
                 _menuItem(LucideIcons.piggyBank, "Enrollment Payment", 4),
+                _menuItem(LucideIcons.wallet, "Student Payment Portal", 8),
+                _menuItem(LucideIcons.fileCheck, "Financial Clearance", 9),
                 _sidebarHeader("INTERNAL"),
-                _menuItem(LucideIcons.users, "Institution Payroll", 3),
-                _menuItem(LucideIcons.shoppingCart, "Disbursements", 4),
+                _menuItem(LucideIcons.users, "Employee Payroll", 3),
                 _sidebarHeader("MESSAGES"),
                 _menuItem(LucideIcons.messageCircle, "Messaging", 6),
-                _menuItem(LucideIcons.settings, "Profile", 7),
+                _menuItem(LucideIcons.facebook, "Profile", 7),
               ])),
           const Divider(color: Colors.white10),
           _menuItem(LucideIcons.logOut, "Logout System", 8,

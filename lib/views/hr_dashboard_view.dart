@@ -174,8 +174,9 @@ class _HRDashboardViewState extends State<HRDashboardView> {
                     3), // Same index, handles sub-logic
 
                 _menuItem(LucideIcons.clock, "Leave Requests", 5),
-                _menuItem(LucideIcons.monitor, "Payroll",
-                    6), // Same index, handles sub-logic
+                _menuItem(LucideIcons.monitor, "Payroll", 6),
+                _menuItem(LucideIcons.list, "Employee Records",
+                    7), // Same index, handles sub-logic
                 _sidebarHeader("COMMUNICATION"),
                 _menuItem(
                     LucideIcons.messagesSquare, "Institutional Messenger", 2),

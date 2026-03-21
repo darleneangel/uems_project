@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:intl/intl.dart';
+import '../../services/supabase_service.dart';
 
 class AccountingOverviewPanel extends StatefulWidget {
   final bool isDarkMode;
@@ -20,876 +22,411 @@ class AccountingOverviewPanel extends StatefulWidget {
 }
 
 class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
-  final _emailController = TextEditingController();
-  final _receiptIdController = TextEditingController();
-  final _searchController = TextEditingController();
-  String _selectedDocumentType = 'E-Receipt';
-  bool _isSending = false;
-  String _activeQuickAction = 'all';
+  final SupabaseService _service = SupabaseService();
+  bool _isLoading = true;
+
+  // Analytics State
+  double _totalCollections = 0;
+  double _pendingReceivables = 0;
+  int _pendingClearances = 0;
+  List<Map<String, dynamic>> _monthlyTrends = [];
+  List<Map<String, dynamic>> _recentTransactions = [];
+
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color success = Color(0xFF69F0AE);
+  static const Color surfaceDark = Color(0xFF0F071D);
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    _receiptIdController.dispose();
-    _searchController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _refreshDashboard();
   }
 
-  void _sendEReceipt() {
-    if (_emailController.text.isEmpty || _receiptIdController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please fill in all required fields"),
-          backgroundColor: Colors.orangeAccent,
-        ),
-      );
-      return;
-    }
+  Future<void> _refreshDashboard() async {
+    setState(() => _isLoading = true);
+    try {
+      // 1. Fetch Total Successful Payments (Collections)
+      final paymentsRes = await _service.client
+          .from('payments')
+          .select('amount, status, created_at');
 
-    setState(() => _isSending = true);
+      // 2. Fetch Pending Clearances
+      final clearanceRes = await _service.client
+          .from('office_requests')
+          .select('id')
+          .eq('request_type', 'Financial Clearance')
+          .eq('status', 'Pending');
 
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => _isSending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("E-Receipt sent to ${_emailController.text}"),
-            backgroundColor: const Color(0xFF69F0AE),
-          ),
-        );
-        _clearForm();
+      // 3. Process Collections Data
+      double total = 0;
+      double pending = 0;
+      Map<String, double> monthlyMap = {};
+
+      for (var p in paymentsRes) {
+        double amt = (p['amount'] ?? 0).toDouble();
+        if (p['status'] == 'Success') {
+          total += amt;
+          String month =
+              DateFormat('MMM').format(DateTime.parse(p['created_at']));
+          monthlyMap[month] = (monthlyMap[month] ?? 0) + amt;
+        } else if (p['status'] == 'Pending') {
+          pending += amt;
+        }
       }
-    });
-  }
 
-  void _clearForm() {
-    _emailController.clear();
-    _receiptIdController.clear();
-  }
+      // 4. Fetch Recent Activity
+      final recentRes = await _service.client
+          .from('payments')
+          .select('*, profiles(fn, ln)')
+          .order('created_at', ascending: false)
+          .limit(5);
 
-  void _toggleQuickAction(String key) {
-    setState(() {
-      _activeQuickAction = _activeQuickAction == key ? 'all' : key;
-    });
-  }
+      if (mounted) {
+        setState(() {
+          _totalCollections = total;
+          _pendingReceivables = pending;
+          _pendingClearances = clearanceRes.length;
+          _recentTransactions = List<Map<String, dynamic>>.from(recentRes);
 
-  List<Map<String, String>> _filterDocuments(
-    List<Map<String, String>> documents,
-  ) {
-    switch (_activeQuickAction) {
-      case 'pending':
-        return documents.where((doc) => doc['status'] == 'Pending').toList();
-      case 'approved':
-        return documents.where((doc) => doc['status'] == 'Approved').toList();
-      case 'rejected':
-        return documents.where((doc) => doc['status'] == 'Rejected').toList();
-      default:
-        return documents;
+          // Convert Map to sorted list for the graph
+          _monthlyTrends = monthlyMap.entries
+              .map((e) => {'month': e.key, 'value': e.value})
+              .toList();
+
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Dashboard Sync Error: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _showApprovalBasis(String requestId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Basis of Approval - $requestId"),
-        content: SizedBox(
-          width: 500,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildBasisSection("Student Information", [
-                "Student ID: 2024-001",
-                "Name: Juan Dela Cruz",
-                "Program: BSCS",
-                "Year: 2nd Year",
-                "GWA: 1.75",
-              ]),
-              const SizedBox(height: 16),
-              _buildBasisSection("Financial Status", [
-                "Previous Payments: Fully Paid",
-                "Outstanding Balance: ₱0.00",
-                "Scholarship: Dean's Lister (25% discount)",
-                "Payment History: Excellent",
-              ]),
-              const SizedBox(height: 16),
-              _buildBasisSection("Academic Standing", [
-                "Units Enrolled: 21 units",
-                "Attendance: 95%",
-                "No disciplinary records",
-                "Good moral character",
-              ]),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF69F0AE).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: const Color(0xFF69F0AE).withOpacity(0.3),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          LucideIcons.checkCircle,
-                          color: Color(0xFF69F0AE),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          "RECOMMENDATION: APPROVED",
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF69F0AE),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Student meets all requirements for financial clearance. No outstanding balances and good academic standing.",
-                      style: GoogleFonts.inter(
-                        color: widget.isDarkMode
-                            ? Colors.white70
-                            : Colors.black87,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("CLOSE"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Approval basis exported to PDF"),
-                  backgroundColor: Color(0xFF8B5CF6),
-                ),
-              );
-            },
-            child: const Text("EXPORT PDF"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBasisSection(String title, List<String> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.bold,
-            color: widget.isDarkMode ? Colors.white : Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ...items.map(
-          (item) => Padding(
-            padding: const EdgeInsets.only(left: 16, bottom: 4),
-            child: Text(
-              "• $item",
-              style: GoogleFonts.inter(
-                color: widget.isDarkMode ? Colors.white70 : Colors.black87,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = widget.isDarkMode
-        ? const Color(0xFF1E1B4B)
-        : Colors.white;
-    final textColor = widget.isDarkMode
-        ? Colors.white
-        : const Color(0xFF2E1065);
-    final subTextColor = widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
+    final textColor =
+        widget.isDarkMode ? Colors.white : const Color(0xFF1E1B4B);
+    final cardColor =
+        widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(cardColor, textColor, subTextColor),
-          const SizedBox(height: 24),
+          _buildHeader(textColor),
+          const SizedBox(height: 32),
+          _buildStatGrid(textColor),
+          const SizedBox(height: 32),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _buildEmailForm(cardColor, textColor, subTextColor),
-              ),
+                  flex: 3, child: _buildFinancialGraph(cardColor, textColor)),
               const SizedBox(width: 24),
               Expanded(
-                child: _buildDocumentSearch(cardColor, textColor, subTextColor),
-              ),
+                  flex: 2, child: _buildRecentActivity(cardColor, textColor)),
             ],
           ),
-          const SizedBox(height: 24),
-          _buildRecentDocuments(cardColor, textColor, subTextColor),
+          const SizedBox(height: 32),
+          _buildClearanceSection(cardColor, textColor),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(Color cardColor, Color textColor, Color subTextColor) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF8B5CF6).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              LucideIcons.fileText,
-              color: Color(0xFF8B5CF6),
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Documentation Management",
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+  Widget _buildHeader(Color textColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Accounting Dashboard",
+                style: GoogleFonts.inter(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
                     color: textColor,
-                  ),
-                ),
-                Text(
-                  "E-Receipts and Basis of Approve & Reject for financial clearance",
-                  style: GoogleFonts.inter(color: subTextColor, fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmailForm(Color cardColor, Color textColor, Color subTextColor) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
+                    letterSpacing: -0.5)),
+            Text(
+                "Institutional financial health and real-time ledger analytics.",
+                style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
+          ],
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Send E-Receipt",
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          TextFormField(
-            controller: _receiptIdController,
-            style: TextStyle(
-              color: widget.isDarkMode ? Colors.white : Colors.black87,
-            ),
-            decoration: InputDecoration(
-              labelText: "Receipt ID",
-              labelStyle: TextStyle(
-                color: widget.isDarkMode ? Colors.white70 : Colors.black87,
-              ),
-              hintText: "Enter receipt ID",
-              hintStyle: TextStyle(
-                color: widget.isDarkMode ? Colors.white38 : Colors.grey,
-              ),
-              prefixIcon: Icon(
-                LucideIcons.hash,
-                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: widget.isDarkMode
-                      ? Colors.white24
-                      : Colors.grey.shade300,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Color(0xFF8B5CF6),
-                  width: 2,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          TextFormField(
-            controller: _emailController,
-            style: TextStyle(
-              color: widget.isDarkMode ? Colors.white : Colors.black87,
-            ),
-            decoration: InputDecoration(
-              labelText: "Email Address",
-              labelStyle: TextStyle(
-                color: widget.isDarkMode ? Colors.white70 : Colors.black87,
-              ),
-              hintText: "student@university.edu",
-              hintStyle: TextStyle(
-                color: widget.isDarkMode ? Colors.white38 : Colors.grey,
-              ),
-              prefixIcon: Icon(
-                LucideIcons.mail,
-                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: widget.isDarkMode
-                      ? Colors.white24
-                      : Colors.grey.shade300,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Color(0xFF8B5CF6),
-                  width: 2,
-                ),
-              ),
-            ),
-            keyboardType: TextInputType.emailAddress,
-          ),
-          const SizedBox(height: 16),
-
-          DropdownButtonFormField<String>(
-            initialValue: _selectedDocumentType,
-            style: TextStyle(
-              color: widget.isDarkMode ? Colors.white : Colors.black87,
-            ),
-            dropdownColor: widget.isDarkMode
-                ? const Color(0xFF1E1B4B)
-                : Colors.white,
-            decoration: InputDecoration(
-              labelText: "Document Type",
-              labelStyle: TextStyle(
-                color: widget.isDarkMode ? Colors.white70 : Colors.black87,
-              ),
-              prefixIcon: Icon(
-                LucideIcons.file,
-                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: widget.isDarkMode
-                      ? Colors.white24
-                      : Colors.grey.shade300,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Color(0xFF8B5CF6),
-                  width: 2,
-                ),
-              ),
-            ),
-            items:
-                [
-                  'E-Receipt',
-                  'Certificate of Payment',
-                  'Tax Certificate',
-                  'Financial Clearance',
-                ].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(
-                      value,
-                      style: TextStyle(
-                        color: widget.isDarkMode
-                            ? Colors.white
-                            : Colors.black87,
-                      ),
-                    ),
-                  );
-                }).toList(),
-            onChanged: (String? value) {
-              setState(() => _selectedDocumentType = value!);
-            },
-          ),
-          const SizedBox(height: 24),
-
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _isSending ? null : _sendEReceipt,
-                  icon: _isSending
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(LucideIcons.send, size: 16),
-                  label: Text(_isSending ? "SENDING..." : "SEND EMAIL"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8B5CF6),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              OutlinedButton.icon(
-                onPressed: _clearForm,
-                icon: const Icon(LucideIcons.x, size: 16),
-                label: const Text("CLEAR"),
-              ),
-            ],
-          ),
-        ],
-      ),
+        ElevatedButton.icon(
+          onPressed: _refreshDashboard,
+          icon: const Icon(LucideIcons.refreshCw, size: 16),
+          label: const Text("SYNC DATA"),
+          style: ElevatedButton.styleFrom(
+              backgroundColor: aViolet,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 15)),
+        )
+      ],
     );
   }
 
-  Widget _buildDocumentSearch(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Search Documents",
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          TextFormField(
-            controller: _searchController,
-            style: TextStyle(
-              color: widget.isDarkMode ? Colors.white : Colors.black87,
-            ),
-            decoration: InputDecoration(
-              labelText: "Search by ID, Name, or Email",
-              labelStyle: TextStyle(
-                color: widget.isDarkMode ? Colors.white70 : Colors.black87,
-              ),
-              hintText: "Enter search term...",
-              hintStyle: TextStyle(
-                color: widget.isDarkMode ? Colors.white38 : Colors.grey,
-              ),
-              prefixIcon: Icon(
-                LucideIcons.search,
-                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: widget.isDarkMode
-                      ? Colors.white24
-                      : Colors.grey.shade300,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Color(0xFF8B5CF6),
-                  width: 2,
-                ),
-              ),
-              suffixIcon: IconButton(
-                onPressed: () {
-                  if (_searchController.text.isNotEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Search completed"),
-                        backgroundColor: Color(0xFF69F0AE),
-                      ),
-                    );
-                  }
-                },
-                icon: Icon(
-                  LucideIcons.search,
-                  color: widget.isDarkMode ? Colors.white54 : Colors.grey,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          Text(
-            "Quick Actions",
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          _quickActionButton(
-            "Pending Approvals",
-            "5 requests",
-            LucideIcons.clock,
-            Colors.orangeAccent,
-            textColor,
-            subTextColor,
-            isActive: _activeQuickAction == 'pending',
-            onTap: () => _toggleQuickAction('pending'),
-          ),
-          const SizedBox(height: 8),
-
-          _quickActionButton(
-            "Approved Today",
-            "12 documents",
-            LucideIcons.checkCircle,
-            const Color(0xFF69F0AE),
-            textColor,
-            subTextColor,
-            isActive: _activeQuickAction == 'approved',
-            onTap: () => _toggleQuickAction('approved'),
-          ),
-          const SizedBox(height: 8),
-
-          _quickActionButton(
-            "Rejected Requests",
-            "2 requests",
-            LucideIcons.xCircle,
-            Colors.redAccent,
-            textColor,
-            subTextColor,
-            isActive: _activeQuickAction == 'rejected',
-            onTap: () => _toggleQuickAction('rejected'),
-          ),
-        ],
-      ),
+  Widget _buildStatGrid(Color textColor) {
+    return Row(
+      children: [
+        _statCard("Total Collections", _totalCollections,
+            LucideIcons.trendingUp, success),
+        const SizedBox(width: 20),
+        _statCard("Receivables", _pendingReceivables, LucideIcons.clock,
+            Colors.orangeAccent),
+        const SizedBox(width: 20),
+        _statCard("Pending Clearances", _pendingClearances.toDouble(),
+            LucideIcons.fileCheck, aViolet,
+            isCurrency: false),
+      ],
     );
   }
 
-  Widget _quickActionButton(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    Color textColor,
-    Color subTextColor, {
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    final baseColor = widget.isDarkMode
-        ? Colors.white.withOpacity(0.05)
-        : Colors.grey.withOpacity(0.05);
-    final activeColor = widget.isDarkMode
-        ? Colors.white.withOpacity(0.12)
-        : Colors.grey.withOpacity(0.12);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+  Widget _statCard(String label, double val, IconData icon, Color color,
+      {bool isCurrency = true}) {
+    return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isActive ? activeColor : baseColor,
-          borderRadius: BorderRadius.circular(12),
+          color:
+              widget.isDarkMode ? Colors.white.withOpacity(0.03) : Colors.white,
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isActive
-                ? (widget.isDarkMode ? Colors.white24 : Colors.black26)
-                : (widget.isDarkMode ? Colors.white10 : Colors.black12),
-          ),
+              color: widget.isDarkMode
+                  ? Colors.white10
+                  : Colors.black.withOpacity(0.05)),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12)),
               child: Icon(icon, color: color, size: 20),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(color: subTextColor, fontSize: 12),
-                  ),
-                ],
-              ),
+            const SizedBox(height: 20),
+            Text(
+              isCurrency
+                  ? "₱${NumberFormat('#,###').format(val)}"
+                  : val.toInt().toString(),
+              style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: widget.isDarkMode ? Colors.white : Colors.black),
             ),
-            Icon(
-              LucideIcons.chevronRight,
-              color: widget.isDarkMode ? Colors.white54 : Colors.grey,
-            ),
+            Text(label,
+                style: const TextStyle(
+                    color: Colors.blueGrey,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRecentDocuments(
-    Color cardColor,
-    Color textColor,
-    Color subTextColor,
-  ) {
-    final documents = [
-      {
-        'id': 'DOC-001',
-        'type': 'E-Receipt',
-        'student': '2024-001',
-        'email': 'student1@university.edu',
-        'status': 'Sent',
-        'date': 'Today, 10:30 AM',
-      },
-      {
-        'id': 'DOC-002',
-        'type': 'Financial Clearance',
-        'student': '2024-002',
-        'email': 'student2@university.edu',
-        'status': 'Pending',
-        'date': 'Today, 9:15 AM',
-      },
-      {
-        'id': 'DOC-003',
-        'type': 'Certificate of Payment',
-        'student': '2024-003',
-        'email': 'student3@university.edu',
-        'status': 'Approved',
-        'date': 'Yesterday, 3:45 PM',
-      },
-    ];
-
-    final filteredDocuments = _filterDocuments(documents);
-
+  Widget _buildFinancialGraph(Color cardColor, Color textColor) {
     return Container(
+      height: 350,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
-        ),
+            color: widget.isDarkMode
+                ? Colors.white10
+                : Colors.black.withOpacity(0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Recent Documents",
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("Collection Trends (Monthly)",
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold, color: textColor)),
+              const Icon(LucideIcons.barChart3, color: aViolet, size: 20),
+            ],
           ),
-          const SizedBox(height: 16),
-          if (filteredDocuments.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                "No documents found for this filter.",
-                style: GoogleFonts.inter(color: subTextColor, fontSize: 12),
-              ),
-            )
-          else
-            ...filteredDocuments.map(
-              (doc) => _documentCard(doc, textColor, subTextColor),
-            ),
+          const SizedBox(height: 40),
+          Expanded(
+            child: _monthlyTrends.isEmpty
+                ? const Center(
+                    child: Text("Insufficient data for trends.",
+                        style: TextStyle(color: Colors.blueGrey)))
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: _monthlyTrends.map((data) {
+                      double heightFactor =
+                          (data['value'] / _totalCollections).clamp(0.1, 1.0);
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Tooltip(
+                            message:
+                                "₱${NumberFormat('#,###').format(data['value'])}",
+                            child: Container(
+                              width: 40,
+                              height: 180 * heightFactor,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                    colors: [aViolet, Color(0xFFC084FC)],
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(data['month'],
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blueGrey)),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _documentCard(
-    Map<String, String> doc,
-    Color textColor,
-    Color subTextColor,
-  ) {
-    Color statusColor;
-    IconData statusIcon;
-
-    switch (doc['status']) {
-      case 'Sent':
-        statusColor = const Color(0xFF69F0AE);
-        statusIcon = LucideIcons.send;
-        break;
-      case 'Approved':
-        statusColor = const Color(0xFF8B5CF6);
-        statusIcon = LucideIcons.checkCircle;
-        break;
-      default:
-        statusColor = Colors.orangeAccent;
-        statusIcon = LucideIcons.clock;
-    }
-
+  Widget _buildRecentActivity(Color cardColor, Color textColor) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      height: 350,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: widget.isDarkMode
-            ? Colors.white.withOpacity(0.05)
-            : Colors.grey.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: widget.isDarkMode ? Colors.white10 : Colors.black12,
-        ),
+            color: widget.isDarkMode
+                ? Colors.white10
+                : Colors.black.withOpacity(0.05)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text("Recent Transactions",
+              style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold, color: textColor)),
+          const SizedBox(height: 20),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: ListView.separated(
+              itemCount: _recentTransactions.length,
+              separatorBuilder: (_, __) =>
+                  const Divider(color: Colors.white10, height: 24),
+              itemBuilder: (context, i) {
+                final tx = _recentTransactions[i];
+                return Row(
                   children: [
-                    Text(
-                      doc['id']!,
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
+                    CircleAvatar(
+                      backgroundColor: tx['status'] == 'Success'
+                          ? success.withOpacity(0.1)
+                          : Colors.orange.withOpacity(0.1),
+                      radius: 18,
+                      child: Icon(
+                          tx['status'] == 'Success'
+                              ? LucideIcons.check
+                              : LucideIcons.clock,
+                          color: tx['status'] == 'Success'
+                              ? success
+                              : Colors.orange,
+                          size: 14),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(statusIcon, color: statusColor, size: 12),
-                          const SizedBox(width: 4),
                           Text(
-                            doc['status']!,
-                            style: GoogleFonts.inter(
-                              color: statusColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                              "${tx['profiles']['fn']} ${tx['profiles']['ln']}",
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text(
+                              DateFormat('MMMM dd')
+                                  .format(DateTime.parse(tx['created_at'])),
+                              style: const TextStyle(
+                                  color: Colors.blueGrey, fontSize: 11)),
                         ],
                       ),
                     ),
+                    Text("₱${tx['amount']}",
+                        style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w900, fontSize: 13)),
                   ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "${doc['type']} - ${doc['student']}",
-                  style: GoogleFonts.inter(color: textColor),
-                ),
-                Text(
-                  doc['email']!,
-                  style: GoogleFonts.inter(color: subTextColor, fontSize: 12),
-                ),
-                Text(
-                  doc['date']!,
-                  style: GoogleFonts.inter(color: subTextColor, fontSize: 12),
-                ),
-              ],
+                );
+              },
             ),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            children: [
-              IconButton(
-                onPressed: () => _showApprovalBasis(doc['id']!),
-                icon: const Icon(LucideIcons.eye),
-                tooltip: "View Approval Basis",
-              ),
-              IconButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Document downloaded"),
-                      backgroundColor: Color(0xFF69F0AE),
-                    ),
-                  );
-                },
-                icon: const Icon(LucideIcons.download),
-                tooltip: "Download",
-              ),
-            ],
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildClearanceSection(Color cardColor, Color textColor) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: aViolet.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(LucideIcons.shieldCheck, color: aViolet),
+              const SizedBox(width: 12),
+              Text("Financial Clearance Queue",
+                  style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor)),
+              const Spacer(),
+              Text("$_pendingClearances PENDING",
+                  style: const TextStyle(
+                      color: Colors.orangeAccent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1)),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+              "Verify student eligibility based on real-time academic standing and account balances.",
+              style: TextStyle(color: Colors.blueGrey, fontSize: 13)),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: 250,
+            child: ElevatedButton(
+              onPressed: widget.onNavigateToFeeManagement,
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white12, foregroundColor: textColor),
+              child: const Text("OPEN CLEARANCE MODULE"),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _showToast(String m, Color c) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m),
+        backgroundColor: c,
+        behavior: SnackBarBehavior.floating));
   }
 }
