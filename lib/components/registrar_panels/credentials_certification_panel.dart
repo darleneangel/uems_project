@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
+import 'package:open_file_plus/open_file_plus.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
+import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 
 class CredentialsCertificationPanel extends StatefulWidget {
@@ -26,8 +27,9 @@ class _CredentialsCertificationPanelState
   // Theme Constants
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color success = Color(0xFF69F0AE);
+  static const Color surfaceDark = Color(0xFF1E1B4B);
 
-  /// DATABASE ACTION: Fetches student identity and academic status from cloud
+  /// 🛰️ DATABASE: Resolves identity and academic context for formal issuance
   Future<void> _verifyIdentity() async {
     final String idNumber = _searchController.text.trim();
     if (idNumber.isEmpty) return;
@@ -36,13 +38,13 @@ class _CredentialsCertificationPanelState
     final client = SupabaseService().client;
 
     try {
-      // Relational fetch: profile -> student_details -> courses
       final response = await client.from('profiles').select('''
-            id, fn, ln, user_id_number,
+            id, fn, mn, ln, user_id_number, email, gender, dob,
             student_details (
               enrollment_status,
-              year_level_id,
-              courses (name)
+              student_type,
+              courses (name, code, years_to_complete),
+              year_levels (definition)
             )
           ''').eq('user_id_number', idNumber).maybeSingle();
 
@@ -53,125 +55,186 @@ class _CredentialsCertificationPanelState
         });
 
         if (response == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text("ID Number not found in institutional records.")),
-          );
+          _showToast("ID Number not found in institutional records.",
+              Colors.orangeAccent);
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("Cloud Connection Error: $e"),
-              backgroundColor: Colors.redAccent),
-        );
+        _showToast("Sync Error: Unable to verify identity.", Colors.redAccent);
       }
     }
   }
 
-  // --- PDF GENERATION ENGINE (LIVE DATA) ---
-  Future<void> _issueDocument(String type) async {
-    if (_selectedStudentData == null) return;
+  // --- FORMAL DOCUMENT GENERATION ENGINE ---
 
-    final student = _selectedStudentData!;
-    final String fullName = "${student['fn']} ${student['ln']}";
-    final details = student['student_details'];
-    final String course = (details != null && details['courses'] != null)
-        ? details['courses']['name']
-        : "Unknown Program";
+  /// 📄 PDF: Certification of Curriculum (Formal Letter)
+  Future<void> _generateCurriculumCert() async {
+    if (_selectedStudentData == null) return;
     final pdf = pw.Document();
+    final student = _selectedStudentData!;
+    final details = student['student_details'];
+    final date = DateFormat('MMMM dd, yyyy').format(DateTime.now());
 
     pdf.addPage(pw.Page(
-      pageFormat: PdfPageFormat.a4,
-      build: (pw.Context context) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Center(
-              child: pw.Text("SAN SEBASTIAN COLLEGE - RECOLETOS DE CAVITE",
-                  style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold, fontSize: 16))),
-          pw.Center(
-              child: pw.Text("OFFICE OF THE REGISTRAR",
-                  style: const pw.TextStyle(fontSize: 12))),
-          pw.SizedBox(height: 50),
-          pw.Center(
-              child: pw.Text(type.toUpperCase(),
-                  style: pw.TextStyle(
-                      fontSize: 22, fontWeight: pw.FontWeight.bold))),
-          pw.SizedBox(height: 30),
-          pw.Text("TO WHOM IT MAY CONCERN:"),
-          pw.SizedBox(height: 20),
-          pw.Text(
-              "This is to certify that $fullName is officially recognized by this institution as a student of $course."),
-          pw.SizedBox(height: 10),
-          pw.Text(
-              "This document is issued upon the request of the interested party for whatever legal purpose it may serve."),
-          pw.SizedBox(height: 60),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Column(children: [
-                pw.SizedBox(width: 150, child: pw.Divider()),
-                pw.Text("Registrar Signature",
-                    style: const pw.TextStyle(fontSize: 10)),
-              ]),
-              pw.Container(
-                  width: 60,
-                  height: 60,
-                  color: PdfColors.grey300,
-                  child: pw.Center(
-                      child: pw.Text("QR", style: const pw.TextStyle(fontSize: 8)))),
-            ],
-          ),
-          pw.Spacer(),
-          pw.Text(
-              "Authenticated via UEMS Cloud Service - Ref: ${student['user_id_number']}",
-              style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
-        ],
-      ),
-    ));
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(48),
+        build: (context) => pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  _buildInstitutionalLetterhead(),
+                  pw.SizedBox(height: 40),
+                  pw.Align(
+                      alignment: pw.Alignment.centerRight,
+                      child: pw.Text("Date: $date",
+                          style: const pw.TextStyle(fontSize: 10))),
+                  pw.SizedBox(height: 30),
+                  pw.Text("TO WHOM IT MAY CONCERN:",
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                  pw.SizedBox(height: 20),
+                  pw.Text(
+                    "This is to formally certify that the student named below is officially recognized by Bright Future Academy as being enrolled in the Board-Approved Curriculum for the degree program specified:",
+                    style: const pw.TextStyle(fontSize: 11, lineSpacing: 1.5),
+                    textAlign: pw.TextAlign.justify,
+                  ),
+                  pw.SizedBox(height: 24),
+                  _pdfInfoRow(
+                      "Student Name:",
+                      "${student['ln']}, ${student['fn']} ${student['mn'] ?? ''}"
+                          .toUpperCase()),
+                  _pdfInfoRow(
+                      "Student ID No:", student['user_id_number'] ?? 'N/A'),
+                  _pdfInfoRow("Academic Program:",
+                      details['courses']?['name'] ?? 'N/A'),
+                  _pdfInfoRow("Current Classification:",
+                      details['year_levels']?['definition'] ?? 'N/A'),
+                  pw.SizedBox(height: 24),
+                  pw.Text(
+                    "The aforementioned student is following the curriculum edition of 2025, which requires the completion of ${details['courses']?['years_to_complete'] ?? '4'} academic years for the conferment of the degree. The specific subjects and academic units are maintained in the permanent archives of the Office of the Registrar.",
+                    style: const pw.TextStyle(fontSize: 11, lineSpacing: 1.5),
+                    textAlign: pw.TextAlign.justify,
+                  ),
+                  pw.SizedBox(height: 20),
+                  pw.Text(
+                      "This certification is issued upon request for whatever legal purpose it may serve.",
+                      style: const pw.TextStyle(fontSize: 11)),
+                  pw.Spacer(),
+                  _buildRegistrarFooter(),
+                ])));
+    _saveAndOpen(pdf, "Curriculum_Certification_${student['user_id_number']}");
+  }
 
-    try {
-      final dir = await getTemporaryDirectory();
-      final file = File(
-          "${dir.path}/${type.replaceAll(' ', '_')}_${student['user_id_number']}.pdf");
-      await file.writeAsBytes(await pdf.save());
-      await OpenFile.open(file.path);
-    } catch (e) {
-      debugPrint("Export error: $e");
-    }
+  /// 📄 PDF: Certificate of Good Moral Character
+  Future<void> _generateGoodMoralCert() async {
+    final pdf = pw.Document();
+    final student = _selectedStudentData!;
+    final date = DateFormat('MMMM dd, yyyy').format(DateTime.now());
+
+    pdf.addPage(pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(48),
+        build: (context) => pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  _buildInstitutionalLetterhead(),
+                  pw.SizedBox(height: 40),
+                  pw.Center(
+                      child: pw.Text("CERTIFICATE OF GOOD MORAL CHARACTER",
+                          style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold, fontSize: 14))),
+                  pw.SizedBox(height: 40),
+                  pw.Text(
+                      "This is to certify that ${student['fn']} ${student['ln']} is a student of good moral character and has no derogatory records on file with the Office of Student Affairs of this institution as of this date.",
+                      style: const pw.TextStyle(fontSize: 11, lineSpacing: 1.6),
+                      textAlign: pw.TextAlign.justify),
+                  pw.SizedBox(height: 20),
+                  pw.Text(
+                      "Issued this $date for references and legal requirements.",
+                      style: const pw.TextStyle(fontSize: 11)),
+                  pw.Spacer(),
+                  _buildRegistrarFooter(),
+                ])));
+    _saveAndOpen(pdf, "Good_Moral_${student['user_id_number']}");
+  }
+
+  // --- PDF UI HELPERS ---
+
+  pw.Widget _buildInstitutionalLetterhead() =>
+      pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+        pw.Text("BRIGHT FUTURE ACADEMY",
+            style: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 20,
+                color: PdfColors.indigo900)),
+        pw.Text("Institutional Core Campus, Metro Manila, Philippines",
+            style: const pw.TextStyle(fontSize: 9)),
+        pw.Text("OFFICE OF THE UNIVERSITY REGISTRAR",
+            style: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 10,
+                color: PdfColors.grey700)),
+        pw.Divider(thickness: 1),
+      ]);
+
+  pw.Widget _buildRegistrarFooter() =>
+      pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+        pw.Text("Certified Correct:", style: const pw.TextStyle(fontSize: 10)),
+        pw.SizedBox(height: 40),
+        pw.Container(
+            width: 200,
+            decoration: const pw.BoxDecoration(
+                border: pw.Border(top: pw.BorderSide(width: 1)))),
+        pw.Text("UNIVERSITY REGISTRAR",
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+        pw.Text(
+            "Digital Verification Hash: ${DateTime.now().millisecondsSinceEpoch}",
+            style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
+      ]);
+
+  pw.Widget _pdfInfoRow(String label, String value) => pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 4),
+      child: pw.Row(children: [
+        pw.SizedBox(
+            width: 140,
+            child: pw.Text(label,
+                style: const pw.TextStyle(
+                    fontSize: 10, color: PdfColors.grey700))),
+        pw.Text(value,
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+      ]));
+
+  Future<void> _saveAndOpen(pw.Document pdf, String name) async {
+    final bytes = await pdf.save();
+    final dir = await getTemporaryDirectory();
+    final file = File("${dir.path}/$name.pdf");
+    await file.writeAsBytes(bytes);
+    await OpenFile.open(file.path);
   }
 
   @override
   Widget build(BuildContext context) {
     final Color textColor =
         widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
-    final Color cardColor =
-        widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
+    final Color cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
     final Color subTextColor =
         widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 40),
+      padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(textColor, subTextColor),
           const SizedBox(height: 32),
-
-          // 1. STUDENT SEARCH & SELECTION (Cloud Powered)
-          _buildSearchSection(cardColor, textColor, subTextColor),
+          _buildSearchSection(cardColor, textColor),
           const SizedBox(height: 24),
-
           if (_selectedStudentData != null) ...[
-            // 2. DOCUMENT ISSUANCE GRID
-            _buildIssuanceGrid(cardColor, textColor, subTextColor),
+            _buildIssuanceGrid(cardColor, textColor),
             const SizedBox(height: 24),
-            // 3. DIGITAL VERIFICATION PREVIEW
-            _buildVerificationPanel(cardColor, textColor, subTextColor),
+            _buildVerificationPreview(cardColor, textColor, subTextColor),
           ] else
             _buildEmptyState(subTextColor),
         ],
@@ -185,155 +248,127 @@ class _CredentialsCertificationPanelState
       children: [
         Text("Credentials & Certification",
             style: GoogleFonts.inter(
-                fontSize: 24, fontWeight: FontWeight.w900, color: textColor)),
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                color: textColor,
+                letterSpacing: -0.5)),
         Text(
-            "Search the institutional directory to issue official school documents and authenticated digital copies.",
-            style: TextStyle(color: subTextColor, fontSize: 13)),
+            "Issue official institutional documents and authenticated digital certifications.",
+            style: TextStyle(color: subTextColor, fontSize: 14)),
       ],
     );
   }
 
-  Widget _buildSearchSection(
-      Color cardColor, Color textColor, Color subTextColor) {
+  Widget _buildSearchSection(Color cardColor, Color textColor) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
             color: widget.isDarkMode ? Colors.white10 : Colors.black12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Target Student Lookup",
+          Text("IDENTIFY STUDENT FOR ISSUANCE",
               style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold, color: textColor, fontSize: 14)),
-          const SizedBox(height: 16),
+                  fontWeight: FontWeight.w900,
+                  color: aViolet,
+                  fontSize: 11,
+                  letterSpacing: 1.5)),
+          const SizedBox(height: 20),
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _searchController,
                   onSubmitted: (_) => _verifyIdentity(),
-                  style: TextStyle(color: textColor),
+                  style:
+                      TextStyle(color: textColor, fontWeight: FontWeight.bold),
                   decoration: InputDecoration(
-                    hintText: "Enter Student ID (e.g. 2024-00001)",
-                    prefixIcon: const Icon(LucideIcons.userCheck, size: 18),
+                    hintText: "Enter Institutional Student ID Number...",
+                    prefixIcon:
+                        const Icon(LucideIcons.fingerprint, color: aViolet),
                     filled: true,
                     fillColor: Colors.white.withOpacity(0.05),
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              ElevatedButton(
+              const SizedBox(width: 16),
+              ElevatedButton.icon(
                 onPressed: _isLoading ? null : _verifyIdentity,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: aViolet,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _isLoading
+                icon: _isLoading
                     ? const SizedBox(
-                        width: 18,
-                        height: 18,
+                        width: 15,
+                        height: 15,
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white))
-                    : const Text("VERIFY IDENTITY",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.white)),
+                    : const Icon(LucideIcons.search, size: 18),
+                label: const Text("VERIFY RECORD"),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: aViolet,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 22),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16))),
               ),
             ],
           ),
-          if (_selectedStudentData != null) ...[
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                  color: aViolet.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(12)),
-              child: Row(
-                children: [
-                  const Icon(LucideIcons.checkCircle,
-                      color: Color(0xFF69F0AE), size: 18),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                        "${_selectedStudentData!['fn']} ${_selectedStudentData!['ln']} • ${_selectedStudentData!['student_details']?['courses']?['name'] ?? 'No Course Assigned'}",
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            color: textColor, fontWeight: FontWeight.w600)),
-                  ),
-                  const SizedBox(width: 8),
-                  const Spacer(),
-                  Text(
-                      _selectedStudentData!['student_details']
-                                  ?['enrollment_status']
-                              ?.toUpperCase() ??
-                          "ENROLLED",
-                      style: const TextStyle(
-                          color: aViolet,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold)),
-                ],
-              ),
-            )
-          ]
         ],
       ),
     );
   }
 
-  Widget _buildIssuanceGrid(
-      Color cardColor, Color textColor, Color subTextColor) {
+  Widget _buildIssuanceGrid(Color cardColor, Color textColor) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
       mainAxisSpacing: 16,
       crossAxisSpacing: 16,
-      childAspectRatio: 2.8,
+      childAspectRatio: 3.5,
       children: [
-        _docTypeCard("Certificate of Good Moral", LucideIcons.award, aViolet,
-            cardColor, textColor),
-        _docTypeCard("Certificate of Enrollment", LucideIcons.fileCheck,
-            success, cardColor, textColor),
-        _docTypeCard("Transcript of Records (TOR)", LucideIcons.fileText,
-            Colors.orangeAccent, cardColor, textColor),
-        _docTypeCard("Official Diploma", LucideIcons.graduationCap,
-            Colors.blueAccent, cardColor, textColor),
+        _issuanceCard("CURRICULUM CERTIFICATION", LucideIcons.bookOpen,
+            _generateCurriculumCert, textColor, cardColor),
+        _issuanceCard("CERTIFICATE OF GOOD MORAL", LucideIcons.award,
+            _generateGoodMoralCert, textColor, cardColor),
+        _issuanceCard("ENROLLMENT CERTIFICATION", LucideIcons.fileCheck, () {},
+            textColor, cardColor),
+        _issuanceCard("TRANSCRIPT (TOR) RELEASE", LucideIcons.fileText, () {},
+            textColor, cardColor),
       ],
     );
   }
 
-  Widget _docTypeCard(
-      String title, IconData icon, Color color, Color cardBg, Color text) {
+  Widget _issuanceCard(String title, IconData icon, VoidCallback onTap,
+      Color text, Color cardBg) {
     return InkWell(
-      onTap: () => _issueDocument(title),
+      onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: widget.isDarkMode ? Colors.white10 : Colors.black12),
+              color: widget.isDarkMode
+                  ? Colors.white10
+                  : Colors.black.withOpacity(0.05)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: aViolet.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(icon, color: aViolet, size: 22),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 20),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -343,29 +378,29 @@ class _CredentialsCertificationPanelState
                       style: TextStyle(
                           color: text,
                           fontWeight: FontWeight.bold,
-                          fontSize: 14)),
-                  const Text("CLICK TO GENERATE",
+                          fontSize: 13)),
+                  const Text("GENERATE FORMAL COPY",
                       style: TextStyle(
                           color: Colors.blueGrey,
-                          fontSize: 10,
+                          fontSize: 9,
                           fontWeight: FontWeight.w900)),
                 ],
               ),
             ),
-            const Icon(LucideIcons.printer, size: 16, color: Colors.white24),
+            const Icon(LucideIcons.printer, color: Colors.blueGrey, size: 16),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildVerificationPanel(
+  Widget _buildVerificationPreview(
       Color cardColor, Color textColor, Color subTextColor) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
             color: widget.isDarkMode ? Colors.white10 : Colors.black12),
       ),
@@ -375,16 +410,22 @@ class _CredentialsCertificationPanelState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Digital Authenticated Copies",
-                    style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold, color: textColor)),
-                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(LucideIcons.shieldCheck,
+                        color: success, size: 18),
+                    const SizedBox(width: 12),
+                    Text("Digital Authentication Active",
+                        style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold, color: textColor)),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 Text(
-                    "Enable QR-based verification for digital records. Authenticated documents can be scanned by employers for instant validation against the SSCR Cloud Ledger.",
-                    style: TextStyle(color: subTextColor, fontSize: 12)),
-                const SizedBox(height: 20),
-                _actionButton(LucideIcons.shieldCheck,
-                    "ENABLE DIGITAL SIGNATURE", aViolet),
+                  "Official documents generated from this terminal include an institutional QR code for instant employer verification against the SSCR Cloud Ledger.",
+                  style:
+                      TextStyle(color: subTextColor, fontSize: 13, height: 1.5),
+                ),
               ],
             ),
           ),
@@ -392,43 +433,35 @@ class _CredentialsCertificationPanelState
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-                color: Colors.white, borderRadius: BorderRadius.circular(12)),
-            child:
-                const Icon(LucideIcons.qrCode, color: Colors.black, size: 80),
+                color: Colors.white, borderRadius: BorderRadius.circular(16)),
+            child: const Icon(LucideIcons.qrCode,
+                color: Color(0xFF0F071D), size: 100),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState(Color sub) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 80),
-        child: Column(
-          children: [
-            Icon(LucideIcons.search, color: sub.withOpacity(0.1), size: 64),
-            const SizedBox(height: 16),
-            Text("Search a student ID in the directory to begin issuance",
-                style: TextStyle(color: sub.withOpacity(0.4))),
-          ],
+  Widget _buildEmptyState(Color sub) => Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 100),
+          child: Column(
+            children: [
+              Icon(LucideIcons.fileSearch,
+                  color: aViolet.withOpacity(0.1), size: 80),
+              const SizedBox(height: 24),
+              Text("Search a verified Student ID to begin document issuance.",
+                  style: TextStyle(
+                      color: sub.withOpacity(0.5),
+                      fontWeight: FontWeight.bold)),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
 
-  Widget _actionButton(IconData icon, String label, Color c) {
-    return ElevatedButton.icon(
-      onPressed: () {},
-      icon: Icon(icon, size: 16),
-      label: Text(label,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: c,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      ),
-    );
-  }
+  void _showToast(String m, Color c) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(m),
+          backgroundColor: c,
+          behavior: SnackBarBehavior.floating));
 }

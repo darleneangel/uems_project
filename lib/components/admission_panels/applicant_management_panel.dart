@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 
 class ApplicationsManagementPanel extends StatefulWidget {
@@ -24,10 +26,20 @@ class _ApplicationsManagementPanelState
   List<Map<String, dynamic>> _courses = [];
   bool _isLoading = true;
 
+  // --- FILTER STATES ---
+  String _selectedStatus = 'All'; // Default to All
+  final List<String> _filterOptions = [
+    'All',
+    'Pending',
+    'Admitted',
+    'Enrolled',
+    'Archived'
+  ];
+
   @override
   void initState() {
     super.initState();
-    _fetchApplicants();
+    _fetchRegistry();
     _fetchCourses();
   }
 
@@ -41,7 +53,8 @@ class _ApplicationsManagementPanelState
     }
   }
 
-  Future<void> _fetchApplicants() async {
+  Future<void> _fetchRegistry() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final response = await _service.client
@@ -60,14 +73,56 @@ class _ApplicationsManagementPanelState
     }
   }
 
-  /// 📝 PRE-REGISTRATION FORM DIALOG
+  /// 📐 SMART FILTER ENGINE
+  /// Logic:
+  /// 1. Filters by Search Term (Real-time).
+  /// 2. If 'Archived' is selected, show only records > 30 days old.
+  /// 3. If 'All' is selected, show all records <= 30 days old.
+  /// 4. Otherwise, show records <= 30 days old matching the specific status.
+  List<Map<String, dynamic>> get _filteredApplicants {
+    final now = DateTime.now();
+
+    return _applicants.where((app) {
+      final String first = (app['fn'] ?? '').toString().toLowerCase();
+      final String last = (app['ln'] ?? '').toString().toLowerCase();
+      final String appNo =
+          (app['application_no'] ?? '').toString().toLowerCase();
+      final String query = _searchController.text.toLowerCase();
+
+      // Real-time Search Match
+      final bool matchesSearch = first.contains(query) ||
+          last.contains(query) ||
+          appNo.contains(query);
+      if (!matchesSearch) return false;
+
+      // Automated Archival Logic
+      final createdAt = DateTime.tryParse(app['created_at'] ?? '') ?? now;
+      final int ageInDays = now.difference(createdAt).inDays;
+      final bool isArchived = ageInDays > 30;
+
+      if (_selectedStatus == 'Archived') {
+        return isArchived;
+      } else {
+        // Exclude archived records from all active views
+        if (isArchived) return false;
+
+        // Handle "All" active filter
+        if (_selectedStatus == 'All') return true;
+
+        // Handle specific status filters
+        final String status = app['status'] ?? 'Pending';
+        return status.toLowerCase() == _selectedStatus.toLowerCase();
+      }
+    }).toList();
+  }
+
+  /// 📝 INTAKE FORM: Validates all institutional identity requirements
   void _showPreRegistrationForm() {
     final formKey = GlobalKey<FormState>();
     String? selectedCourseId;
     String selectedCategory = "New Student";
     String gender = "Male";
 
-    final idCtrl = TextEditingController();
     final fnCtrl = TextEditingController();
     final lnCtrl = TextEditingController();
     final mnCtrl = TextEditingController();
@@ -88,7 +143,7 @@ class _ApplicationsManagementPanelState
             children: [
               const Icon(LucideIcons.userPlus, color: Color(0xFF8B5CF6)),
               const SizedBox(width: 12),
-              Text("Pre-Registration Form",
+              Text("Applicant Intake Form",
                   style: GoogleFonts.inter(
                       fontWeight: FontWeight.w900, color: Colors.white)),
             ],
@@ -101,49 +156,27 @@ class _ApplicationsManagementPanelState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("ACADEMIC CLASSIFICATION",
-                        style: TextStyle(
-                            color: Colors.blueGrey,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.5)),
+                    _sectionLabel("ACADEMIC CLASSIFICATION"),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            initialValue: selectedCategory,
-                            dropdownColor: const Color(0xFF1E1B4B),
-                            style: const TextStyle(color: Colors.white),
-                            decoration: _fieldInput("Category"),
-                            items: ["New Student", "Returnee", "Transferee"]
-                                .map((e) =>
-                                    DropdownMenuItem(value: e, child: Text(e)))
-                                .toList(),
-                            onChanged: (v) => setModalState(() {
-                              selectedCategory = v!;
-                              if (v != "Returnee") idCtrl.clear();
-                            }),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: idCtrl,
-                            enabled: selectedCategory == "Returnee",
-                            style: const TextStyle(color: Colors.white),
-                            decoration:
-                                _fieldInput("Student ID (Returnees Only)"),
-                          ),
-                        ),
-                      ],
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedCategory,
+                      dropdownColor: const Color(0xFF1E1B4B),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _fieldInput("Entry Category"),
+                      items: ["New Student", "Returnee", "Transferee"]
+                          .map(
+                              (e) => DropdownMenuItem(value: e, child: Text(e)))
+                          .toList(),
+                      onChanged: (v) =>
+                          setModalState(() => selectedCategory = v!),
+                      validator: (v) => v == null ? "Required" : null,
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      initialValue: selectedCourseId,
+                      value: selectedCourseId,
                       dropdownColor: const Color(0xFF1E1B4B),
                       style: const TextStyle(color: Colors.white),
-                      decoration: _fieldInput("Target Course / Program"),
+                      decoration: _fieldInput("Target Program of Choice"),
                       items: _courses
                           .map((c) => DropdownMenuItem(
                               value: c['id'].toString(),
@@ -151,14 +184,11 @@ class _ApplicationsManagementPanelState
                           .toList(),
                       onChanged: (v) =>
                           setModalState(() => selectedCourseId = v),
+                      validator: (v) =>
+                          v == null ? "Program selection required" : null,
                     ),
                     const SizedBox(height: 32),
-                    const Text("PERSONAL INFORMATION",
-                        style: TextStyle(
-                            color: Colors.blueGrey,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.5)),
+                    _sectionLabel("LEGAL PERSONAL IDENTITY"),
                     const SizedBox(height: 16),
                     Row(
                       children: [
@@ -166,13 +196,17 @@ class _ApplicationsManagementPanelState
                             child: TextFormField(
                                 controller: fnCtrl,
                                 style: const TextStyle(color: Colors.white),
-                                decoration: _fieldInput("First Name"))),
+                                decoration: _fieldInput("First Name *"),
+                                validator: (v) => (v == null || v.isEmpty)
+                                    ? "Required"
+                                    : null)),
                         const SizedBox(width: 12),
                         Expanded(
                             child: TextFormField(
                                 controller: mnCtrl,
                                 style: const TextStyle(color: Colors.white),
-                                decoration: _fieldInput("Middle Name"))),
+                                decoration:
+                                    _fieldInput("Middle Name (Optional)"))),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -182,13 +216,16 @@ class _ApplicationsManagementPanelState
                             child: TextFormField(
                                 controller: lnCtrl,
                                 style: const TextStyle(color: Colors.white),
-                                decoration: _fieldInput("Last Name"))),
+                                decoration: _fieldInput("Last Name *"),
+                                validator: (v) => (v == null || v.isEmpty)
+                                    ? "Required"
+                                    : null)),
                         const SizedBox(width: 12),
                         Expanded(
                             child: TextFormField(
                                 controller: suffixCtrl,
                                 style: const TextStyle(color: Colors.white),
-                                decoration: _fieldInput("Suffix (Jr, III)"))),
+                                decoration: _fieldInput("Suffix (Optional)"))),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -221,11 +258,11 @@ class _ApplicationsManagementPanelState
                               }
                             },
                             child: InputDecorator(
-                              decoration: _fieldInput("Birthdate"),
+                              decoration: _fieldInput("Date of Birth *"),
                               child: Text(
                                   dob == null
                                       ? "Select Date"
-                                      : dob!.toString().split(' ')[0],
+                                      : DateFormat('yyyy-MM-dd').format(dob!),
                                   style: const TextStyle(color: Colors.white)),
                             ),
                           ),
@@ -239,13 +276,20 @@ class _ApplicationsManagementPanelState
                             child: TextFormField(
                                 controller: mobileCtrl,
                                 style: const TextStyle(color: Colors.white),
-                                decoration: _fieldInput("Mobile Number"))),
+                                decoration: _fieldInput("Contact Number *"),
+                                validator: (v) => (v == null || v.isEmpty)
+                                    ? "Required"
+                                    : null)),
                         const SizedBox(width: 12),
                         Expanded(
                             child: TextFormField(
                                 controller: emailCtrl,
                                 style: const TextStyle(color: Colors.white),
-                                decoration: _fieldInput("Email Address"))),
+                                decoration:
+                                    _fieldInput("Institutional Email *"),
+                                validator: (v) => (v == null || v.isEmpty)
+                                    ? "Required"
+                                    : null)),
                       ],
                     ),
                   ],
@@ -259,23 +303,32 @@ class _ApplicationsManagementPanelState
                 child: const Text("CANCEL",
                     style: TextStyle(color: Colors.blueGrey))),
             ElevatedButton(
-              onPressed: () => _submitPreRegistration(
-                context,
-                courseId: selectedCourseId!,
-                category: selectedCategory,
-                idNumber: idCtrl.text,
-                fn: fnCtrl.text,
-                ln: lnCtrl.text,
-                mn: mnCtrl.text,
-                suffix: suffixCtrl.text,
-                email: emailCtrl.text,
-                mobile: mobileCtrl.text,
-                gender: gender,
-                dob: dob,
-              ),
+              onPressed: () {
+                if (formKey.currentState!.validate() &&
+                    dob != null &&
+                    selectedCourseId != null) {
+                  _submitPreRegistration(
+                    context,
+                    courseId: selectedCourseId!,
+                    category: selectedCategory,
+                    fn: fnCtrl.text.trim(),
+                    ln: lnCtrl.text.trim(),
+                    mn: mnCtrl.text.trim(),
+                    suffix: suffixCtrl.text.trim(),
+                    email: emailCtrl.text.trim(),
+                    mobile: mobileCtrl.text.trim(),
+                    gender: gender,
+                    dob: dob!,
+                  );
+                } else if (dob == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text("Birthdate is required."),
+                      backgroundColor: Colors.orangeAccent));
+                }
+              },
               style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8B5CF6)),
-              child: const Text("SUBMIT APPLICATION"),
+              child: const Text("INTAKE APPLICANT"),
             ),
           ],
         ),
@@ -283,9 +336,16 @@ class _ApplicationsManagementPanelState
     );
   }
 
+  Widget _sectionLabel(String text) => Text(text,
+      style: const TextStyle(
+          color: Colors.blueGrey,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.5));
+
   InputDecoration _fieldInput(String label) => InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.blueGrey, fontSize: 12),
+        labelStyle: const TextStyle(color: Colors.blueGrey, fontSize: 11),
         filled: true,
         fillColor: Colors.white.withOpacity(0.05),
         border: OutlineInputBorder(
@@ -295,12 +355,11 @@ class _ApplicationsManagementPanelState
             const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       );
 
-  /// 🛰️ DATABASE: Save Applicant and Initialize Requirements Checklist
+  /// 🛰️ DATABASE: Saves pre-registration data
   Future<void> _submitPreRegistration(
     BuildContext context, {
     required String courseId,
     required String category,
-    String? idNumber,
     required String fn,
     required String ln,
     String? mn,
@@ -308,54 +367,55 @@ class _ApplicationsManagementPanelState
     required String email,
     required String mobile,
     required String gender,
-    DateTime? dob,
+    required DateTime dob,
   }) async {
     try {
       final appNo =
           "APP-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}";
 
-      // 1. Insert into Applicants Table
       final res = await _service.client
           .from('applicants')
           .insert({
             'application_no': appNo,
-            'full_name': "$ln, $fn ${mn ?? ''} ${suffix ?? ''}".trim(),
             'email': email,
             'applicant_type': category,
             'target_course_id': courseId,
             'status': 'Pending',
+            'fn': fn,
+            'mn': (mn == null || mn.isEmpty) ? '-' : mn,
+            'ln': ln,
+            'suffix': (suffix == null || suffix.isEmpty) ? 'N/A' : suffix,
+            'gender': gender,
+            'dob': DateFormat('yyyy-MM-dd').format(dob),
+            'phone': mobile,
           })
           .select()
           .single();
 
-      final String applicantId = res['id'];
-
-      // 2. Initialize Requirement Checklist
       final List<String> standardDocs = [
-        "FORM 138 (Report Card)",
-        "PSA Birth Certificate",
-        "Good Moral Character",
-        "Medical Clearance"
+        "FORM 138",
+        "PSA Birth Cert",
+        "Good Moral",
+        "Medical"
       ];
-      final requirementInserts = standardDocs
+      await _service.client.from('applicant_requirements').insert(standardDocs
           .map((doc) => {
-                'applicant_id': applicantId,
+                'applicant_id': res['id'],
                 'requirement_name': doc,
-                'is_verified': false,
+                'is_verified': false
               })
-          .toList();
+          .toList());
 
-      await _service.client
-          .from('applicant_requirements')
-          .insert(requirementInserts);
-
-      Navigator.pop(context);
-      _fetchApplicants();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          backgroundColor: Color(0xFF69F0AE),
-          content: Text("Pre-registration successful. Roster created.")));
+      if (mounted) {
+        Navigator.pop(context);
+        _fetchRegistry();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            backgroundColor: Color(0xFF69F0AE),
+            content: Text(
+                "Institutional record created. Applicant synced to registry.")));
+      }
     } catch (e) {
-      debugPrint("Pre-Reg Error: $e");
+      debugPrint("Intake Sync Error: $e");
     }
   }
 
@@ -366,85 +426,190 @@ class _ApplicationsManagementPanelState
     final cardColor =
         widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text("Applications Management",
-                style: GoogleFonts.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    color: textColor)),
-            Row(
-              children: [
-                _buildSearchField(cardColor, textColor),
-                const SizedBox(width: 16),
-                ElevatedButton.icon(
-                  onPressed: _showPreRegistrationForm,
-                  icon: const Icon(LucideIcons.userPlus),
-                  label: const Text("PRE-REGISTER STUDENT"),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF8B5CF6),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 20)),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
-        Expanded(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Container(
-                  decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white10)),
-                  child: ListView.builder(
-                    itemCount: _applicants.length,
-                    itemBuilder: (context, i) {
-                      final app = _applicants[i];
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
-                        title: Text(app['full_name'],
-                            style: TextStyle(
-                                color: textColor, fontWeight: FontWeight.bold)),
-                        subtitle: Text(
-                            "${app['email']} • ${app['applicant_type']}",
-                            style: const TextStyle(color: Colors.blueGrey)),
-                        trailing: Text(app['status'].toUpperCase(),
-                            style: const TextStyle(
-                                color: Color(0xFF8B5CF6),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12)),
-                      );
-                    },
-                  ),
-                ),
-        ),
-      ],
-    );
-  }
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Admission Registry",
+                      style: GoogleFonts.inter(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: textColor)),
+                  const Text(
+                      "Centralized intake terminal with smart archival tracking.",
+                      style: TextStyle(color: Colors.blueGrey, fontSize: 13)),
+                ],
+              ),
+              ElevatedButton.icon(
+                onPressed: _showPreRegistrationForm,
+                icon: const Icon(LucideIcons.userPlus),
+                label: const Text("NEW APPLICANT"),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8B5CF6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 22),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16))),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
 
-  Widget _buildSearchField(Color bg, Color text) {
-    return Container(
-      width: 300,
-      decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white10)),
-      child: TextField(
-        controller: _searchController,
-        style: TextStyle(color: text, fontSize: 13),
-        decoration: const InputDecoration(
-            hintText: "Search applicant...",
-            border: InputBorder.none,
-            prefixIcon: Icon(LucideIcons.search, size: 16)),
+          // --- SMART SEARCH & FILTER SUITE ---
+          Row(
+            children: [
+              Expanded(child: _buildSearchField(cardColor, textColor)),
+              const SizedBox(width: 16),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: _filterOptions.map((f) => _filterChip(f)).toList(),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF8B5CF6)))
+                : Container(
+                    decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.white10)),
+                    child: _filteredApplicants.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.separated(
+                            itemCount: _filteredApplicants.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(color: Colors.white10, height: 1),
+                            itemBuilder: (context, i) {
+                              final app = _filteredApplicants[i];
+
+                              final String first =
+                                  (app['fn'] ?? 'TBA').toString();
+                              final String last =
+                                  (app['ln'] ?? 'TBA').toString();
+                              final String suffix = (app['suffix'] != null &&
+                                      app['suffix'] != 'N/A' &&
+                                      app['suffix'].toString().isNotEmpty)
+                                  ? " ${app['suffix']}"
+                                  : "";
+                              final String name =
+                                  "$last, $first$suffix".toUpperCase();
+
+                              return ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 12),
+                                leading: CircleAvatar(
+                                    backgroundColor: const Color(0xFF8B5CF6)
+                                        .withOpacity(0.1),
+                                    child: Text(
+                                        app['ln'] != null ? app['ln'][0] : 'A',
+                                        style: const TextStyle(
+                                            color: Color(0xFF8B5CF6),
+                                            fontWeight: FontWeight.bold))),
+                                title: Text(name,
+                                    style: TextStyle(
+                                        color: textColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13)),
+                                subtitle: Text(
+                                    "${app['application_no']} • ${app['courses']?['name'] ?? 'UNDECLARED'}",
+                                    style: const TextStyle(
+                                        color: Colors.blueGrey, fontSize: 11)),
+                                trailing:
+                                    _statusChip(app['status'] ?? 'Pending'),
+                              );
+                            },
+                          ),
+                  ),
+          ),
+        ],
       ),
     );
   }
+
+  Widget _filterChip(String status) {
+    bool isSelected = _selectedStatus == status;
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: ChoiceChip(
+        label: Text(status.toUpperCase(),
+            style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : Colors.blueGrey)),
+        selected: isSelected,
+        onSelected: (val) {
+          if (val) setState(() => _selectedStatus = status);
+        },
+        selectedColor: const Color(0xFF8B5CF6),
+        backgroundColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+                color: isSelected ? Colors.transparent : Colors.white10)),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() => Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(LucideIcons.searchX,
+            size: 48, color: Colors.blueGrey.withOpacity(0.2)),
+        const SizedBox(height: 16),
+        Text("No records found in $_selectedStatus view.",
+            style: const TextStyle(color: Colors.blueGrey))
+      ]));
+
+  Widget _statusChip(String status) {
+    bool isVerified =
+        status == 'Enrolled' || status == 'Verified' || status == 'Admitted';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+          color: isVerified
+              ? Colors.green.withOpacity(0.1)
+              : (status == 'Rejected'
+                  ? Colors.red.withOpacity(0.1)
+                  : Colors.orange.withOpacity(0.1)),
+          borderRadius: BorderRadius.circular(8)),
+      child: Text(status.toUpperCase(),
+          style: TextStyle(
+              color: isVerified
+                  ? Colors.green
+                  : (status == 'Rejected' ? Colors.red : Colors.orange),
+              fontSize: 9,
+              fontWeight: FontWeight.w900)),
+    );
+  }
+
+  Widget _buildSearchField(Color bg, Color text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white10)),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (v) => setState(() {}),
+          style: TextStyle(color: text, fontSize: 13),
+          decoration: const InputDecoration(
+              hintText: "Search name or reference...",
+              border: InputBorder.none,
+              prefixIcon:
+                  Icon(LucideIcons.search, size: 16, color: Color(0xFF8B5CF6))),
+        ),
+      );
 }

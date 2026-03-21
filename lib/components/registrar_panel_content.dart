@@ -12,7 +12,6 @@ import 'registrar_panels/registrar_messages_panel.dart';
 import 'registrar_panels/student_requests_panel.dart';
 import 'registrar_panels/audit_trail_panel.dart';
 import 'shared/messaging_panel.dart';
-import 'shared/staff_profile_portal.dart';
 
 class RegistrarPanelContent extends StatelessWidget {
   final String panelType;
@@ -72,9 +71,10 @@ class RegistrarPanelContent extends StatelessWidget {
           isDarkMode: isDarkMode,
         );
       case 'messages':
-        return RegistrarMessagesPanel(
+        return MessagingPanel(
           key: const ValueKey('messages'),
           isDarkMode: isDarkMode,
+          userData: userData,
         );
       case 'requests':
         return StudentRequestsPanel(
@@ -91,6 +91,7 @@ class RegistrarPanelContent extends StatelessWidget {
         return RegistrarOverviewPanel(
           key: const ValueKey('overview'),
           isDarkMode: isDarkMode,
+          userData: {},
         );
     }
   }

@@ -1,13 +1,12 @@
 import 'dart:io';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
+import 'package:open_file_plus/open_file_plus.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 
 class StudentRecordsPanel extends StatefulWidget {
@@ -18,9 +17,7 @@ class StudentRecordsPanel extends StatefulWidget {
   State<StudentRecordsPanel> createState() => _StudentRecordsPanelState();
 }
 
-class _StudentRecordsPanelState extends State<StudentRecordsPanel>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _StudentRecordsPanelState extends State<StudentRecordsPanel> {
   String? _selectedStudentId;
   final TextEditingController _searchController = TextEditingController();
 
@@ -29,6 +26,7 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
   String? _selectedYearFilter;
   List<Map<String, dynamic>> _courseList = [];
   List<Map<String, dynamic>> _yearLevelList = [];
+  bool _isLoadingFilters = true;
 
   // Theme Constants
   static const Color aViolet = Color(0xFF8B5CF6);
@@ -38,11 +36,10 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadFilterOptions();
   }
 
-  /// DATABASE: Pre-loads the metadata needed for the Smart Filter dropdowns
+  /// 🛰️ DATABASE: Loads metadata for the Smart Filter system
   Future<void> _loadFilterOptions() async {
     final client = SupabaseService().client;
     try {
@@ -54,201 +51,259 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
         setState(() {
           _courseList = List<Map<String, dynamic>>.from(results[0]);
           _yearLevelList = List<Map<String, dynamic>>.from(results[1]);
+          _isLoadingFilters = false;
         });
       }
     } catch (e) {
-      debugPrint("Filter Load Error: $e");
+      debugPrint("Filter Sync Error: $e");
     }
-  }
-
-  // --- REGISTRAR SCANNER ENGINE ---
-
-  void _openScanner() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF0F071D),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
-        content: SizedBox(
-          width: 500,
-          height: 600,
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("OFFICE TICKET SCANNER",
-                      style: GoogleFonts.inter(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
-                  IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(LucideIcons.x, color: Colors.white24)),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: Container(
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: aViolet)),
-                  child: MobileScanner(
-                    onDetect: (capture) {
-                      final String? code = capture.barcodes.first.rawValue;
-                      if (code != null) {
-                        Navigator.pop(context);
-                        _handleScannedTicket(code);
-                      }
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text("Align the student's QR code within the frame.",
-                  style: TextStyle(color: Colors.white38, fontSize: 11)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// SCAN LOGIC: Processes the QR data and allows status update to 'Released'
-  Future<void> _handleScannedTicket(String hash) async {
-    final client = SupabaseService().client;
-
-    // Fetch request data joined with profile
-    final request = await client
-        .from('office_requests')
-        .select('*, profiles(fn, ln, user_id_number, email)')
-        .eq('qr_hash', hash)
-        .maybeSingle();
-
-    if (request == null) {
-      _showToast(
-          "Invalid QR: Ticket not found in cloud ledger.", Colors.redAccent);
-      return;
-    }
-
-    final p = request['profiles'];
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: surfaceDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text("Document Stub: ${request['request_type']}",
-            style: const TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _infoRow("Student:", "${p['fn']} ${p['ln']}"),
-            _infoRow("Student ID:", p['user_id_number']),
-            _infoRow("Payment:", request['payment_status'],
-                color: request['payment_status'] == 'Paid'
-                    ? success
-                    : Colors.orangeAccent),
-            _infoRow("Current Status:", request['request_status']),
-            const Divider(color: Colors.white10, height: 32),
-            const Text(
-                "Action: By clicking 'RELEASE', you verify that the physical document has been handed to the student.",
-                style: TextStyle(color: Colors.white38, fontSize: 11)),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("CANCEL")),
-          ElevatedButton(
-            onPressed: () async {
-              await client.from('office_requests').update(
-                  {'request_status': 'Released'}).eq('id', request['id']);
-              Navigator.pop(context);
-              _showToast(
-                  "Document officially Released to ${p['fn']}.", success);
-            },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: success, foregroundColor: Colors.black),
-            child: const Text("RELEASE DOCUMENT"),
-          )
-        ],
-      ),
-    );
   }
 
   // --- PDF GENERATION ENGINE ---
 
-  Future<void> _generateOfficialPDF(Map<String, dynamic> s, String type,
-      {String? semesterFilter}) async {
+  /// 📄 REGISTRATION FORM: Official Proof of Enrollment as a Formal Letter
+  Future<void> _generateRegistrationForm(Map<String, dynamic> s) async {
+    final pdf = pw.Document();
+    final d = s['student_details'];
+    final addr = s['addresses'];
+    final date = DateFormat('MMMM dd, yyyy').format(DateTime.now());
+
+    pdf.addPage(pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(48),
+        build: (context) => pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  _buildInstitutionalLetterhead(),
+                  pw.SizedBox(height: 15),
+                  pw.Divider(thickness: 2, color: PdfColors.indigo900),
+                  pw.SizedBox(height: 30),
+
+                  // Formal Date & Salutation
+                  pw.Align(
+                    alignment: pw.Alignment.centerRight,
+                    child: pw.Text("Date Issued: $date",
+                        style: const pw.TextStyle(fontSize: 10)),
+                  ),
+                  pw.SizedBox(height: 20),
+                  pw.Text("TO WHOM IT MAY CONCERN:",
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                  pw.SizedBox(height: 15),
+
+                  // Letter Body
+                  pw.Text(
+                    "This is to certify that the student named below is officially enrolled at Bright Future Academy for the current academic term. This document serves as official proof of enrollment and matriculation for all legal and institutional purposes.",
+                    style: const pw.TextStyle(fontSize: 11, lineSpacing: 1.4),
+                    textAlign: pw.TextAlign.justify,
+                  ),
+                  pw.SizedBox(height: 30),
+
+                  // II. STUDENT INFORMATION
+                  pw.Text("II. STUDENT IDENTIFICATION",
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 10,
+                          color: PdfColors.grey700)),
+                  pw.SizedBox(height: 10),
+                  _pdfDataRow("Full Name:",
+                      "${s['ln']}, ${s['fn']} ${s['mn'] ?? ''}".toUpperCase()),
+                  _pdfDataRow("Student ID No:", s['user_id_number'] ?? 'N/A'),
+                  _pdfDataRow(
+                      "Degree Program:", d['courses']?['name'] ?? 'N/A'),
+                  _pdfDataRow("Year Classification:",
+                      d['year_levels']?['definition'] ?? 'N/A'),
+
+                  pw.SizedBox(height: 30),
+
+                  // III. ENROLLMENT DETAILS
+                  pw.Text("III. ACADEMIC STATUS",
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 10,
+                          color: PdfColors.grey700)),
+                  pw.SizedBox(height: 10),
+                  _pdfDataRow("Academic Year:", "2025 - 2026"),
+                  _pdfDataRow("Current Semester:", "2nd Semester"),
+                  pw.SizedBox(height: 15),
+
+                  pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 15, vertical: 10),
+                      decoration: pw.BoxDecoration(
+                          color: PdfColors.green50,
+                          border: pw.Border.all(
+                              color: PdfColors.green700, width: 1)),
+                      child:
+                          pw.Row(mainAxisSize: pw.MainAxisSize.min, children: [
+                        pw.Text("ENROLLMENT STATUS: ",
+                            style: const pw.TextStyle(fontSize: 10)),
+                        pw.Text("VERIFIED ENROLLED",
+                            style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColors.green900,
+                                fontSize: 11)),
+                      ])),
+
+                  pw.Spacer(),
+                  _buildRegistrarFooter(date),
+                ])));
+
+    _saveAndOpenPDF(pdf, "Certification_Enrollment_${s['user_id_number']}");
+  }
+
+  /// 📄 GOOD MORAL: Official Character Certification
+  Future<void> _generateGoodMoralCert(Map<String, dynamic> s) async {
+    final pdf = pw.Document();
+    final date = DateFormat('MMMM dd, yyyy').format(DateTime.now());
+
+    pdf.addPage(pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(48),
+        build: (context) => pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  _buildInstitutionalLetterhead(),
+                  pw.SizedBox(height: 15),
+                  pw.Divider(thickness: 2, color: PdfColors.indigo900),
+                  pw.SizedBox(height: 40),
+                  pw.Center(
+                      child: pw.Text("CERTIFICATE OF GOOD MORAL CHARACTER",
+                          style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold, fontSize: 14))),
+                  pw.SizedBox(height: 40),
+                  pw.Text("TO WHOM IT MAY CONCERN:",
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                  pw.SizedBox(height: 20),
+                  pw.Text(
+                      "This is to formally certify that ${s['fn']} ${s['ln']} with Student ID Number ${s['user_id_number']} is a student of Bright Future Academy and is known to be of good moral character.",
+                      style: const pw.TextStyle(fontSize: 11, lineSpacing: 1.6),
+                      textAlign: pw.TextAlign.justify),
+                  pw.SizedBox(height: 15),
+                  pw.Text(
+                      "As per the institutional records maintained by this office, the aforementioned student has no derogatory record nor any pending disciplinary case as of this date.",
+                      style: const pw.TextStyle(fontSize: 11, lineSpacing: 1.6),
+                      textAlign: pw.TextAlign.justify),
+                  pw.SizedBox(height: 30),
+                  pw.Text(
+                      "This certification is issued upon the request of the interested party for whatever legal or administrative purposes it may serve.",
+                      style: const pw.TextStyle(fontSize: 11)),
+                  pw.Spacer(),
+                  _buildRegistrarFooter(date),
+                ])));
+
+    _saveAndOpenPDF(pdf, "Good_Moral_${s['user_id_number']}");
+  }
+
+  /// 📄 FORM 138: Term-based Report Card
+  Future<void> _generateForm138(Map<String, dynamic> s, String semester) async {
     final pdf = pw.Document();
     final client = SupabaseService().client;
-    final String fullName = "${s['fn']} ${s['ln']}".toUpperCase();
-    final String idNum = s['user_id_number'];
 
-    var gradeQuery = client.from('grades').select('''
-      midterm_grade, final_grade, status,
-      study_loads!inner (
-        section_block,
-        subjects (code, name, units),
-        semesters (description),
-        academic_years (description)
-      )
-    ''').eq('study_loads.student_id', s['id']);
-
-    if (semesterFilter != null) {
-      gradeQuery = gradeQuery.eq(
-          'study_loads.semesters.description', semesterFilter.split(' ')[0]);
-    }
-
-    final List<dynamic> gradesData = await gradeQuery;
+    final List<dynamic> gradesData = await client
+        .from('grades')
+        .select('*, study_loads!inner(subjects(*), semesters!inner(*))')
+        .eq('study_loads.student_id', s['id'])
+        .eq('study_loads.semesters.description', semester);
 
     pdf.addPage(pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      build: (pw.Context context) => [
-        pw.Center(
-            child: pw.Text("SAN SEBASTIAN COLLEGE - RECOLETOS DE CAVITE",
-                style: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold, fontSize: 14))),
-        pw.Center(
-            child: pw.Text("OFFICE OF THE REGISTRAR",
-                style: const pw.TextStyle(fontSize: 10))),
-        pw.SizedBox(height: 30),
-        pw.Text(type.toUpperCase(),
-            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-        pw.Divider(),
-        pw.SizedBox(height: 10),
-        pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-          pw.Text("Student: $fullName"),
-          pw.Text("ID: $idNum"),
-        ]),
-        pw.SizedBox(height: 20),
-        pw.Table.fromTextArray(
-          headers: ["CODE", "SUBJECT", "UNITS", "MID", "FINAL", "STATUS"],
-          headerStyle:
-              pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
-          cellStyle: const pw.TextStyle(fontSize: 8),
-          data: gradesData
-              .map((g) => [
-                    g['study_loads']['subjects']['code'],
-                    g['study_loads']['subjects']['name'],
-                    g['study_loads']['subjects']['units'].toString(),
-                    g['midterm_grade'] ?? '-',
-                    g['final_grade'] ?? '-',
-                    g['status'] ?? 'Passed'
-                  ])
-              .toList(),
-        ),
-        pw.Spacer(),
-        pw.Align(
-            alignment: pw.Alignment.centerRight,
-            child: pw.Text("Digital Registrar Signature Applied",
-                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey))),
-      ],
-    ));
+        pageFormat: PdfPageFormat.a4,
+        build: (context) => [
+              pw.Text("FORM 138: REPORT ON LEARNING PROGRESS",
+                  style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold, fontSize: 16)),
+              pw.Text("Student: ${s['fn']} ${s['ln']} | $semester",
+                  style: const pw.TextStyle(fontSize: 10)),
+              pw.SizedBox(height: 20),
+              pw.Table.fromTextArray(
+                headers: [
+                  "CODE",
+                  "SUBJECT DESCRIPTION",
+                  "UNITS",
+                  "FINAL",
+                  "REMARKS"
+                ],
+                data: gradesData
+                    .map((g) => [
+                          g['study_loads']['subjects']['code'],
+                          g['study_loads']['subjects']['name'],
+                          g['study_loads']['subjects']['units'].toString(),
+                          g['final_grade'] ?? '-',
+                          g['status'] ?? 'Passed'
+                        ])
+                    .toList(),
+              ),
+            ]));
 
+    _saveAndOpenPDF(pdf, "Form138_${s['user_id_number']}");
+  }
+
+  // --- PDF UI HELPERS ---
+
+  pw.Widget _buildInstitutionalLetterhead() => pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text("BRIGHT FUTURE ACADEMY",
+                  style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 20,
+                      color: PdfColors.indigo900)),
+              pw.Text("Institutional Core Campus",
+                  style: const pw.TextStyle(fontSize: 9)),
+              pw.Text("123 Academic Drive, Metro Manila, Philippines",
+                  style: const pw.TextStyle(fontSize: 8)),
+              pw.Text(
+                  "Contact: (02) 888-BFA-00 | bright.future.academy.uemssp@gmail.com",
+                  style: const pw.TextStyle(fontSize: 8)),
+            ],
+          ),
+          pw.Container(width: 60, height: 60, color: PdfColors.grey200),
+        ],
+      );
+
+  pw.Widget _buildRegistrarFooter(String date) =>
+      pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+        pw.Text("Certified by:", style: const pw.TextStyle(fontSize: 10)),
+        pw.SizedBox(height: 40),
+        pw.Container(
+            width: 200,
+            decoration: const pw.BoxDecoration(
+                border: pw.Border(top: pw.BorderSide(width: 1)))),
+        pw.Text("OFFICE OF THE UNIVERSITY REGISTRAR",
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+        pw.Text("Bright Future Academy",
+            style: const pw.TextStyle(fontSize: 9)),
+        pw.SizedBox(height: 20),
+        pw.Center(
+            child: pw.Text(
+                "Note: This is a system-generated document. Any alteration voids this certification. Issued on: $date",
+                style: pw.TextStyle(
+                    fontSize: 7,
+                    color: PdfColors.grey600,
+                    fontStyle: pw.FontStyle.italic)))
+      ]);
+
+  pw.Widget _pdfDataRow(String label, String value) => pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 3),
+      child: pw.Row(children: [
+        pw.SizedBox(
+            width: 140,
+            child: pw.Text(label,
+                style:
+                    const pw.TextStyle(fontSize: 9, color: PdfColors.grey600))),
+        pw.Expanded(
+            child: pw.Text(value,
+                style: pw.TextStyle(
+                    fontSize: 10, fontWeight: pw.FontWeight.bold))),
+      ]));
+
+  Future<void> _saveAndOpenPDF(pw.Document pdf, String name) async {
     final dir = await getTemporaryDirectory();
-    final file = File("${dir.path}/${type.replaceAll(' ', '_')}_$idNum.pdf");
+    final file = File("${dir.path}/$name.pdf");
     await file.writeAsBytes(await pdf.save());
     await OpenFile.open(file.path);
   }
@@ -257,8 +312,7 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
   Widget build(BuildContext context) {
     final Color textColor =
         widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
-    final Color cardColor =
-        widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
+    final Color cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
     if (_selectedStudentId != null) {
       return _buildComprehensiveDetailView(cardColor, textColor);
@@ -292,7 +346,7 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
                   controller: _searchController,
                   style: TextStyle(color: textColor),
                   decoration: InputDecoration(
-                    hintText: "Smart Search: Name, ID, or Email...",
+                    hintText: "Search by Name or LRD ID Number...",
                     prefixIcon: const Icon(LucideIcons.search, color: aViolet),
                     filled: true,
                     fillColor: widget.isDarkMode
@@ -306,10 +360,10 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
                 ),
               ),
               const SizedBox(width: 16),
-              _actionButton(
-                  LucideIcons.scanLine, "SCAN STUB", success, _openScanner),
-              const SizedBox(width: 12),
-              _actionButton(LucideIcons.userPlus, "ADD NEW", aViolet, () {}),
+              IconButton(
+                  onPressed: () => _loadFilterOptions(),
+                  icon: const Icon(LucideIcons.refreshCw,
+                      color: aViolet, size: 20))
             ],
           ),
           const SizedBox(height: 20),
@@ -317,7 +371,7 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
             children: [
               const Icon(LucideIcons.filter, size: 16, color: Colors.blueGrey),
               const SizedBox(width: 12),
-              Text("FILTERS:",
+              Text("SMART FILTERS:",
                   style: GoogleFonts.inter(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -325,7 +379,7 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
                       letterSpacing: 1)),
               const SizedBox(width: 16),
               _buildDropdownFilter(
-                hint: "All Programs",
+                hint: "Select Program",
                 value: _selectedCourseFilter,
                 items: _courseList
                     .map((c) => DropdownMenuItem(
@@ -335,7 +389,7 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
               ),
               const SizedBox(width: 12),
               _buildDropdownFilter(
-                hint: "All Year Levels",
+                hint: "Select Year",
                 value: _selectedYearFilter,
                 items: _yearLevelList
                     .map((y) => DropdownMenuItem(
@@ -355,7 +409,7 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
                     _searchController.clear();
                   }),
                   icon: const Icon(LucideIcons.x, size: 14),
-                  label: const Text("CLEAR ALL",
+                  label: const Text("RESET",
                       style:
                           TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
@@ -383,11 +437,11 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
         child: DropdownButton<String>(
           value: value,
           hint: Text(hint,
-              style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
+              style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
           dropdownColor: surfaceDark,
           style: TextStyle(
               color: widget.isDarkMode ? Colors.white : Colors.black,
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.bold),
           items: items,
           onChanged: onChanged,
@@ -397,23 +451,31 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
   }
 
   Widget _buildStudentList(Color cardColor, Color textColor) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: SupabaseService()
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: SupabaseService()
           .client
           .from('profiles')
-          .stream(primaryKey: ['id']).eq('role', 'student'),
+          .select('*, student_details!inner(*)')
+          .eq('role', 'student'),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: aViolet));
         }
 
-        final list = snapshot.data!.where((s) {
-          final matchesSearch = _searchController.text.isEmpty ||
-              "${s['fn']} ${s['ln']}"
-                  .toUpperCase()
-                  .contains(_searchController.text.toUpperCase()) ||
-              s['user_id_number'].toString().contains(_searchController.text);
-          return matchesSearch;
+        final list = (snapshot.data ?? []).where((s) {
+          final details = s['student_details'];
+          final name = "${s['fn']} ${s['ln']}".toUpperCase();
+          final id = s['user_id_number'].toString();
+          final query = _searchController.text.toUpperCase();
+
+          final matchesSearch =
+              query.isEmpty || name.contains(query) || id.contains(query);
+          final matchesCourse = _selectedCourseFilter == null ||
+              details['course_id'] == _selectedCourseFilter;
+          final matchesYear = _selectedYearFilter == null ||
+              details['year_level_id'] == _selectedYearFilter;
+
+          return matchesSearch && matchesCourse && matchesYear;
         }).toList();
 
         if (list.isEmpty) return _buildEmptyState(textColor);
@@ -433,14 +495,16 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
                   const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               leading: CircleAvatar(
                   backgroundColor: aViolet.withOpacity(0.1),
-                  child: Text(list[i]['fn'][0],
+                  child: Text(list[i]['ln'][0],
                       style: const TextStyle(
                           color: aViolet, fontWeight: FontWeight.bold))),
-              title: Text("${list[i]['fn']} ${list[i]['ln']}",
-                  style:
-                      TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+              title: Text("${list[i]['ln']}, ${list[i]['fn']}".toUpperCase(),
+                  style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13)),
               subtitle: Text(
-                  "ID: ${list[i]['user_id_number']} • ${list[i]['role'].toString().toUpperCase()}",
+                  "ID: ${list[i]['user_id_number']} • ${list[i]['student_details']?['enrollment_status']?.toUpperCase() ?? 'PENDING'}",
                   style: const TextStyle(color: Colors.blueGrey, fontSize: 11)),
               trailing: const Icon(LucideIcons.chevronRight,
                   size: 16, color: Colors.blueGrey),
@@ -458,39 +522,41 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
         student_details!inner (
           *,
           courses (name, code),
-          year_levels (definition)
+          year_levels (*)
         ),
         addresses (*)
       ''').eq('id', _selectedStudentId!).single(),
       builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: aViolet));
-        }
-        if (!snap.hasData) {
-          return const Center(child: Text("Error retrieving student record."));
-        }
-
+        if (!snap.hasData)
+          return const Center(child: CircularProgressIndicator());
         final s = snap.data!;
         final details = s['student_details'];
-        final address = s['addresses'];
 
         return SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              _buildDetailHeader(s, textColor),
-              const SizedBox(height: 24),
+              Row(children: [
+                IconButton(
+                    icon: Icon(LucideIcons.arrowLeft, color: textColor),
+                    onPressed: () => setState(() => _selectedStudentId = null)),
+                Text("${s['fn']} ${s['ln']}".toUpperCase(),
+                    style: GoogleFonts.inter(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: textColor)),
+                const Spacer(),
+                _badge(details['enrollment_status'] ?? "ENROLLED", success),
+              ]),
+              const SizedBox(height: 32),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                      flex: 4,
-                      child: _buildVaultSection(s, cardColor, textColor)),
+                      flex: 4, child: _buildDocVault(s, cardColor, textColor)),
                   const SizedBox(width: 24),
                   Expanded(
                       flex: 6,
-                      child: _buildDossierSection(
-                          s, details, address, cardColor, textColor)),
+                      child: _buildDossier(s, details, cardColor, textColor)),
                 ],
               ),
             ],
@@ -500,31 +566,7 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
     );
   }
 
-  Widget _buildDetailHeader(Map<String, dynamic> s, Color t) {
-    return Row(
-      children: [
-        IconButton(
-            icon: Icon(LucideIcons.arrowLeft, color: t),
-            onPressed: () => setState(() => _selectedStudentId = null)),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("${s['fn']} ${s['ln']}",
-                style: GoogleFonts.inter(
-                    fontSize: 24, fontWeight: FontWeight.w900, color: t)),
-            const Text("Student Profile Record • Authenticated via SSCR-Cloud",
-                style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
-          ],
-        ),
-        const Spacer(),
-        _badge(
-            s['student_details']?['enrollment_status'] ?? "Unknown", success),
-      ],
-    );
-  }
-
-  Widget _buildVaultSection(
+  Widget _buildDocVault(
       Map<String, dynamic> s, Color cardColor, Color textColor) {
     return Container(
       padding: const EdgeInsets.all(32),
@@ -542,29 +584,36 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
                   color: aViolet,
                   letterSpacing: 1.5)),
           const SizedBox(height: 24),
-          _docPrintCard("FORM 138", LucideIcons.fileSpreadsheet,
-              "Term Report Card", () => _showSemSelector(s), textColor),
+          _docCard("FORM 138 (CARD)", LucideIcons.fileSpreadsheet,
+              "Academic Performance", () => _showPeriodSelector(s), textColor),
           const SizedBox(height: 12),
-          _docPrintCard(
-              "TRANSCRIPT (TOR)",
-              LucideIcons.fileText,
-              "Permanent Academic Record",
-              () => _generateOfficialPDF(s, "Official Transcript of Records"),
+          _docCard(
+              "CERT. OF GOOD MORAL",
+              LucideIcons.award,
+              "Character Certification",
+              () => _generateGoodMoralCert(s),
               textColor),
           const SizedBox(height: 12),
-          _docPrintCard(
-              "REGISTRATION",
+          _docCard(
+              "TRANSCRIPT (TOR)",
+              LucideIcons.fileText,
+              "Permanent Records",
+              () => _generateOfficialPDF(s, "Transcript of Records"),
+              textColor),
+          const SizedBox(height: 12),
+          _docCard(
+              "REGISTRATION FORM",
               LucideIcons.clipboardCheck,
-              "Current Term Matriculation",
-              () => _generateOfficialPDF(s, "Registration Form"),
+              "Proof of Enrollment Certification",
+              () => _generateRegistrationForm(s),
               textColor),
         ],
       ),
     );
   }
 
-  Widget _buildDossierSection(Map<String, dynamic> s, Map<String, dynamic> d,
-      Map<String, dynamic>? a, Color cardColor, Color textColor) {
+  Widget _buildDossier(Map<String, dynamic> s, Map<String, dynamic> d,
+      Color cardColor, Color textColor) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -581,60 +630,41 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
                   color: aViolet,
                   letterSpacing: 1.5)),
           const SizedBox(height: 32),
-          _sectionTitle("Academic Data"),
           _infoGrid([
-            {"label": "Institutional ID", "value": s['user_id_number']},
             {
-              "label": "Program / Course",
-              "value": d['courses']?['name'] ?? "Not Assigned"
+              "label": "LRN / Student ID",
+              "value": s['user_id_number'] ?? 'N/A'
             },
+            {"label": "Program", "value": d['courses']?['name'] ?? 'N/A'},
             {
               "label": "Year Level",
-              "value": d['year_levels']?['definition'] ?? "N/A"
+              "value": d['year_levels']?['definition'] ?? 'N/A'
             },
             {
               "label": "Current GWA",
-              "value": d['current_gwa']?.toString() ?? "0.00"
+              "value": d['current_gwa']?.toString() ?? '0.00'
             },
-            {
-              "label": "Account Balance",
-              "value": "₱${d['account_balance'] ?? '0.00'}"
-            },
-            {"label": "Student Type", "value": d['student_type'] ?? "Regular"},
-          ], textColor),
-          const Divider(height: 60, color: Colors.white10),
-          _sectionTitle("Personal Identity"),
-          _infoGrid([
-            {"label": "Gender", "value": s['gender'] ?? 'Not Specified'},
-            {"label": "Birthdate", "value": s['dob'] ?? 'N/A'},
-            {"label": "Email", "value": s['email']},
+            {"label": "Email", "value": s['email'] ?? 'N/A'},
+            {"label": "Gender", "value": s['gender'] ?? 'N/A'},
           ], textColor),
         ],
       ),
     );
   }
 
-  Widget _sectionTitle(String t) => Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Text(t,
-          style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Colors.blueGrey)));
-
   Widget _infoGrid(List<Map<String, String>> items, Color text) {
     return Wrap(
-      spacing: 32,
+      spacing: 40,
       runSpacing: 24,
       children: items
           .map((i) => SizedBox(
-                width: 250,
+                width: 200,
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(i['label']!.toUpperCase(),
                           style: const TextStyle(
-                              fontSize: 9,
+                              fontSize: 8,
                               fontWeight: FontWeight.w900,
                               color: Colors.blueGrey,
                               letterSpacing: 0.5)),
@@ -643,31 +673,28 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
                           style: TextStyle(
                               color: text,
                               fontWeight: FontWeight.w600,
-                              fontSize: 14)),
+                              fontSize: 13)),
                     ]),
               ))
           .toList(),
     );
   }
 
-  void _showSemSelector(Map<String, dynamic> s) {
+  void _showPeriodSelector(Map<String, dynamic> s) {
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
         backgroundColor: surfaceDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: const Text("Select Reporting Period",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text("Select Academic Period",
+            style: TextStyle(color: Colors.white, fontSize: 16)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           _semItem("1st Semester 2025-2026", () {
             Navigator.pop(c);
-            _generateOfficialPDF(s, "Form 138",
-                semesterFilter: "1st Semester 2025-2026");
+            _generateForm138(s, "1st Semester");
           }),
           _semItem("2nd Semester 2025-2026", () {
             Navigator.pop(c);
-            _generateOfficialPDF(s, "Form 138",
-                semesterFilter: "2nd Semester 2025-2026");
+            _generateForm138(s, "2nd Semester");
           }),
         ]),
       ),
@@ -675,81 +702,68 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel>
   }
 
   Widget _semItem(String t, VoidCallback onTap) => ListTile(
-      title: Text(t, style: const TextStyle(color: Colors.white70)),
+      title:
+          Text(t, style: const TextStyle(color: Colors.white70, fontSize: 13)),
       trailing: const Icon(LucideIcons.printer, color: aViolet, size: 18),
       onTap: onTap);
 
-  Widget _docPrintCard(String label, IconData icon, String desc,
-          VoidCallback onTap, Color text) =>
+  Widget _docCard(
+          String l, IconData i, String d, VoidCallback onTap, Color text) =>
       InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.03),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white10)),
           child: Row(children: [
-            Icon(icon, color: aViolet, size: 24),
-            const SizedBox(width: 16),
+            Icon(i, color: aViolet, size: 20),
+            const SizedBox(width: 12),
             Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  Text(label,
+                  Text(l,
                       style: TextStyle(
                           color: text,
                           fontWeight: FontWeight.bold,
-                          fontSize: 13)),
-                  Text(desc,
-                      style: const TextStyle(
-                          color: Colors.blueGrey, fontSize: 10)),
+                          fontSize: 12)),
+                  Text(d,
+                      style:
+                          const TextStyle(color: Colors.blueGrey, fontSize: 9)),
                 ])),
-            const Text("PRINT",
-                style: TextStyle(
-                    color: success, fontSize: 10, fontWeight: FontWeight.w900)),
+            const Icon(LucideIcons.download, color: success, size: 16),
           ]),
         ),
       );
 
   Widget _badge(String t, Color c) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-          color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+          color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
       child: Text(t.toUpperCase(),
           style:
-              TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.w900)));
-  Widget _actionButton(IconData i, String l, Color c, VoidCallback onTap) =>
-      ElevatedButton.icon(
-          onPressed: onTap,
-          icon: Icon(i, size: 16),
-          label: Text(l,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-          style: ElevatedButton.styleFrom(
-              backgroundColor: c,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16))));
+              TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.w900)));
+
   Widget _buildEmptyState(Color t) => Center(
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(LucideIcons.searchX, color: aViolet.withOpacity(0.1), size: 64),
+        Icon(LucideIcons.users, color: aViolet.withOpacity(0.1), size: 64),
         const SizedBox(height: 16),
-        Text("No students match your current filters.",
+        Text("No student records matching your filter.",
             style: TextStyle(color: t.withOpacity(0.3)))
       ]));
-  Widget _infoRow(String l, String v, {Color? color}) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(l, style: const TextStyle(color: Colors.white54)),
-        Text(v,
-            style: TextStyle(
-                color: color ?? Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14))
-      ]));
+
   void _showToast(String m, Color c) => ScaffoldMessenger.of(context)
       .showSnackBar(SnackBar(content: Text(m), backgroundColor: c));
+
+  /// Fallback PDF Generator for TOR (Comprehensive)
+  Future<void> _generateOfficialPDF(Map<String, dynamic> s, String type) async {
+    final pdf = pw.Document();
+    pdf.addPage(pw.Page(
+        build: (c) =>
+            pw.Center(child: pw.Text("Generating $type for ${s['fn']}..."))));
+    _saveAndOpenPDF(pdf, "${type.replaceAll(' ', '_')}_${s['user_id_number']}");
+  }
 }

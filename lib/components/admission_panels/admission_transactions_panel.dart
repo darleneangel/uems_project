@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
+import 'package:open_file_plus/open_file_plus.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
+import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 
 class AdmissionTransactionsPanel extends StatefulWidget {
@@ -27,7 +28,17 @@ class _AdmissionTransactionsPanelState
 
   List<Map<String, dynamic>> _allTransactions = [];
   bool _isLoading = true;
+
+  // --- FILTER STATES ---
   String _statusFilter = "All";
+  final List<String> _filterOptions = [
+    "All",
+    "Pending",
+    "Verified",
+    "Admitted",
+    "Rejected",
+    "Archived"
+  ];
 
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color surfaceDark = Color(0xFF1E1B4B);
@@ -38,8 +49,9 @@ class _AdmissionTransactionsPanelState
     _fetchTransactions();
   }
 
-  /// 🛰️ DATABASE: Fetch every applicant record regardless of status
+  /// 🛰️ DATABASE: Fetch every applicant record with course metadata
   Future<void> _fetchTransactions() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final response = await _service.client
@@ -54,33 +66,53 @@ class _AdmissionTransactionsPanelState
         });
       }
     } catch (e) {
-      debugPrint("Transaction Fetch Error: $e");
+      debugPrint("Transaction Sync Error: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  /// 📐 SMART FILTER ENGINE: Handles search components and 30-day archival logic
   List<Map<String, dynamic>> get _filteredList {
+    final now = DateTime.now();
     return _allTransactions.where((item) {
-      final matchesSearch = item['full_name']
-              .toString()
-              .toLowerCase()
-              .contains(_searchController.text.toLowerCase()) ||
-          item['application_no'].toString().contains(_searchController.text);
-      final matchesStatus =
-          _statusFilter == "All" || item['status'] == _statusFilter;
-      return matchesSearch && matchesStatus;
+      final String fn = (item['fn'] ?? '').toString().toLowerCase();
+      final String ln = (item['ln'] ?? '').toString().toLowerCase();
+      final String appNo =
+          (item['application_no'] ?? '').toString().toLowerCase();
+      final String query = _searchController.text.toLowerCase();
+
+      // 1. Multi-component Search
+      final bool matchesSearch =
+          fn.contains(query) || ln.contains(query) || appNo.contains(query);
+      if (!matchesSearch) return false;
+
+      // 2. Archival Logic (Records > 30 days old)
+      final createdAt = DateTime.tryParse(item['created_at'] ?? '') ?? now;
+      final int ageInDays = now.difference(createdAt).inDays;
+      final bool isArchived = ageInDays > 30;
+
+      if (_statusFilter == "Archived") {
+        return isArchived;
+      } else {
+        // Exclude archived from active views
+        if (isArchived) return false;
+        if (_statusFilter == "All") return true;
+
+        return (item['status'] ?? 'Pending').toString().toLowerCase() ==
+            _statusFilter.toLowerCase();
+      }
     }).toList();
   }
 
-  /// 📄 REPORT ENGINE: Generates a professional summary of the admissions ledger
+  /// 📄 REPORT ENGINE: Generates a professional PDF using normalized name fields
   Future<void> _generateMasterReport() async {
     final pdf = pw.Document();
-    final timestamp = DateTime.now().toString().split('.')[0];
+    final timestamp = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
     final reportData = _filteredList;
 
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
+        pageFormat: PdfPageFormat.a4.landscape, // Landscape for dense data
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) => [
           pw.Header(
@@ -91,17 +123,18 @@ class _AdmissionTransactionsPanelState
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text("UEMSSP ADMISSIONS INTELLIGENCE",
+                    pw.Text("BRIGHT FUTURE ACADEMY",
                         style: pw.TextStyle(
                             fontWeight: pw.FontWeight.bold,
                             fontSize: 18,
-                            color: PdfColors.purple900)),
-                    pw.Text("Institutional Applicant Transaction Ledger",
+                            color: PdfColors.indigo900)),
+                    pw.Text("Institutional Admissions Transaction Ledger",
                         style: const pw.TextStyle(
                             fontSize: 10, color: PdfColors.grey700)),
                   ],
                 ),
-                pw.Text(timestamp, style: const pw.TextStyle(fontSize: 8)),
+                pw.Text("Generated: $timestamp",
+                    style: const pw.TextStyle(fontSize: 8)),
               ],
             ),
           ),
@@ -112,18 +145,27 @@ class _AdmissionTransactionsPanelState
                 fontSize: 9,
                 color: PdfColors.white),
             headerDecoration:
-                const pw.BoxDecoration(color: PdfColors.purple700),
+                const pw.BoxDecoration(color: PdfColors.indigo700),
             cellStyle: const pw.TextStyle(fontSize: 8),
-            headers: ["REF NO", "APPLICANT NAME", "PROGRAM", "TYPE", "STATUS"],
-            data: reportData
-                .map((item) => [
-                      item['application_no'],
-                      item['full_name'],
-                      item['courses']?['code'] ?? 'N/A',
-                      item['applicant_type'],
-                      item['status'].toString().toUpperCase(),
-                    ])
-                .toList(),
+            headers: [
+              "REF NO",
+              "APPLICANT NAME",
+              "PROGRAM",
+              "ADMISSION TYPE",
+              "STATUS"
+            ],
+            data: reportData.map((item) {
+              final name =
+                  "${item['ln'] ?? 'TBA'}, ${item['fn'] ?? ''} ${item['suffix'] == 'N/A' ? '' : (item['suffix'] ?? '')}"
+                      .trim();
+              return [
+                item['application_no'] ?? 'N/A',
+                name.toUpperCase(),
+                item['courses']?['code'] ?? 'N/A',
+                item['applicant_type'] ?? 'Standard',
+                item['status'].toString().toUpperCase(),
+              ];
+            }).toList(),
           ),
           pw.SizedBox(height: 40),
           pw.Divider(),
@@ -133,9 +175,9 @@ class _AdmissionTransactionsPanelState
               crossAxisAlignment: pw.CrossAxisAlignment.end,
               children: [
                 pw.Text(
-                    "Certified by Admissions Node: ${widget.userData['fn']} ${widget.userData['ln']}",
+                    "Authorized by Ledger Admin: ${widget.userData['fn']} ${widget.userData['ln']}",
                     style: const pw.TextStyle(fontSize: 8)),
-                pw.Text("Total Records Exported: ${reportData.length}",
+                pw.Text("Total Records Processed: ${reportData.length}",
                     style: pw.TextStyle(
                         fontWeight: pw.FontWeight.bold, fontSize: 8)),
               ],
@@ -147,12 +189,13 @@ class _AdmissionTransactionsPanelState
 
     try {
       final dir = await getTemporaryDirectory();
-      final file = File(
-          "${dir.path}/Admissions_Master_Report_${DateTime.now().millisecondsSinceEpoch}.pdf");
+      final path =
+          "${dir.path}/Admissions_Ledger_${DateTime.now().millisecondsSinceEpoch}.pdf";
+      final file = File(path);
       await file.writeAsBytes(await pdf.save());
-      await OpenFile.open(file.path);
+      await OpenFile.open(path);
     } catch (e) {
-      debugPrint("PDF Export Error: $e");
+      debugPrint("PDF Generation Failed: $e");
     }
   }
 
@@ -162,94 +205,110 @@ class _AdmissionTransactionsPanelState
         widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Transaction Ledger",
-                    style: GoogleFonts.inter(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: textColor,
-                        letterSpacing: -1)),
-                const Text(
-                    "Historical record of all institutional applicant interactions.",
-                    style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
-              ],
-            ),
-            ElevatedButton.icon(
-              onPressed: _generateMasterReport,
-              icon: const Icon(LucideIcons.fileDown, size: 18),
-              label: const Text("GENERATE MASTER REPORT"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: aViolet,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Admission Transactions",
+                      style: GoogleFonts.inter(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: textColor,
+                          letterSpacing: -1)),
+                  const Text(
+                      "Comprehensive historical record of institutional admissions activities.",
+                      style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
+                ],
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
-        _buildFilterBar(cardColor, textColor),
-        const SizedBox(height: 24),
-        Expanded(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator(color: aViolet))
-              : Container(
-                  decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white10)),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: ListView.separated(
-                      itemCount: _filteredList.length,
-                      separatorBuilder: (_, __) =>
-                          const Divider(height: 1, color: Colors.white10),
-                      itemBuilder: (context, i) {
-                        final item = _filteredList[i];
-                        return ListTile(
-                          contentPadding: const EdgeInsets.all(24),
-                          leading: CircleAvatar(
-                            backgroundColor: _getStatusColor(item['status'])
-                                .withOpacity(0.1),
-                            child: Icon(LucideIcons.history,
-                                color: _getStatusColor(item['status']),
-                                size: 18),
-                          ),
-                          title: Text(item['full_name'],
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontWeight: FontWeight.bold)),
-                          subtitle: Text(
-                              "${item['application_no']} • ${item['courses']?['name'] ?? 'N/A'}",
-                              style: const TextStyle(
-                                  color: Colors.blueGrey, fontSize: 12)),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              _statusBadge(item['status']),
-                              const SizedBox(height: 4),
-                              Text(item['created_at'].toString().split('T')[0],
-                                  style: const TextStyle(
-                                      color: Colors.white24, fontSize: 10)),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+              ElevatedButton.icon(
+                onPressed: _generateMasterReport,
+                icon: const Icon(LucideIcons.fileDown, size: 18),
+                label: const Text("GENERATE LEDGER REPORT"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: aViolet,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                 ),
-        ),
-      ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          _buildFilterBar(cardColor, textColor),
+          const SizedBox(height: 24),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: aViolet))
+                : Container(
+                    decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.white10)),
+                    child: _filteredList.isEmpty
+                        ? _buildEmptyState()
+                        : ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: ListView.separated(
+                              itemCount: _filteredList.length,
+                              separatorBuilder: (_, __) => const Divider(
+                                  height: 1, color: Colors.white10),
+                              itemBuilder: (context, i) {
+                                final item = _filteredList[i];
+                                final name =
+                                    "${item['ln'] ?? 'TBA'}, ${item['fn'] ?? ''} ${item['suffix'] == 'N/A' ? '' : (item['suffix'] ?? '')}"
+                                        .toUpperCase();
+
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.all(24),
+                                  leading: CircleAvatar(
+                                    backgroundColor:
+                                        _getStatusColor(item['status'])
+                                            .withOpacity(0.1),
+                                    child: Icon(LucideIcons.history,
+                                        color: _getStatusColor(item['status']),
+                                        size: 18),
+                                  ),
+                                  title: Text(name,
+                                      style: TextStyle(
+                                          color: textColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14)),
+                                  subtitle: Text(
+                                      "${item['application_no']} • ${item['courses']?['name'] ?? 'UNDECLARED'}",
+                                      style: const TextStyle(
+                                          color: Colors.blueGrey,
+                                          fontSize: 12)),
+                                  trailing: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      _statusBadge(item['status'] ?? 'Pending'),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                          DateFormat('MMM dd, yyyy').format(
+                                              DateTime.parse(
+                                                  item['created_at'])),
+                                          style: TextStyle(
+                                              color: textColor.withOpacity(0.2),
+                                              fontSize: 10)),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -263,7 +322,7 @@ class _AdmissionTransactionsPanelState
       child: Row(
         children: [
           const SizedBox(width: 12),
-          const Icon(LucideIcons.search, color: Colors.blueGrey, size: 20),
+          const Icon(LucideIcons.search, color: aViolet, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: TextField(
@@ -271,15 +330,17 @@ class _AdmissionTransactionsPanelState
               onChanged: (_) => setState(() {}),
               style: TextStyle(color: text),
               decoration: const InputDecoration(
-                  hintText: "Search transactions...", border: InputBorder.none),
+                  hintText: "Search name or reference...",
+                  border: InputBorder.none),
             ),
           ),
           const VerticalDivider(color: Colors.white10, indent: 8, endIndent: 8),
-          _filterChip("All"),
-          _filterChip("Pending"),
-          _filterChip("Verified"),
-          _filterChip("Admitted"),
-          _filterChip("Rejected"),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _filterOptions.map((f) => _filterChip(f)).toList(),
+            ),
+          ),
         ],
       ),
     );
@@ -298,10 +359,10 @@ class _AdmissionTransactionsPanelState
           border:
               Border.all(color: active ? Colors.transparent : Colors.white10),
         ),
-        child: Text(label,
+        child: Text(label.toUpperCase(),
             style: TextStyle(
                 color: active ? Colors.white : Colors.blueGrey,
-                fontSize: 12,
+                fontSize: 10,
                 fontWeight: FontWeight.bold)),
       ),
     );
@@ -314,10 +375,18 @@ class _AdmissionTransactionsPanelState
       decoration: BoxDecoration(
           color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
       child: Text(s.toUpperCase(),
-          style:
-              TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.bold)),
+          style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.w900)),
     );
   }
+
+  Widget _buildEmptyState() => Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(LucideIcons.searchX,
+            size: 48, color: Colors.blueGrey.withOpacity(0.2)),
+        const SizedBox(height: 16),
+        Text("No transactions found in $_statusFilter view.",
+            style: const TextStyle(color: Colors.blueGrey))
+      ]));
 
   Color _getStatusColor(String? s) {
     switch (s) {
@@ -325,8 +394,12 @@ class _AdmissionTransactionsPanelState
         return const Color(0xFF69F0AE);
       case 'Admitted':
         return Colors.blueAccent;
+      case 'Enrolled':
+        return Colors.greenAccent;
       case 'Rejected':
         return Colors.redAccent;
+      case 'Conditional':
+        return Colors.orangeAccent;
       default:
         return Colors.orangeAccent;
     }

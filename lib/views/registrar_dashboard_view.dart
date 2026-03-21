@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:uems_project/components/registrar_panel_content.dart';
-import '../components/smart_search_widget.dart';
+import '../components/registrar_panel_content.dart';
 
 class RegistrarDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
-  const RegistrarDashboardView({super.key, required this.onLogout});
+  final Map<String, dynamic> userData;
+
+  const RegistrarDashboardView(
+      {super.key, required this.onLogout, required this.userData});
 
   @override
   State<RegistrarDashboardView> createState() => _RegistrarDashboardViewState();
 }
 
 class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
+  // Navigation & Theme State
   bool _isDarkMode = true;
   bool _isSidebarExpanded = true;
   int _selectedIndex = 0;
@@ -32,6 +35,7 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
     'audit', // 10
   ];
 
+  // Institutional Palette
   static const Color pViolet = Color(0xFF2E1065);
   static const Color tDark = Color(0xFF0F071D);
   static const Color aViolet = Color(0xFF8B5CF6);
@@ -46,23 +50,26 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Confirm Logout"),
-        content: const Text("Are you sure you want to log out of the system?"),
+        backgroundColor: surfaceDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text("Secure Logout",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text(
+            "Are you sure you want to terminate this administrative session?",
+            style: TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("CANCEL"),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text("CANCEL")),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               widget.onLogout();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text("LOG OUT"),
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white),
+            child: const Text("LOGOUT SYSTEM"),
           ),
         ],
       ),
@@ -74,28 +81,24 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
     final bgColor = _isDarkMode ? tDark : const Color(0xFFF8FAFC);
     final sideColor = _isDarkMode ? pViolet : const Color(0xFFF1F5F9);
     final textColor = _isDarkMode ? Colors.white : pViolet;
-    final subTextColor = _isDarkMode ? Colors.white54 : Colors.blueGrey;
 
     return Scaffold(
       backgroundColor: bgColor,
       body: Row(
         children: [
-          // 1. SIDEBAR
-          _buildSidebar(sideColor, textColor, subTextColor),
-
-          // 2. MAIN PANEL
+          _buildSidebar(sideColor, textColor),
           Expanded(
             child: Column(
               children: [
-                _buildTopBar(textColor, subTextColor),
+                _buildTopBar(textColor),
                 Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.all(24),
-                    // THE BRIDGE: This calls the modular Registrar Hub
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
                     child: RegistrarPanelContent(
+                      key: ValueKey(_selectedIndex),
                       isDarkMode: _isDarkMode,
                       panelType: _panelTypes[_selectedIndex],
-                      userData: const {}, // Replace with actual user data if available
+                      userData: widget.userData,
                     ),
                   ),
                 ),
@@ -107,112 +110,84 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
     );
   }
 
-  Widget _buildTopBar(Color textColor, Color subTextColor) {
+  Widget _buildTopBar(Color textColor) {
+    // 🛰️ IDENTITY RESOLUTION: Fetching from DB context
+    final String fullName =
+        "${widget.userData['fn'] ?? ''} ${widget.userData['ln'] ?? ''}"
+            .toUpperCase();
+    final String role =
+        (widget.userData['role'] ?? 'REGISTRAR').toString().toUpperCase();
+
     return Container(
       height: 75,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       decoration: BoxDecoration(
         color: _isDarkMode ? tDark : Colors.white,
         border: Border(
-          bottom: BorderSide(
-            color: _isDarkMode ? Colors.white10 : Colors.black12,
-          ),
-        ),
+            bottom: BorderSide(
+                color: _isDarkMode ? Colors.white10 : Colors.black12)),
       ),
       child: Row(
         children: [
           IconButton(
             icon: Icon(
-              _isSidebarExpanded ? LucideIcons.menu : LucideIcons.chevronRight,
-              color: textColor,
-            ),
+                _isSidebarExpanded
+                    ? LucideIcons.menu
+                    : LucideIcons.chevronRight,
+                color: textColor),
             onPressed: _toggleSidebar,
           ),
           const SizedBox(width: 16),
           Text(
-            "Registrar Office",
+            "Registrar Intelligence Terminal",
             style: GoogleFonts.inter(
-              color: textColor,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(width: 24),
-          // Smart Search Widget
-          Expanded(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 500),
-              child: SmartSearchWidget(
-                isDarkMode: _isDarkMode,
-                defaultDepartment: 'Registrar',
-                onResultTap: (result) {
-                  // Handle result tap - e.g., navigate to specific panel
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Selected: ${result.title}'),
-                      backgroundColor: aViolet,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-              ),
-            ),
+                color: textColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5),
           ),
           const Spacer(),
           IconButton(
             onPressed: _toggleTheme,
-            icon: Icon(
-              _isDarkMode ? LucideIcons.sun : LucideIcons.moon,
-              color: aViolet,
-            ),
+            icon: Icon(_isDarkMode ? LucideIcons.sun : LucideIcons.moon,
+                color: aViolet),
           ),
           const SizedBox(width: 20),
-          _headerAction(LucideIcons.bell, subTextColor),
+          _headerAction(LucideIcons.bell, textColor.withOpacity(0.5)),
           const SizedBox(width: 24),
           const VerticalDivider(
-            color: Colors.white10,
-            indent: 20,
-            endIndent: 20,
-          ),
+              color: Colors.white10, indent: 20, endIndent: 20),
           const SizedBox(width: 24),
+
+          // 🛰️ DYNAMIC PROFILE: Database Connected
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                "REGISTRAR_ADMIN",
-                style: GoogleFonts.inter(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                "Verified Session",
-                style: GoogleFonts.inter(
-                  color: success,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text(fullName,
+                  style: GoogleFonts.inter(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12)),
+              Text(role,
+                  style: GoogleFonts.inter(
+                      color: success,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1)),
             ],
           ),
           const SizedBox(width: 12),
           const CircleAvatar(
             backgroundColor: aViolet,
-            child: Icon(
-              LucideIcons.shieldCheck,
-              color: Colors.white,
-              size: 18,
-            ),
+            child: Icon(LucideIcons.shieldCheck, color: Colors.white, size: 18),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSidebar(Color sideColor, Color textColor, Color subTextColor) {
+  Widget _buildSidebar(Color sideColor, Color textColor) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       width: _isSidebarExpanded ? 260 : 85,
@@ -226,67 +201,51 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
-                _menuItem(LucideIcons.layoutDashboard, "Dashboard", 0),
+                _menuItem(LucideIcons.layoutDashboard, "Overview", 0),
                 _sidebarHeader("RECORDS"),
-                _menuItem(LucideIcons.contact, "Student Directory", 1),
+                _menuItem(LucideIcons.users, "Student Directory", 1),
                 _menuItem(LucideIcons.clipboardCheck, "Enrollment Verify", 2),
                 _sidebarHeader("ACADEMICS"),
                 _menuItem(LucideIcons.star, "Grade Management", 3),
-                _menuItem(LucideIcons.fileText, "Transcripts & TOR", 4),
-                _sidebarHeader("SYSTEM"),
-                _menuItem(LucideIcons.mail, "Student Inbox", 8),
+                _sidebarHeader("COMMUNICATIONS"),
+                _menuItem(LucideIcons.mail, "Messaging", 8),
                 _menuItem(LucideIcons.fileSignature, "Document Requests", 9),
+                _sidebarHeader("SYSTEM"),
                 _menuItem(LucideIcons.history, "Institutional Audit", 10),
               ],
             ),
           ),
           const Divider(color: Colors.white10),
-          _menuItem(
-            LucideIcons.logOut,
-            "Logout",
-            10,
-            isDestructive: true,
-            onTap: _confirmLogout,
-          ),
+          _menuItem(LucideIcons.logOut, "Logout System", 99,
+              isDestructive: true, onTap: _confirmLogout),
           const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  Widget _menuItem(
-    IconData icon,
-    String title,
-    int index, {
-    bool isDestructive = false,
-    VoidCallback? onTap,
-  }) {
+  Widget _menuItem(IconData icon, String title, int index,
+      {bool isDestructive = false, VoidCallback? onTap}) {
     bool isSelected = _selectedIndex == index;
     final activeColor = isDestructive ? Colors.redAccent : aViolet;
-    final inactiveColor = isDestructive ? Colors.redAccent : Colors.blueGrey;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
         color: isSelected ? aViolet.withOpacity(0.15) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: ListTile(
         onTap: onTap ?? () => setState(() => _selectedIndex = index),
         visualDensity: VisualDensity.compact,
-        leading: Icon(
-          icon,
-          color: isSelected ? activeColor : inactiveColor,
-          size: 18,
-        ),
+        leading: Icon(icon,
+            color: isSelected ? activeColor : Colors.blueGrey, size: 20),
         title: _isSidebarExpanded
-            ? Text(
-                title,
+            ? Text(title,
                 style: GoogleFonts.inter(
-                  color: isSelected ? Colors.white : inactiveColor,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                  fontSize: 13,
-                ),
-              )
+                    color: isSelected ? Colors.white : Colors.blueGrey,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                    fontSize: 13))
             : null,
       ),
     );
@@ -296,44 +255,34 @@ class _RegistrarDashboardViewState extends State<RegistrarDashboardView> {
     if (!_isSidebarExpanded) return const SizedBox(height: 20);
     return Padding(
       padding: const EdgeInsets.only(left: 16, bottom: 10, top: 20),
-      child: Text(
-        title,
-        style: GoogleFonts.inter(
-          fontSize: 9,
-          fontWeight: FontWeight.w900,
-          color: Colors.blueGrey.withOpacity(0.5),
-          letterSpacing: 1.5,
-        ),
-      ),
+      child: Text(title,
+          style: GoogleFonts.inter(
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+              color: Colors.blueGrey.withOpacity(0.5),
+              letterSpacing: 1.5)),
     );
   }
 
-  Widget _buildLogo(Color textColor) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(LucideIcons.bookOpen, color: aViolet, size: 24),
-        if (_isSidebarExpanded) ...[
-          const SizedBox(width: 12),
-          Text(
-            "UEMSSP Registrar",
-            style: GoogleFonts.orbitron(
-              color: textColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
+  Widget _buildLogo(Color textColor) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(LucideIcons.bookOpen, color: aViolet, size: 24),
+          if (_isSidebarExpanded) ...[
+            const SizedBox(width: 12),
+            Text("UEMS Registrar",
+                style: GoogleFonts.orbitron(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14)),
+          ]
         ],
-      ],
-    );
-  }
+      );
 
   Widget _headerAction(IconData icon, Color color) => Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.05),
-          shape: BoxShape.circle,
-        ),
+            color: color.withOpacity(0.05), shape: BoxShape.circle),
         child: Icon(icon, color: color, size: 20),
       );
 }

@@ -221,7 +221,8 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       case 'login':
         return _buildSplitLogin();
       case 'registrar_dashboard':
-        return RegistrarDashboardView(onLogout: _resetToLogin);
+        return RegistrarDashboardView(
+            userData: _loggedInUserData!, onLogout: _resetToLogin);
       case 'hr_panel_content':
       // This case should ideally not be hit if routing is correct.
       // The HRPanelContent is a sub-component, not a top-level dashboard.

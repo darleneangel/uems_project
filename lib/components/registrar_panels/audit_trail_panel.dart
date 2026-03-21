@@ -3,10 +3,30 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/pdf.dart';
+import 'package:open_file_plus/open_file_plus.dart';
+import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
+
+/// 📊 CSV FORMATTING ENGINE
+class ListToCsvConverter {
+  const ListToCsvConverter();
+
+  String convert(List<List<dynamic>> rows) {
+    if (rows.isEmpty) return "";
+    // FIXED: Corrected the mapping and joining logic to prevent type errors
+    return rows.map((row) {
+      return row.map((item) {
+        String value = item?.toString() ?? "";
+        if (value.contains(',') ||
+            value.contains('\n') ||
+            value.contains('"')) {
+          value = '"${value.replaceAll('"', '""')}"';
+        }
+        return value;
+      }).join(',');
+    }).join('\n');
+  }
+}
 
 class AuditTrailPanel extends StatefulWidget {
   final bool isDarkMode;
@@ -18,9 +38,15 @@ class AuditTrailPanel extends StatefulWidget {
 
 class _AuditTrailPanelState extends State<AuditTrailPanel> {
   final TextEditingController _searchController = TextEditingController();
-  bool _isArchiving = false;
-  String _filterType = "Active"; // Active vs Archived
+  final SupabaseService _service = SupabaseService();
 
+  // Filter States
+  String _statusFilter = 'All Status';
+  String _docTypeFilter = 'All Documents';
+  bool _isArchivedView = false;
+  bool _isActionLoading = false;
+
+  // Theme Constants
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color success = Color(0xFF69F0AE);
   static const Color surfaceDark = Color(0xFF1E1B4B);
@@ -31,131 +57,93 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
     super.dispose();
   }
 
-  /// HELPER: Robustly extracts details Map from joined Supabase data
-  Map<String, dynamic>? _extractDetails(Map<String, dynamic> profile) {
-    final dynamic raw = profile['student_details'];
-    if (raw == null) return null;
-    if (raw is List && raw.isNotEmpty) return raw[0] as Map<String, dynamic>;
-    if (raw is Map<String, dynamic>) return raw;
-    return null;
-  }
+  // --- DATA EXTRACTION HELPERS ---
 
-  /// HELPER: Formats timestamp for UI display
-  String _formatDateTime(dynamic raw) {
+  String _formatDT(dynamic raw) {
     if (raw == null) return "---";
     try {
       final dt = DateTime.parse(raw.toString()).toLocal();
-      return "${dt.month}/${dt.day}/${dt.year} ${dt.hour % 12 == 0 ? 12 : dt.hour % 12}:${dt.minute.toString().padLeft(2, '0')} ${dt.hour >= 12 ? 'PM' : 'AM'}";
+      return DateFormat('MM/dd/yy hh:mm a').format(dt);
     } catch (e) {
       return raw.toString();
     }
   }
 
-  // --- EXPORT ENGINE: PDF ---
-  Future<void> _generateAuditPDF(List<Map<String, dynamic>> data) async {
-    final pdf = pw.Document();
-    final timestamp = DateTime.now().toString().split('.')[0];
-
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4.landscape,
-        build: (pw.Context context) => [
-          pw.Header(
-            level: 0,
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text("INSTITUTIONAL AUDIT LEDGER - SSCR CAVITE",
-                    style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold, fontSize: 14)),
-                pw.Text("Generated: $timestamp",
-                    style: const pw.TextStyle(fontSize: 8)),
-              ],
-            ),
-          ),
-          pw.SizedBox(height: 20),
-          pw.Table.fromTextArray(
-            headers: [
-              'STUDENT NAME',
-              'DOCUMENT',
-              'REQUESTED',
-              'ACCEPTED (PAID)',
-              'RELEASED',
-              'STATUS'
-            ],
-            headerStyle:
-                pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8),
-            cellStyle: const pw.TextStyle(fontSize: 7),
-            data: data.map((item) {
-              final p = item['profiles'] as Map<String, dynamic>;
-              final d = _extractDetails(p);
-              return [
-                "${p['fn']} ${p['ln']}",
-                item['request_type'] ?? 'N/A',
-                _formatDateTime(item['date_applied']),
-                _formatDateTime(item['paid_at']),
-                _formatDateTime(item['released_at']),
-                item['request_status'] ?? 'N/A',
-              ];
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-
+  int _calculateAge(dynamic rawDate) {
+    if (rawDate == null) return 0;
     try {
-      final dir = await getTemporaryDirectory();
-      final file = File("${dir.path}/UEMS_Audit_Report.pdf");
-      await file.writeAsBytes(await pdf.save());
-      await OpenFile.open(file.path);
+      final submittedDate = DateTime.parse(rawDate.toString());
+      return DateTime.now().difference(submittedDate).inDays;
     } catch (e) {
-      _showToast("PDF Export Interrupted.", Colors.redAccent);
+      return 0;
     }
   }
 
   // --- EXPORT ENGINE: CSV ---
-  Future<void> _generateAuditCSV(List<Map<String, dynamic>> data) async {
-    String csvData =
-        "Student Name,ID,Document,Requested,Accepted/Paid,Released,Status\n";
 
-    for (var item in data) {
-      final p = item['profiles'] as Map<String, dynamic>;
-      final d = _extractDetails(p);
-
-      csvData += "${p['fn']} ${p['ln']},"
-          "${p['user_id_number']},"
-          "${item['request_type']},"
-          "${_formatDateTime(item['date_applied'])},"
-          "${_formatDateTime(item['paid_at'])},"
-          "${_formatDateTime(item['released_at'])},"
-          "${item['request_status']}\n";
+  Future<void> _exportAuditCSV(List<Map<String, dynamic>> data) async {
+    if (data.isEmpty) {
+      _showToast("No records available to export.", Colors.orangeAccent);
+      return;
     }
 
-    try {
-      final dir = await getTemporaryDirectory();
-      final file = File("${dir.path}/Institutional_Audit_Log.csv");
-      await file.writeAsString(csvData);
-      await OpenFile.open(file.path);
-      _showToast("CSV Exported to local storage.", success);
-    } catch (e) {
-      _showToast("CSV Export Failed.", Colors.redAccent);
-    }
-  }
+    setState(() => _isActionLoading = true);
 
-  Future<void> _archiveTransaction(String id) async {
-    setState(() => _isArchiving = true);
     try {
-      await SupabaseService()
-          .client
-          .from('office_requests')
-          .update({'request_status': 'Archived'}).eq('id', id);
-      _showToast("Record moved to institutional archives.", success);
+      final List<List<dynamic>> csvRows = [];
+
+      // 1. Official Institutional Header Row
+      csvRows.add([
+        'STUDENT NAME',
+        'ID NUMBER',
+        'DOCUMENT TYPE',
+        'AGE (DAYS)',
+        'DATE SUBMITTED',
+        'DATE PAID',
+        'DATE RELEASED',
+        'CURRENT STATUS'
+      ]);
+
+      // 2. Map Ledger Entries to Rows
+      for (var t in data) {
+        final p = t['profiles'] ?? {};
+        csvRows.add([
+          "${p['fn'] ?? ''} ${p['ln'] ?? ''}".toUpperCase(),
+          (p['user_id_number'] ?? 'N/A').toString(),
+          (t['request_type'] ?? 'N/A').toString(),
+          _calculateAge(t['date_applied']),
+          _formatDT(t['date_applied']),
+          _formatDT(t['paid_at']),
+          _formatDT(t['released_at']),
+          (t['request_status'] ?? 'N/A').toString().toUpperCase(),
+        ]);
+      }
+
+      // 3. Convert and Save
+      const converter = ListToCsvConverter();
+      final String csvString = converter.convert(csvRows);
+
+      final Directory directory = await getApplicationDocumentsDirectory();
+      final String fileName =
+          "Audit_Ledger_${DateTime.now().millisecondsSinceEpoch}.csv";
+      final String path = "${directory.path}/$fileName";
+      final File file = File(path);
+
+      await file.writeAsString(csvString);
+
+      // 4. Interaction Feedback
+      if (mounted) {
+        _showToast("Audit CSV generated successfully.", success);
+        await OpenFile.open(path);
+      }
     } catch (e) {
-      _showToast("Sync Error.", Colors.redAccent);
+      _showToast("CSV Export Failed: Institutional error.", Colors.redAccent);
     } finally {
-      setState(() => _isArchiving = false);
+      if (mounted) setState(() => _isActionLoading = false);
     }
   }
+
+  // --- UI BUILDERS ---
 
   @override
   Widget build(BuildContext context) {
@@ -163,88 +151,30 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
         widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildHeader(textColor),
-        const SizedBox(height: 32),
-        _buildSearchBar(cardColor, textColor),
-        const SizedBox(height: 24),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(textColor),
+          const SizedBox(height: 32),
+          _buildSmartFilterBar(cardColor, textColor),
+          const SizedBox(height: 24),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
                 color: cardColor,
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white10)),
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: SupabaseService().client.from('office_requests').stream(
-                  primaryKey: ['id']).order('date_applied', ascending: false),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(
-                      child: CircularProgressIndicator(color: aViolet));
-                }
-
-                return FutureBuilder<List<dynamic>>(
-                    future: SupabaseService()
-                        .client
-                        .from('office_requests')
-                        .select(
-                            '*, profiles(*, student_details(*, courses(code, name)))')
-                        .order('date_applied', ascending: false),
-                    builder: (context, futureSnap) {
-                      if (!futureSnap.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      final allData =
-                          List<Map<String, dynamic>>.from(futureSnap.data!);
-
-                      final filtered = allData.where((t) {
-                        final matchesStatus = _filterType == "Archived"
-                            ? t['request_status'] == 'Archived'
-                            : t['request_status'] != 'Archived';
-                        final query = _searchController.text.toLowerCase();
-                        final matchesSearch = t['profiles']['fn']
-                                .toString()
-                                .toLowerCase()
-                                .contains(query) ||
-                            t['profiles']['ln']
-                                .toString()
-                                .toLowerCase()
-                                .contains(query) ||
-                            t['profiles']['user_id_number']
-                                .toString()
-                                .contains(query);
-                        return matchesStatus && matchesSearch;
-                      }).toList();
-
-                      if (filtered.isEmpty) return _buildEmptyState(textColor);
-
-                      return Column(
-                        children: [
-                          _buildSubHeader(filtered, textColor),
-                          const SizedBox(height: 24),
-                          _buildTableHeader(textColor),
-                          const Divider(color: Colors.white10, height: 1),
-                          Expanded(
-                            child: ListView.separated(
-                              itemCount: filtered.length,
-                              separatorBuilder: (c, i) => const Divider(
-                                  color: Colors.white10, height: 1),
-                              itemBuilder: (context, i) =>
-                                  _buildAuditRow(filtered[i], textColor),
-                            ),
-                          ),
-                        ],
-                      );
-                    });
-              },
+                border: Border.all(
+                    color: widget.isDarkMode
+                        ? Colors.white10
+                        : Colors.black.withOpacity(0.05)),
+              ),
+              child: _buildLedgerStream(textColor),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -252,76 +182,219 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text("Institutional Audit & Ledger",
+            Text("Institutional Audit Ledger",
                 style: GoogleFonts.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
                     color: t,
                     letterSpacing: -1)),
             const Text(
-                "Comprehensive tracking of all student transactions and document clearances.",
-                style: TextStyle(color: Colors.blueGrey)),
+                "Real-time tracking and forensic audit of scholastic document fulfillment.",
+                style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
           ]),
-          _buildFilterToggle(),
+          Row(
+            children: [
+              _filterToggle("Active", !_isArchivedView,
+                  () => setState(() => _isArchivedView = false)),
+              _filterToggle("Archived", _isArchivedView,
+                  () => setState(() => _isArchivedView = true)),
+            ],
+          ),
         ],
       );
 
-  Widget _buildSearchBar(Color bg, Color text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white10)),
-        child: TextField(
-          controller: _searchController,
-          onChanged: (v) => setState(() {}),
-          style: TextStyle(color: text),
-          decoration: const InputDecoration(
-            hintText: "Search by Student Name or Institutional ID...",
-            prefixIcon: Icon(LucideIcons.search, color: aViolet),
-            border: InputBorder.none,
+  Widget _buildSmartFilterBar(Color bg, Color text) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: widget.isDarkMode ? Colors.white10 : Colors.black12),
+      ),
+      child: Row(
+        children: [
+          // 1. SMART SEARCH
+          Expanded(
+            flex: 3,
+            child: TextField(
+              controller: _searchController,
+              onChanged: (v) => setState(() {}),
+              style: TextStyle(
+                  color: text, fontWeight: FontWeight.bold, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: "Search Name, ID, or Transaction...",
+                prefixIcon:
+                    const Icon(LucideIcons.search, color: aViolet, size: 18),
+                border: InputBorder.none,
+                hintStyle:
+                    const TextStyle(color: Colors.blueGrey, fontSize: 13),
+              ),
+            ),
           ),
+          const VerticalDivider(width: 32, color: Colors.white10),
+
+          // 2. STATUS DROPDOWN
+          _buildDropdownFilter(
+              _statusFilter,
+              [
+                'All Status',
+                'Pending',
+                'In Process',
+                'Ready for Pickup',
+                'Released',
+                'Rejected'
+              ],
+              (v) => setState(() => _statusFilter = v!)),
+          const SizedBox(width: 12),
+
+          // 3. DOC TYPE DROPDOWN
+          _buildDropdownFilter(
+              _docTypeFilter,
+              [
+                'All Documents',
+                'Transcript of Records',
+                'Certificate of Good Moral',
+                'Certificate of Enrollment',
+                'Curriculum Certification'
+              ],
+              (v) => setState(() => _docTypeFilter = v!)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLedgerStream(Color text) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _service.client
+          .from('office_requests')
+          .stream(primaryKey: ['id']).order('date_applied', ascending: false),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator(color: aViolet));
+
+        return FutureBuilder<List<dynamic>>(
+            future: _service.client
+                .from('office_requests')
+                .select(
+                    '*, profiles(*, student_details(courses(code), year_levels(definition)))')
+                .order('date_applied', ascending: false),
+            builder: (context, futureSnap) {
+              if (!futureSnap.hasData)
+                return const Center(
+                    child: LinearProgressIndicator(color: aViolet));
+
+              final rawData = List<Map<String, dynamic>>.from(futureSnap.data!);
+
+              // --- SMART FILTER & ARCHIVAL LOGIC ---
+              final filtered = rawData.where((t) {
+                final String reqStatus = (t['request_status'] ?? '').toString();
+                final String reqType = (t['request_type'] ?? '').toString();
+                final profile = t['profiles'] ?? {};
+                final String fullName =
+                    "${profile['fn'] ?? ''} ${profile['ln'] ?? ''}"
+                        .toLowerCase();
+                final String idNum =
+                    (profile['user_id_number'] ?? '').toString().toLowerCase();
+                final String query = _searchController.text.toLowerCase();
+
+                // 📐 AUTOMATED ARCHIVAL CALCULATION
+                final int ageInDays = _calculateAge(t['date_applied']);
+                final bool isSystemArchived = ageInDays > 30;
+
+                // Logic:
+                // - Archives view shows: Status is 'Archived' OR it is older than 30 days
+                // - Active view shows: Status is NOT 'Archived' AND it is newer than 30 days
+                if (_isArchivedView) {
+                  if (!(reqStatus == 'Archived' || isSystemArchived))
+                    return false;
+                } else {
+                  if (reqStatus == 'Archived' || isSystemArchived) return false;
+                }
+
+                if (reqType == 'Registration Fee') return false;
+
+                final bool matchesSearch =
+                    fullName.contains(query) || idNum.contains(query);
+                if (!matchesSearch) return false;
+
+                if (_statusFilter != 'All Status' && reqStatus != _statusFilter)
+                  return false;
+                if (_docTypeFilter != 'All Documents' &&
+                    reqType != _docTypeFilter) return false;
+
+                return true;
+              }).toList();
+
+              if (filtered.isEmpty) return _buildEmptyState(text);
+
+              return Column(
+                children: [
+                  _buildActionStrip(filtered, text),
+                  _buildTableHeader(),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: filtered.length,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      separatorBuilder: (_, __) =>
+                          const Divider(color: Colors.white10, height: 1),
+                      itemBuilder: (context, i) =>
+                          _buildAuditRow(filtered[i], text),
+                    ),
+                  ),
+                ],
+              );
+            });
+      },
+    );
+  }
+
+  Widget _buildActionStrip(List<Map<String, dynamic>> data, Color text) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.white10))),
+        child: Row(
+          children: [
+            Text("SYSTEM ENTRIES: ${data.length}",
+                style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.blueGrey,
+                    letterSpacing: 1.5)),
+            const Spacer(),
+            _exportBtn(LucideIcons.fileSpreadsheet, "EXPORT AS CSV (EXCEL)",
+                () => _exportAuditCSV(data), success),
+          ],
         ),
       );
 
-  Widget _buildSubHeader(List<Map<String, dynamic>> data, Color text) => Row(
-        children: [
-          Text("SYSTEM ENTRIES (${data.length})",
-              style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.blueGrey,
-                  letterSpacing: 1.5)),
-          const Spacer(),
-          _exportBtn(LucideIcons.fileText, "PDF", () => _generateAuditPDF(data),
-              aViolet),
-          const SizedBox(width: 12),
-          _exportBtn(LucideIcons.fileSpreadsheet, "CSV",
-              () => _generateAuditCSV(data), success),
-        ],
-      );
-
-  Widget _buildTableHeader(Color t) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+  Widget _buildTableHeader() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        color: widget.isDarkMode
+            ? Colors.white.withOpacity(0.02)
+            : const Color(0xFFF8FAFC),
         child: Row(
           children: [
             _hCell("STUDENT IDENTITY", 4),
-            _hCell("DOCUMENT", 3),
-            _hCell("REQUESTED", 3),
-            _hCell("PROCESSED LOGS", 4),
+            _hCell("DOCUMENT TYPE", 3),
+            _hCell("AGE", 1),
+            _hCell("LOG SUBMITTED", 3),
+            _hCell("FULFILLMENT LOGS", 4),
             _hCell("STATUS", 3),
-            _hCell("ACTION", 1),
+            _hCell("ARCHIVE", 1),
           ],
         ),
       );
 
   Widget _buildAuditRow(Map<String, dynamic> t, Color text) {
-    final p = t['profiles'] as Map<String, dynamic>;
-    final details = _extractDetails(p);
-    bool isArchived = t['request_status'] == 'Archived';
+    final p = t['profiles'] ?? {};
+    final String studentName = "${p['fn'] ?? 'TBA'} ${p['ln'] ?? ''}".trim();
+    final String idNum = (p['user_id_number'] ?? 'N/A').toString();
+    final int age = _calculateAge(t['date_applied']);
 
     return Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(24),
       child: Row(
         children: [
           // 1. Identity
@@ -330,87 +403,128 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("${p['fn']} ${p['ln']}",
+                    Text(studentName.toUpperCase(),
                         style: TextStyle(
-                            color: text, fontWeight: FontWeight.bold)),
-                    Text(p['user_id_number'] ?? "N/A",
+                            color: text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13)),
+                    Text("LRN: $idNum",
                         style: const TextStyle(
                             color: Colors.blueGrey, fontSize: 11)),
                   ])),
           // 2. Document
           Expanded(
               flex: 3,
-              child: Text(t['request_type'] ?? "Document",
-                  style: TextStyle(color: text, fontSize: 13))),
-          // 3. Requested Time
+              child: Text((t['request_type'] ?? 'N/A').toString(),
+                  style: TextStyle(
+                      color: text, fontSize: 13, fontWeight: FontWeight.w500))),
+          // 3. Age Column (New)
+          Expanded(
+              flex: 1,
+              child: Text("${age}d",
+                  style: TextStyle(
+                      color: age > 25 ? Colors.orange : Colors.blueGrey,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold))),
+          // 4. Submitted
           Expanded(
               flex: 3,
-              child: Text(_formatDateTime(t['date_applied']),
+              child: Text(_formatDT(t['date_applied']),
                   style:
-                      TextStyle(color: text.withOpacity(0.7), fontSize: 11))),
-          // 4. Status
+                      const TextStyle(color: Colors.blueGrey, fontSize: 11))),
+          // 5. Processing Logs
           Expanded(
               flex: 4,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (t['paid_at'] != null)
-                    _miniLog("PAID", t['paid_at'], Colors.blueAccent),
-                  if (t['released_at'] != null)
-                    _miniLog("RELE", t['released_at'], success),
-                  if (t['paid_at'] == null && t['released_at'] == null)
-                    const Text("No process logs yet",
-                        style: TextStyle(
-                            color: Colors.white10,
-                            fontSize: 10,
-                            fontStyle: FontStyle.italic)),
-                ],
-              )),
-          // 5. Status Badge
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (t['paid_at'] != null)
+                      _miniLog("PAID", t['paid_at'], Colors.blueAccent),
+                    if (t['released_at'] != null)
+                      _miniLog("RELE", t['released_at'], success),
+                    if (t['paid_at'] == null && t['released_at'] == null)
+                      const Text("---",
+                          style: TextStyle(color: Colors.white10)),
+                  ])),
+          // 6. Status
           Expanded(
               flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _statusBadge(t['request_status'] ?? "Pending"),
-                ],
-              )),
-          // 6. Action
+              child:
+                  _statusBadge((t['request_status'] ?? 'Pending').toString())),
+          // 7. Archive Action
           Expanded(
               flex: 1,
-              child: !isArchived
-                  ? IconButton(
+              child: _isArchivedView
+                  ? const Icon(LucideIcons.lock,
+                      color: Colors.white10, size: 16)
+                  : IconButton(
                       icon: const Icon(LucideIcons.archive,
                           size: 18, color: Colors.blueGrey),
-                      onPressed: () => _archiveTransaction(t['id']))
-                  : const Icon(LucideIcons.lock,
-                      size: 14, color: Colors.white10)),
+                      onPressed: () => _archiveRecord(t['id'].toString()))),
         ],
       ),
     );
   }
 
-  Widget _miniLog(String label, dynamic time, Color color) => Padding(
-        padding: const EdgeInsets.only(bottom: 2),
-        child: Row(
-          children: [
-            Container(
-              width: 35,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+  // --- SUB-WIDGET UTILS ---
+
+  Widget _buildDropdownFilter(
+          String value, List<String> items, ValueChanged<String?> onChanged) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12)),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: value,
+            dropdownColor: surfaceDark,
+            style: const TextStyle(
+                color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+            items: items
+                .map((i) => DropdownMenuItem(value: i, child: Text(i)))
+                .toList(),
+            onChanged: onChanged,
+          ),
+        ),
+      );
+
+  Widget _filterToggle(String l, bool active, VoidCallback onTap) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(left: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+              color: active ? aViolet : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: active ? Colors.transparent : Colors.white10)),
+          child: Text(l,
+              style: TextStyle(
+                  color: active ? Colors.white : Colors.blueGrey,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800)),
+        ),
+      );
+
+  Widget _miniLog(String label, dynamic time, Color c) => Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(children: [
+          Container(
+              width: 32,
+              padding: const EdgeInsets.symmetric(vertical: 2),
               decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: c.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4)),
               child: Text(label,
                   style: TextStyle(
-                      color: color, fontSize: 8, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center),
-            ),
-            const SizedBox(width: 6),
-            Text(_formatDateTime(time),
-                style: const TextStyle(color: Colors.blueGrey, fontSize: 10)),
-          ],
-        ),
+                      color: c, fontSize: 7, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center)),
+          const SizedBox(width: 8),
+          Text(_formatDT(time),
+              style: const TextStyle(color: Colors.blueGrey, fontSize: 10)),
+        ]),
       );
 
   Widget _hCell(String t, int f) => Expanded(
@@ -432,34 +546,9 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
             backgroundColor: c.withOpacity(0.1),
             foregroundColor: c,
             elevation: 0,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-      );
-
-  Widget _buildFilterToggle() => Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-            color: Colors.white10, borderRadius: BorderRadius.circular(12)),
-        child: Row(
-          children: ["Active", "Archived"].map((l) {
-            bool sel = _filterType == l;
-            return GestureDetector(
-              onTap: () => setState(() => _filterType = l),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                    color: sel ? aViolet : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8)),
-                child: Text(l,
-                    style: TextStyle(
-                        color: sel ? Colors.white : Colors.white38,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold)),
-              ),
-            );
-          }).toList(),
-        ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12))),
       );
 
   Widget _statusBadge(String s) {
@@ -469,23 +558,46 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
     return UnconstrainedBox(
         alignment: Alignment.centerLeft,
         child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
                 color: c.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6)),
             child: Text(s.toUpperCase(),
                 style: TextStyle(
-                    color: c, fontSize: 8, fontWeight: FontWeight.w900))));
+                    color: c, fontSize: 9, fontWeight: FontWeight.w900))));
   }
 
   Widget _buildEmptyState(Color t) => Center(
-      child: Text("No records match your criteria.",
-          style: TextStyle(color: t.withOpacity(0.1))));
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(LucideIcons.fileX, size: 48, color: t.withOpacity(0.05)),
+        const SizedBox(height: 16),
+        Text("No records match your audit criteria.",
+            style:
+                TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold))
+      ]));
+
+  void _archiveRecord(String id) async {
+    setState(() => _isActionLoading = true);
+    try {
+      await _service.client
+          .from('office_requests')
+          .update({'request_status': 'Archived'}).eq('id', id);
+      _showToast("Record archived successfully.", success);
+    } catch (e) {
+      _showToast("Sync Error.", Colors.redAccent);
+    } finally {
+      setState(() => _isActionLoading = false);
+    }
+  }
+
   void _showToast(String m, Color c) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(m),
         backgroundColor: c,
-        behavior: SnackBarBehavior.floating));
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(32),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
   }
 }

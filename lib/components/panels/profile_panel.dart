@@ -45,25 +45,41 @@ class _ProfilePanelState extends State<ProfilePanel> {
   void initState() {
     super.initState();
     _currentStudentData = Map<String, dynamic>.from(widget.studentData);
-    _initializeData();
+
+    // Initialize controllers once
+    _phoneController = TextEditingController();
+    _emailController = TextEditingController();
+    _birthdateController = TextEditingController();
+    _lrdController = TextEditingController();
+
+    _syncControllersFromState();
   }
 
-  /// INITIALIZATION: Maps database fields to controllers
-  void _initializeData() {
-    final details = _currentStudentData['student_details'];
+  /// 🛰️ SYNC ENGINE: Explicitly updates the text in the controllers
+  /// This ensures that after a database fetch, the UI fields are repopulated.
+  /// Fixed to handle Supabase returning joined tables as Lists.
+  void _syncControllersFromState() {
+    final dynamic detailsRaw = _currentStudentData['student_details'];
 
-    _phoneController = TextEditingController(
-        text: (details?['phone'] ?? _currentStudentData['phone'] ?? "")
-            .toString());
-    _emailController = TextEditingController(
-        text: (_currentStudentData['email'] ?? "").toString());
-    _birthdateController = TextEditingController(
-        text: (_currentStudentData['dob'] ?? "").toString());
-    _lrdController = TextEditingController(
-        text: (_currentStudentData['user_id_number'] ?? "").toString());
-    _gender = _currentStudentData['gender'] ?? 'Female';
+    // Supabase often returns joined tables as a List of Maps
+    Map<String, dynamic>? details;
+    if (detailsRaw is List && detailsRaw.isNotEmpty) {
+      details = detailsRaw.first;
+    } else if (detailsRaw is Map<String, dynamic>) {
+      details = detailsRaw;
+    }
 
-    _isSyncing = false;
+    setState(() {
+      // Prioritize the phone number from the details map (student_details table)
+      _phoneController.text =
+          (details?['phone'] ?? _currentStudentData['phone'] ?? "").toString();
+      _emailController.text = (_currentStudentData['email'] ?? "").toString();
+      _birthdateController.text = (_currentStudentData['dob'] ?? "").toString();
+      _lrdController.text =
+          (_currentStudentData['user_id_number'] ?? "").toString();
+      _gender = _currentStudentData['gender'] ?? 'Female';
+      _isSyncing = false;
+    });
   }
 
   @override
@@ -94,7 +110,8 @@ class _ProfilePanelState extends State<ProfilePanel> {
         'phone': _phoneController.text.trim(),
       }).eq('profile_id', profileId);
 
-      // 3. RE-FETCH FRESH DATA: Ensure system memory matches database perfectly
+      // 3. RE-FETCH FRESH DATA: Pull verified data back from Supabase
+      // Using .single() handles the root object, but joined records usually remain a list
       final freshData = await _service.client
           .from('profiles')
           .select('*, student_details(*, courses(name))')
@@ -103,12 +120,17 @@ class _ProfilePanelState extends State<ProfilePanel> {
 
       if (mounted) {
         setState(() {
+          // Update the source of truth for the header and initials
           _currentStudentData = freshData;
           _isEditing = false;
           _isSaving = false;
         });
-        _showToast("Institutional Ledger Updated Successfully",
-            const Color(0xFF69F0AE));
+
+        // 4. REFRESH CONTROLLERS: Force the text fields to show the newly saved data
+        _syncControllersFromState();
+
+        _showToast(
+            "Institutional Ledger Synchronized", const Color(0xFF69F0AE));
       }
     } catch (e) {
       if (mounted) {
@@ -266,8 +288,17 @@ class _ProfilePanelState extends State<ProfilePanel> {
     final String fn = _currentStudentData['fn'] ?? '';
     final String ln = _currentStudentData['ln'] ?? '';
     final String fullName = "$fn $ln";
-    final String program = _currentStudentData['student_details']?['courses']
-            ?['name'] ??
+
+    // Safe extraction for program name from potentially nested student_details list
+    final dynamic detailsRaw = _currentStudentData['student_details'];
+    Map<String, dynamic>? details;
+    if (detailsRaw is List && detailsRaw.isNotEmpty) {
+      details = detailsRaw.first;
+    } else if (detailsRaw is Map<String, dynamic>) {
+      details = detailsRaw;
+    }
+
+    final String program = details?['courses']?['name'] ??
         _currentStudentData['program'] ??
         "General Education";
 
@@ -352,9 +383,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
                         fontSize: 13,
                         fontWeight: FontWeight.w500)),
                 const SizedBox(height: 12),
-                _statusBadge(_currentStudentData['student_details']
-                        ?['enrollment_status'] ??
-                    "ENROLLED"),
+                _statusBadge(details?['enrollment_status'] ?? "ENROLLED"),
               ],
             ),
           ),
