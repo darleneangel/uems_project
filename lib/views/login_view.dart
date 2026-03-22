@@ -110,14 +110,27 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       setState(() => _isLoading = false);
 
       if (results.isNotEmpty) {
-        _loggedInUserData = results.first;
+        // 1. Store the resulting user data
+        final userData = results.first;
+
+        // 2. CRITICAL ENFORCEMENT: Verify if the account is Active
+        // This logic connects the 'Access & Security' panel settings to the login gate.
+        final String status = userData['account_status'] ?? 'Active';
+
+        if (status != 'Active') {
+          _showSuspendedDialog(status);
+          return; // 🛑 BLOCK ACCESS: Prevents reaching the dashboard
+        }
+
+        // 3. Process session data and attendance
+        _loggedInUserData = userData;
         final String role =
             (_loggedInUserData!['role'] as String).toLowerCase();
 
-        // --- ADDED: Record Check-In Timestamp ---
-        // We use the UUID (id) for the attendance link
+        // Record Check-In Timestamp for employees
         await service.recordAttendanceLogin(_loggedInUserData!['id'], role);
 
+        // 4. Authorized Navigation
         _routeToDashboard(role);
       } else {
         _showError("Identity Mismatch. Please check your credentials.");
@@ -126,6 +139,40 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       if (mounted) setState(() => _isLoading = false);
       _showError("Sync Error: Unable to reach academic core.");
     }
+  }
+
+  /// Helper to display the institutional access restriction notice
+  void _showSuspendedDialog(String status) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1B4B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            const Icon(Icons.report_problem, color: Colors.redAccent),
+            const SizedBox(width: 12),
+            Text("Access Restricted",
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          "Your institutional account is currently $status. \n\n"
+          "Portal access is prohibited under current status. Please coordinate with the Office of the Registrar or HR Management for verification.",
+          style: const TextStyle(color: Colors.white70, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("UNDERSTOOD",
+                style: TextStyle(
+                    color: Color(0xFF8B5CF6), fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
+    );
   }
 
   void _resetToLogin() async {
@@ -214,7 +261,8 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         return StudentDashboardView(
             userData: _loggedInUserData!, onLogout: _resetToLogin);
       case 'admin_dashboard':
-        return AdminDashboardView(onLogout: _resetToLogin);
+        return AdminDashboardView(
+            userData: _loggedInUserData!, onLogout: _resetToLogin);
       case 'admission_dashboard':
         return AdmissionDashboardView(
             userData: _loggedInUserData!, onLogout: _resetToLogin);

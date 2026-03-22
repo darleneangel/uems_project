@@ -1,1088 +1,429 @@
 import 'package:flutter/material.dart';
-
-import 'package:flutter/services.dart';
-
 import 'package:google_fonts/google_fonts.dart';
-
-
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:intl/intl.dart';
+import '../services/supabase_service.dart';
 
 class ReportPanel extends StatefulWidget {
-
-  const ReportPanel({super.key, this.isDarkMode = true});
-
   final bool isDarkMode;
+  final Map<String, dynamic> userData;
 
-
+  const ReportPanel({
+    super.key,
+    required this.isDarkMode,
+    required this.userData,
+  });
 
   @override
-
   State<ReportPanel> createState() => _ReportPanelState();
-
 }
-
-
 
 class _ReportPanelState extends State<ReportPanel> {
+  final SupabaseService _service = SupabaseService();
+  final _formKey = GlobalKey<FormState>();
 
-  final List<Map<String, String>> _reports = [];
+  // Controllers
+  final TextEditingController _officeCtl = TextEditingController();
+  final TextEditingController _categoryCtl = TextEditingController();
+  final TextEditingController _descCtl = TextEditingController();
 
-  late TextEditingController _officeCtl;
+  bool _isSubmitting = false;
+  String _selectedPriority = 'Medium';
 
-  late TextEditingController _categoryCtl;
-
-  late TextEditingController _descCtl;
-
-  late TextEditingController _importCtl;
-
-  int? _editingIndex;
-
-
-
-  // Theme colors
-
-  static const Color pViolet = Color(0xFF2E1065);
-
+  // Constants
   static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color success = Color(0xFF69F0AE);
+  static const Color surfaceDark = Color(0xFF1E1B4B);
 
-  static const Color surfaceDark = Color(0xFF1E1033);
+  final List<String> _offices = [
+    'Admissions',
+    'Registrar',
+    'Accounting',
+    'Finance',
+    'HR',
+    'Academic Affairs'
+  ];
 
-  static const Color lCard = Color(0xFFFFFFFF);
+  final List<String> _categories = [
+    'System Error',
+    'Data Issue',
+    'Performance',
+    'UI/UX',
+    'Integration',
+    'Security'
+  ];
 
-  
+  /// 🛰️ DATABASE: Submits a new incident report to the ledger
+  Future<void> _submitReport() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  late bool _isDarkMode;
-
-
-
-  final List<String> _offices = ['Admissions', 'Registrar', 'Accounting', 'Finance', 'HR', 'Academic Affairs'];
-
-  final List<String> _categories = ['System Error', 'Data Issue', 'Performance', 'UI/UX', 'Integration', 'Other'];
-
-  final List<String> _statuses = ['Open', 'In Progress', 'Resolved', 'Closed'];
-
-
-
-  @override
-
-  void initState() {
-
-    super.initState();
-
-    _officeCtl = TextEditingController();
-
-    _categoryCtl = TextEditingController();
-
-    _descCtl = TextEditingController();
-
-    _importCtl = TextEditingController();
-
-    _isDarkMode = widget.isDarkMode;
-
-    _seedDemoReports();
-
-  }
-
-  @override
-  void didUpdateWidget(covariant ReportPanel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.isDarkMode != widget.isDarkMode) {
-      setState(() {
-        _isDarkMode = widget.isDarkMode;
+    setState(() => _isSubmitting = true);
+    try {
+      await _service.client.from('system_reports').insert({
+        'office': _officeCtl.text,
+        'category': _categoryCtl.text,
+        'description': _descCtl.text.trim(),
+        'priority': _selectedPriority,
+        'status': 'Open',
+        'reported_by': widget.userData['id'], // Identity Link
       });
+
+      _clearForm();
+      _showToast("Incident Logged to System Archives", success);
+    } catch (e) {
+      _showToast(
+          "Critical Ledger Error: Submission Rejected", Colors.redAccent);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
-
-
-  void _seedDemoReports() {
-
-    _reports.addAll([
-
-      {
-
-        'office': 'Admissions',
-
-        'category': 'System Error',
-
-        'description': 'Login page crashes when submitting form with special characters',
-
-        'status': 'Open',
-
-        'timestamp': DateTime.now().subtract(const Duration(days: 2)).toString(),
-
-        'priority': 'High',
-
-      },
-
-      {
-
-        'office': 'Registrar',
-
-        'category': 'Data Issue',
-
-        'description': 'Course codes not syncing with academic calendar',
-
-        'status': 'In Progress',
-
-        'timestamp': DateTime.now().subtract(const Duration(days: 1)).toString(),
-
-        'priority': 'Medium',
-
-      },
-
-      {
-
-        'office': 'Accounting',
-
-        'category': 'Performance',
-
-        'description': 'Payment processing takes 5+ minutes to load',
-
-        'status': 'Resolved',
-
-        'timestamp': DateTime.now().subtract(const Duration(hours: 6)).toString(),
-
-        'priority': 'High',
-
-      },
-
-    ]);
-
+  /// 🛰️ DATABASE: Updates the resolution status of an existing report
+  Future<void> _updateReportStatus(String id, String status) async {
+    try {
+      await _service.client.from('system_reports').update({
+        'status': status,
+        'resolved_at':
+            status == 'Resolved' ? DateTime.now().toIso8601String() : null,
+      }).eq('id', id);
+      _showToast("System Status Synchronized", aViolet);
+    } catch (e) {
+      _showToast("Sync Error", Colors.redAccent);
+    }
   }
-
-
 
   void _clearForm() {
-
     _officeCtl.clear();
-
     _categoryCtl.clear();
-
     _descCtl.clear();
-
-    setState(() => _editingIndex = null);
-
+    setState(() => _selectedPriority = 'Medium');
   }
 
+  @override
+  Widget build(BuildContext context) {
+    final textColor =
+        widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
+    final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(textColor),
+          const SizedBox(height: 32),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // LEFT: Submission Terminal
+                Expanded(
+                    flex: 4,
+                    child: _buildReportingTerminal(cardColor, textColor)),
+                const SizedBox(width: 24),
+                // RIGHT: System Incident Ledger
+                Expanded(
+                    flex: 6, child: _buildIncidentLedger(cardColor, textColor)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  void _addReport() {
-
-    if (_officeCtl.text.isEmpty || _categoryCtl.text.isEmpty || _descCtl.text.isEmpty) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-
-        SnackBar(content: Text('Please fill all fields', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: Colors.redAccent),
-
+  Widget _buildHeader(Color t) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("System Health & Error Reports",
+              style: GoogleFonts.inter(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: t,
+                  letterSpacing: -1)),
+          const Text(
+              "Monitor institutional platform issues, data inconsistencies, and UI performance feedback.",
+              style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
+        ],
       );
 
-      return;
-
-    }
-
-
-
-    final newReport = {
-
-      'office': _officeCtl.text,
-
-      'category': _categoryCtl.text,
-
-      'description': _descCtl.text,
-
-      'status': 'Open',
-
-      'timestamp': DateTime.now().toString(),
-
-      'priority': 'Medium',
-
-    };
-
-
-
-    setState(() {
-
-      if (_editingIndex != null) {
-
-        _reports[_editingIndex!] = newReport;
-
-        _editingIndex = null;
-
-      } else {
-
-        _reports.insert(0, newReport);
-
-      }
-
-    });
-
-
-
-    _clearForm();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-
-      SnackBar(content: Text(_editingIndex == null ? 'Report submitted' : 'Report updated', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: const Color(0xFF69F0AE)),
-
-    );
-
-  }
-
-
-
-  void _startEdit(int idx) {
-
-    final report = _reports[idx];
-
-    setState(() {
-
-      _officeCtl.text = report['office'] ?? '';
-
-      _categoryCtl.text = report['category'] ?? '';
-
-      _descCtl.text = report['description'] ?? '';
-
-      _editingIndex = idx;
-
-    });
-
-  }
-
-
-
-  void _deleteReport(int idx) {
-
-    showDialog(
-
-      context: context,
-
-      builder: (ctx) => AlertDialog(
-
-        backgroundColor: _isDarkMode ? surfaceDark : lCard,
-
-        title: Text('Delete Report?', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w700)),
-
-        content: Text('This action cannot be undone.', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
-
-        actions: [
-
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54))),
-
-          TextButton(
-
-            onPressed: () {
-
-              setState(() => _reports.removeAt(idx));
-
-              Navigator.pop(ctx);
-
-              ScaffoldMessenger.of(context).showSnackBar(
-
-                SnackBar(content: Text('Report deleted', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: Colors.redAccent),
-
-              );
-
-            },
-
-            child: Text('Delete', style: GoogleFonts.inter(color: Colors.redAccent)),
-
-          ),
-
-        ],
-
-      ),
-
-    );
-
-  }
-
-
-
-  void _updateStatus(int idx, String newStatus) {
-
-    setState(() => _reports[idx]['status'] = newStatus);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-
-      SnackBar(content: Text('Status updated to $newStatus', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: const Color(0xFF69F0AE)),
-
-    );
-
-  }
-
-
-
-  String _exportCsv() {
-
-    const headers = 'Office,Category,Description,Status,Priority,Timestamp';
-
-    final rows = _reports.map((r) {
-
-      final desc = (r['description'] ?? '').replaceAll('"', '""');
-
-      return '"${r['office']}","${r['category']}","$desc","${r['status']}","${r['priority']}","${r['timestamp']}"';
-
-    }).join('\n');
-
-    return '$headers\n$rows';
-
-  }
-
-
-
-  List<Map<String, String>> _parseCsv(String csv) {
-
-    final lines = csv.split('\n').where((l) => l.isNotEmpty && !l.startsWith('Office,')).toList();
-
-    return lines.map((l) {
-
-      final parts = <String>[];
-
-      var current = '';
-
-      var inQuotes = false;
-
-      for (var i = 0; i < l.length; i++) {
-
-        final char = l[i];
-
-        if (char == '"') {
-
-          inQuotes = !inQuotes;
-
-          if (i + 1 < l.length && l[i + 1] == '"') {
-
-            current += '"';
-
-            i++;
-
-          }
-
-        } else if (char == ',' && !inQuotes) {
-
-          parts.add(current);
-
-          current = '';
-
-        } else {
-
-          current += char;
-
-        }
-
-      }
-
-      parts.add(current);
-
-      final result = parts.length >= 5
-
-          ? <String, String>{
-
-              'office': parts[0],
-
-              'category': parts[1],
-
-              'description': parts[2],
-
-              'status': parts[3],
-
-              'priority': parts[4],
-
-              'timestamp': DateTime.now().toString(),
-
-            }
-
-          : <String, String>{};
-
-      return result;
-
-    }).where((m) => m.isNotEmpty).toList();
-
-  }
-
-
-
-  void _showExportDialog() {
-
-    final csv = _exportCsv();
-
-    showDialog(
-
-      context: context,
-
-      builder: (ctx) => AlertDialog(
-
-        backgroundColor: _isDarkMode ? surfaceDark : lCard,
-
-        title: Text('Export Reports as CSV', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w700)),
-
-        content: SizedBox(
-
-          width: 500,
-
-          height: 300,
-
-          child: SingleChildScrollView(
-
-            child: SelectableText(csv, style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87, fontSize: 11)),
-
-          ),
-
-        ),
-
-        actions: [
-
-          TextButton(
-
-            onPressed: () {
-
-              Clipboard.setData(ClipboardData(text: csv));
-
-              ScaffoldMessenger.of(context).showSnackBar(
-
-                SnackBar(content: Text('CSV copied to clipboard', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: const Color(0xFF69F0AE)),
-
-              );
-
-              Navigator.pop(ctx);
-
-            },
-
-            child: Text('Copy to Clipboard', style: GoogleFonts.inter(color: const Color(0xFF8B5CF6))),
-
-          ),
-
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Close', style: GoogleFonts.inter(color: Colors.white54))),
-
-        ],
-
-      ),
-
-    );
-
-  }
-
-
-
-  void _showImportDialog() {
-
-    _importCtl.clear();
-
-    showDialog(
-
-      context: context,
-
-      builder: (ctx) => AlertDialog(
-
-        backgroundColor: _isDarkMode ? surfaceDark : lCard,
-
-        title: Text('Import Reports from CSV', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w700)),
-
-        content: SizedBox(
-
-          width: 500,
-
-          height: 300,
-
-          child: TextField(
-
-            controller: _importCtl,
-
-            maxLines: null,
-
-            expands: true,
-
-            style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet),
-
-            decoration: InputDecoration(
-
-              hintText: 'Paste CSV data here',
-
-              hintStyle: GoogleFonts.inter(color: _isDarkMode ? Colors.white30 : Colors.grey.shade500),
-
-              filled: true,
-
-              fillColor: Colors.white10,
-
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-
-            ),
-
-          ),
-
-        ),
-
-        actions: [
-
-          TextButton(
-
-            onPressed: () {
-
-              final imported = _parseCsv(_importCtl.text);
-
-              setState(() => _reports.addAll(imported));
-
-              Navigator.pop(ctx);
-
-              ScaffoldMessenger.of(context).showSnackBar(
-
-                SnackBar(content: Text('${imported.length} reports imported', style: GoogleFonts.inter(color: Colors.white)), backgroundColor: const Color(0xFF69F0AE)),
-
-              );
-
-            },
-
-            child: Text('Import', style: GoogleFonts.inter(color: const Color(0xFF8B5CF6))),
-
-          ),
-
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54))),
-
-        ],
-
-      ),
-
-    );
-
-  }
-
-
-
-  Color _getPriorityColor(String priority) {
-
-    return priority == 'High'
-
-        ? Colors.redAccent
-
-        : priority == 'Medium'
-
-            ? const Color(0xFFFFD54F)
-
-            : Colors.green;
-
-  }
-
-
-
-  Color _getStatusColor(String status) {
-
-    return status == 'Open'
-
-        ? Colors.orange
-
-        : status == 'In Progress'
-
-            ? const Color(0xFF64B5F6)
-
-            : status == 'Resolved'
-
-                ? const Color(0xFF69F0AE)
-
-                : Colors.grey;
-
-  }
-
-
-
-  Widget _buildReportDetails(Map<String, String> report) {
-
+  Widget _buildReportingTerminal(Color bg, Color text) {
     return Container(
-
-      padding: const EdgeInsets.all(20),
-
-      decoration: BoxDecoration(color: _isDarkMode ? Colors.white10 : Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
-
-      child: Column(
-
-        crossAxisAlignment: CrossAxisAlignment.start,
-
-        children: [
-
-          Row(
-
-            children: [
-
-              Container(
-
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-
-                decoration: BoxDecoration(color: _getPriorityColor(report['priority'] ?? 'Medium').withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
-
-                child: Text(report['priority'] ?? 'Medium', style: GoogleFonts.inter(color: _getPriorityColor(report['priority'] ?? 'Medium'), fontWeight: FontWeight.w600)),
-
-              ),
-
-              const SizedBox(width: 12),
-
-              Container(
-
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-
-                decoration: BoxDecoration(color: _getStatusColor(report['status'] ?? 'Open').withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
-
-                child: Text(report['status'] ?? 'Open', style: GoogleFonts.inter(color: _getStatusColor(report['status'] ?? 'Open'), fontWeight: FontWeight.w600)),
-
-              ),
-
-            ],
-
-          ),
-
-          const SizedBox(height: 16),
-
-          Text('Office: ${report['office']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w600)),
-
-          const SizedBox(height: 8),
-
-          Text('Category: ${report['category']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87)),
-
-          const SizedBox(height: 12),
-
-          Text('Description:', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white : pViolet, fontWeight: FontWeight.w600)),
-
-          const SizedBox(height: 8),
-
-          Text(report['description'] ?? '', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white70 : Colors.black87, height: 1.5)),
-
-          const SizedBox(height: 12),
-
-          Text('Submitted: ${report['timestamp']}', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54, fontSize: 12)),
-
-        ],
-
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+            color: widget.isDarkMode ? Colors.white10 : Colors.black12),
       ),
-
-    );
-
-  }
-
-
-
-  @override
-
-  Widget build(BuildContext context) {
-
-    // Theme-aware colors
-
-    final cardColor = _isDarkMode ? surfaceDark : lCard;
-
-    final textColor = _isDarkMode ? Colors.white : pViolet;
-
-    final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
-
-    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
-
-    final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
-
-    
-
-    return SingleChildScrollView(
-
-      child: Padding(
-
-        padding: const EdgeInsets.all(16),
-
+      child: Form(
+        key: _formKey,
         child: Column(
-
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            Row(
-
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
-
-        // Left panel: Create/Edit Report
-
-        Expanded(
-
-          flex: 1,
-
-          child: Container(
-
-            padding: const EdgeInsets.all(24),
-
-            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
-
-            child: Column(
-
-              mainAxisSize: MainAxisSize.min,
-
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
-
-                Row(
-
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-                  children: [
-
-                    Text('Submit Error Report', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700)),
-
-                    Row(children: [
-
-                      TextButton.icon(
-
-                        onPressed: _showImportDialog,
-
-                        icon: Icon(Icons.file_upload, color: subTextColor),
-
-                        label: Text('Import', style: GoogleFonts.inter(color: subTextColor)),
-
-                      ),
-
-                      const SizedBox(width: 8),
-
-                      TextButton.icon(
-
-                        onPressed: _showExportDialog,
-
-                        icon: Icon(Icons.file_download, color: subTextColor),
-
-                        label: Text('Export', style: GoogleFonts.inter(color: subTextColor)),
-
-                      ),
-
-                    ])
-
-                  ],
-
-                ),
-
-                const SizedBox(height: 16),
-
-                DropdownButtonFormField<String>(
-
-                  initialValue: _officeCtl.text.isEmpty ? null : _officeCtl.text,
-
-                  items: _offices.map((o) => DropdownMenuItem(value: o, child: Text(o, style: GoogleFonts.inter()))).toList(),
-
-                  onChanged: (v) => setState(() => _officeCtl.text = v ?? ''),
-
-                  decoration: InputDecoration(
-
-                    hintText: 'Select Office',
-
-                    filled: true,
-
-                    fillColor: fillColor,
-
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
-
-                  ),
-
-                  style: TextStyle(color: textColor),
-
-                  dropdownColor: cardColor,
-
-                ),
-
-                const SizedBox(height: 12),
-
-                DropdownButtonFormField<String>(
-
-                  initialValue: _categoryCtl.text.isEmpty ? null : _categoryCtl.text,
-
-                  items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c, style: GoogleFonts.inter()))).toList(),
-
-                  onChanged: (v) => setState(() => _categoryCtl.text = v ?? ''),
-
-                  decoration: InputDecoration(
-
-                    hintText: 'Error Category',
-
-                    filled: true,
-
-                    fillColor: fillColor,
-
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
-
-                  ),
-
-                  style: TextStyle(color: textColor),
-
-                  dropdownColor: cardColor,
-
-                ),
-
-                const SizedBox(height: 12),
-
-                TextField(
-
-                  controller: _descCtl,
-
-                  maxLines: 6,
-
-                  style: TextStyle(color: textColor),
-
-                  decoration: InputDecoration(
-
-                    hintText: 'Describe the error/problem in detail...',
-
-                    hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
-
-                    filled: true,
-
-                    fillColor: fillColor,
-
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
-
-                  ),
-
-                ),
-
-                const SizedBox(height: 16),
-
-                Row(children: [
-
-                  ElevatedButton(
-
-                    onPressed: _addReport,
-
-                    style: ElevatedButton.styleFrom(backgroundColor: aViolet),
-
-                    child: Text(_editingIndex == null ? 'Submit Report' : 'Update Report', style: GoogleFonts.inter(color: Colors.white)),
-
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  OutlinedButton(
-
-                    onPressed: _clearForm,
-
-                    style: OutlinedButton.styleFrom(side: BorderSide(color: borderColor)),
-
-                    child: Text('Clear', style: GoogleFonts.inter(color: subTextColor)),
-
-                  ),
-
-                ]),
-
-              ],
-
+            Text("NEW INCIDENT LOG",
+                style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: aViolet,
+                    letterSpacing: 1.5)),
+            const SizedBox(height: 24),
+            _buildDropdown("Originating Office", _officeCtl, _offices),
+            const SizedBox(height: 16),
+            _buildDropdown("Incident Category", _categoryCtl, _categories),
+            const SizedBox(height: 16),
+            _buildPriorityPicker(),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _descCtl,
+              maxLines: 5,
+              style: TextStyle(color: text),
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? "Description required" : null,
+              decoration: _inputStyle(
+                  "Detailed problem description...", LucideIcons.fileText),
             ),
-
-          ),
-
-        ),
-
-        const SizedBox(width: 24),
-
-        // Right panel: Reports List
-
-        Expanded(
-
-          flex: 1,
-
-          child: Container(
-
-            padding: const EdgeInsets.all(24),
-
-            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
-
-            child: Column(
-
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
-
-                Text('Reports Directory (${_reports.length})', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700)),
-
-                const SizedBox(height: 16),
-
-                ConstrainedBox(
-
-                  constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.6),
-
-                  child: _reports.isEmpty
-
-                      ? Center(child: Text('No reports yet', style: GoogleFonts.inter(color: subTextColor)))
-
-                      : ListView.builder(
-
-                          shrinkWrap: true,
-
-                          itemCount: _reports.length,
-
-                          itemBuilder: (ctx, idx) {
-
-                            final r = _reports[idx];
-
-                            return Container(
-
-                              margin: const EdgeInsets.only(bottom: 12),
-
-                              padding: const EdgeInsets.all(12),
-
-                              decoration: BoxDecoration(color: fillColor, borderRadius: BorderRadius.circular(8)),
-
-                              child: Column(
-
-                                crossAxisAlignment: CrossAxisAlignment.start,
-
-                                children: [
-
-                                  Row(
-
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-                                    children: [
-
-                                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-                                        Text(r['office'] ?? '', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w600)),
-
-                                        Text(r['category'] ?? '', style: GoogleFonts.inter(color: subTextColor, fontSize: 12)),
-
-                                      ]),
-
-                                      Row(children: [
-
-                                        Container(
-
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-
-                                          decoration: BoxDecoration(color: _getPriorityColor(r['priority'] ?? 'Medium').withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-
-                                          child: Text(r['priority'] ?? '', style: GoogleFonts.inter(color: _getPriorityColor(r['priority'] ?? 'Medium'), fontSize: 11, fontWeight: FontWeight.w600)),
-
-                                        ),
-
-                                        const SizedBox(width: 8),
-
-                                        PopupMenuButton(
-
-                                          onSelected: (status) => _updateStatus(idx, status),
-
-                                          itemBuilder: (ctx) => _statuses.map((s) => PopupMenuItem(value: s, child: Text(s, style: GoogleFonts.inter()))).toList(),
-
-                                          child: Container(
-
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-
-                                            decoration: BoxDecoration(color: _getStatusColor(r['status'] ?? 'Open').withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-
-                                            child: Text(r['status'] ?? '', style: GoogleFonts.inter(color: _getStatusColor(r['status'] ?? 'Open'), fontSize: 11, fontWeight: FontWeight.w600)),
-
-                                          ),
-
-                                        ),
-
-                                      ]),
-
-                                    ],
-
-                                  ),
-
-                                  const SizedBox(height: 8),
-
-                                  Text(r['description'] ?? '', style: GoogleFonts.inter(color: subTextColor, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
-
-                                  const SizedBox(height: 8),
-
-                                  Row(
-
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-                                    children: [
-
-                                      Text(r['timestamp'] ?? '', style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54, fontSize: 10)),
-
-                                      Row(
-
-                                        children: [
-
-                                          IconButton(
-
-                                            onPressed: () => showDialog(
-
-                                              context: context,
-
-                                              builder: (ctx) => AlertDialog(
-
-                                                backgroundColor: cardColor,
-
-                                                title: Text('Report Details', style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700)),
-
-                                                content: SizedBox(width: 400, child: _buildReportDetails(r)),
-
-                                                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Close', style: GoogleFonts.inter(color: subTextColor)))],
-
-                                              ),
-
-                                            ),
-
-                                            icon: Icon(Icons.info, color: subTextColor, size: 18),
-
-                                          ),
-
-                                          IconButton(onPressed: () => _startEdit(idx), icon: Icon(Icons.edit, color: subTextColor, size: 18)),
-
-                                          IconButton(onPressed: () => _deleteReport(idx), icon: const Icon(Icons.delete, color: Colors.redAccent, size: 18)),
-
-                                        ],
-
-                                      ),
-
-                                    ],
-
-                                  ),
-
-                                ],
-
-                              ),
-
-                            );
-
-                          },
-
-                        ),
-
-                ),
-
-              ],
-
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              height: 60,
+              child: ElevatedButton.icon(
+                onPressed: _isSubmitting ? null : _submitReport,
+                icon: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.black))
+                    : const Icon(LucideIcons.send),
+                label: const Text("TRANSMIT ERROR LOG",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, letterSpacing: 1)),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: success,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16))),
+              ),
             ),
-
-          ),
-
-        ),
-
-              ],
-
-            ),
-
           ],
-
         ),
-
       ),
-
     );
-
   }
 
+  Widget _buildIncidentLedger(Color bg, Color text) {
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+            color: widget.isDarkMode ? Colors.white10 : Colors.black12),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.activity, color: aViolet, size: 18),
+                const SizedBox(width: 12),
+                Text("REAL-TIME SYSTEM INCIDENTS",
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold, color: text)),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Colors.white10),
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _service.client.from('system_reports').stream(
+                  primaryKey: ['id']).order('created_at', ascending: false),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData)
+                  return const Center(
+                      child: CircularProgressIndicator(color: aViolet));
+                final list = snapshot.data!;
 
+                if (list.isEmpty) return _emptyState();
 
-  
-
-  @override
-
-  void dispose() {
-
-    _officeCtl.dispose();
-
-    _categoryCtl.dispose();
-
-    _descCtl.dispose();
-
-    _importCtl.dispose();
-
-    super.dispose();
-
+                return ListView.separated(
+                  itemCount: list.length,
+                  padding: const EdgeInsets.all(12),
+                  separatorBuilder: (_, __) =>
+                      const Divider(color: Colors.white10, height: 1),
+                  itemBuilder: (context, i) {
+                    final report = list[i];
+                    return _buildReportItem(report, text);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
+  Widget _buildReportItem(Map<String, dynamic> r, Color text) {
+    final timestamp = DateFormat('MMM dd, hh:mm a')
+        .format(DateTime.parse(r['created_at']).toLocal());
+    final status = r['status'] ?? 'Open';
+    final priority = r['priority'] ?? 'Medium';
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      title: Row(
+        children: [
+          Text(r['office'] ?? 'System',
+              style: TextStyle(
+                  color: text, fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(width: 12),
+          _priorityChip(priority),
+        ],
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          Text(r['description'] ?? '',
+              style: const TextStyle(
+                  color: Colors.blueGrey, fontSize: 12, height: 1.4)),
+          const SizedBox(height: 8),
+          Text("$timestamp • ID: ${r['id'].toString().substring(0, 8)}",
+              style: const TextStyle(
+                  color: Colors.blueGrey,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold)),
+        ],
+      ),
+      trailing: PopupMenuButton<String>(
+        onSelected: (val) => _updateReportStatus(r['id'], val),
+        color: surfaceDark,
+        child: _statusChip(status),
+        itemBuilder: (context) => ['Open', 'In Progress', 'Resolved', 'Closed']
+            .map((s) => PopupMenuItem(
+                value: s,
+                child: Text(s,
+                    style: const TextStyle(color: Colors.white, fontSize: 12))))
+            .toList(),
+      ),
+    );
+  }
+
+  // --- UI COMPONENTS ---
+
+  Widget _buildDropdown(
+      String label, TextEditingController c, List<String> items) {
+    return DropdownButtonFormField<String>(
+      dropdownColor: surfaceDark,
+      style: const TextStyle(color: Colors.white),
+      decoration: _inputStyle(label, LucideIcons.building),
+      items:
+          items.map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
+      onChanged: (v) => setState(() => c.text = v ?? ''),
+      validator: (v) => (v == null || v.isEmpty) ? "Required" : null,
+    );
+  }
+
+  Widget _buildPriorityPicker() {
+    return Row(
+      children: ['Low', 'Medium', 'High'].map((p) {
+        bool isSelected = _selectedPriority == p;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _selectedPriority = p),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? _getPriorityColor(p)
+                    : Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(p,
+                    style: TextStyle(
+                        color: isSelected ? Colors.black : Colors.blueGrey,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11)),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  InputDecoration _inputStyle(String hint, IconData icon) => InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon, size: 18, color: Colors.blueGrey),
+        hintStyle: const TextStyle(color: Colors.blueGrey, fontSize: 13),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.03),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: aViolet, width: 1)),
+      );
+
+  Widget _priorityChip(String p) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+            color: _getPriorityColor(p).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(6)),
+        child: Text(p.toUpperCase(),
+            style: TextStyle(
+                color: _getPriorityColor(p),
+                fontSize: 8,
+                fontWeight: FontWeight.w900)),
+      );
+
+  Widget _statusChip(String s) {
+    Color c = s == 'Resolved'
+        ? success
+        : (s == 'Open' ? Colors.orangeAccent : Colors.blueAccent);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+          color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+      child: Text(s.toUpperCase(),
+          style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.w900)),
+    );
+  }
+
+  Color _getPriorityColor(String p) {
+    if (p == 'High') return Colors.redAccent;
+    if (p == 'Medium') return Colors.orange;
+    return Colors.green;
+  }
+
+  Widget _emptyState() => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(LucideIcons.shieldCheck,
+                size: 48, color: Colors.blueGrey.withOpacity(0.2)),
+            const SizedBox(height: 16),
+            const Text("System Core is currently stable.",
+                style: TextStyle(
+                    color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+
+  void _showToast(String m, Color c) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(m, style: const TextStyle(fontWeight: FontWeight.bold)),
+      backgroundColor: c,
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.all(24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
+  }
 }
-

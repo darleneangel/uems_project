@@ -1,686 +1,401 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../services/office_request_service.dart';
+import 'package:intl/intl.dart';
+import '../services/supabase_service.dart';
 
 class RequestReceiver extends StatefulWidget {
-  const RequestReceiver({super.key, this.isDarkMode = true});
   final bool isDarkMode;
+  final Map<String, dynamic> userData; // Required as per system architecture
+
+  const RequestReceiver({
+    super.key,
+    this.isDarkMode = true,
+    required this.userData,
+  });
 
   @override
   State<RequestReceiver> createState() => _RequestReceiverState();
 }
 
 class _RequestReceiverState extends State<RequestReceiver> {
-  final OfficeRequestService _service = OfficeRequestService();
+  final SupabaseService _service = SupabaseService();
   String _selectedOfficeFilter = 'all';
 
+  // Institutional Palette
   static const Color aViolet = Color(0xFF8B5CF6);
-  static const Color surfaceDark = Color(0xFF1E1033);
+  static const Color surfaceDark = Color(0xFF1E1B4B);
   static const Color success = Color(0xFF69F0AE);
-  static const Color warning = Color(0xFFFFB74D);
   static const Color pViolet = Color(0xFF2E1065);
-  static const Color lCard = Color(0xFFFFFFFF);
-  
-  late bool _isDarkMode;
 
+  // Office Metadata Mapping (Syncs request types to departments)
   static const Map<String, Map<String, dynamic>> officeInfo = {
     'admissions': {
       'name': 'Admissions',
       'icon': LucideIcons.userPlus,
       'color': Color(0xFF42A5F5),
+      'types': ['Registration Fee', 'Document Submission', 'Entrance Exam']
     },
     'registrar': {
       'name': 'Registrar',
-      'icon': LucideIcons.users,
+      'icon': LucideIcons.bookOpen,
       'color': Color(0xFF66BB6A),
+      'types': [
+        'Transcript of Records',
+        'Certification of Grades',
+        'Certificate of Good Moral',
+        'Official Document'
+      ]
     },
     'accounting': {
       'name': 'Accounting',
       'icon': LucideIcons.wallet,
       'color': Color(0xFFFFA726),
+      'types': ['Financial Clearance', 'Promissory Note', 'Tuition Payment']
     },
   };
 
-  @override
-  void initState() {
-    super.initState();
-    _isDarkMode = widget.isDarkMode;
-    _seedDemoRequests();
-  }
+  /// 🛰️ DATABASE: Approves the institutional request and stamps the admin's ID
+  Future<void> _processRequest(String id, String status) async {
+    try {
+      await _service.client.from('office_requests').update({
+        'request_status': status,
+        'processed_at': DateTime.now().toIso8601String(),
+        'processed_by': widget.userData['id'], // Audit trail link
+      }).eq('id', id);
 
-  @override
-  void didUpdateWidget(covariant RequestReceiver oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.isDarkMode != widget.isDarkMode) {
-      setState(() {
-        _isDarkMode = widget.isDarkMode;
-      });
+      _showToast("Institutional status updated to $status",
+          status == 'Approved' ? success : Colors.redAccent);
+    } catch (e) {
+      _showToast(
+          "Ledger Update Failed: Connection Interrupted", Colors.redAccent);
     }
   }
 
-  void _seedDemoRequests() {
-    // Demo data is automatically seeded when OfficeRequestService is instantiated
-    // No need to call _seedDemoData() here as it's private
-  }
+  @override
+  Widget build(BuildContext context) {
+    final textColor = widget.isDarkMode ? Colors.white : pViolet;
+    final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
+    final subTextColor = widget.isDarkMode ? Colors.white70 : Colors.blueGrey;
 
-  List<OfficeRequest> _getFilteredRequests(List<OfficeRequest> allRequests) {
-    // Show only pending requests (not approved, rejected, or archived)
-    List<OfficeRequest> pending =
-        allRequests.where((r) => r.status == 'pending').toList();
+    // FIX: mainAxisSize.max is now enabled because the Dashboard provides bounded height.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        _buildFilterBar(subTextColor),
+        const SizedBox(height: 32),
 
-    if (_selectedOfficeFilter == 'all') {
-      return pending;
-    }
-    return pending.where((r) => r.office == _selectedOfficeFilter).toList();
-  }
+        // DYNAMIC DATA STREAM
+        // FIX: Wrapped in Expanded to utilize bounded height and prevent RenderFlex overflow.
+        Expanded(
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _service.client.from('office_requests').stream(
+                primaryKey: ['id']).order('date_applied', ascending: false),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return _buildErrorState(subTextColor,
+                    "Institutional Sync Error: Ledger unreachable.");
+              }
 
-  void _approveRequest(int id) {
-    _service.approve(id);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Request approved'),
-        backgroundColor: success,
-      ),
-    );
-  }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                    child: CircularProgressIndicator(color: aViolet));
+              }
 
-  void _rejectRequest(int id) {
-    _service.reject(id);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Request rejected'),
-        backgroundColor: Colors.redAccent,
-      ),
-    );
-  }
+              final rawData = snapshot.data ?? [];
 
-  void _showRequestDetails(OfficeRequest request) {
-    // Theme-aware colors for dialogs
-    final dialogBgColor = _isDarkMode ? surfaceDark : lCard;
-    final dialogTextColor = _isDarkMode ? Colors.white : pViolet;
-    final dialogSubTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: dialogBgColor,
-        title: Text(
-          '${officeInfo[request.office]?['name'] ?? request.office} - ${request.requestType}',
-          style: GoogleFonts.inter(
-            color: dialogTextColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+              // 📐 FILTER ENGINE: Logic verified for cross-office audit
+              final filtered = rawData.where((req) {
+                if (req == null) return false;
+
+                final status =
+                    (req['request_status'] ?? req['status'] ?? '').toString();
+
+                // Finalized items are moved to archives/history
+                if (status == 'Approved' ||
+                    status == 'Rejected' ||
+                    status == 'Released' ||
+                    status == 'Archived') return false;
+
+                if (_selectedOfficeFilter == 'all') return true;
+
+                final String type = (req['request_type'] ?? '').toString();
+                final List<String> officeTypes = List<String>.from(
+                    officeInfo[_selectedOfficeFilter]?['types'] ?? []);
+                return officeTypes.contains(type);
+              }).toList();
+
+              if (filtered.isEmpty) return _buildEmptyState(subTextColor);
+
+              // FIX: shrinkWrap: false and default scroll physics enabled.
+              // This allows the list to scroll independently within the panel.
+              return ListView.separated(
+                physics: const BouncingScrollPhysics(),
+                itemCount: filtered.length,
+                padding: const EdgeInsets.only(bottom: 40),
+                separatorBuilder: (_, __) => const SizedBox(height: 16),
+                itemBuilder: (context, i) => _buildRequestCard(
+                    filtered[i], cardColor, textColor, subTextColor),
+              );
+            },
           ),
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+      ],
+    );
+  }
+
+  Widget _buildFilterBar(Color sub) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("OFFICE QUEUE SELECTION",
+            style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: sub,
+                letterSpacing: 1.5)),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
             children: [
-              // Display different content based on whether this is an announcement
-              if (request.isAnnouncement) ...[
-                // Announcement Format
-                Text(
-                  'Office:',
-                  style: GoogleFonts.inter(
-                    color: dialogSubTextColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  officeInfo[request.office]?['name'] ?? request.office,
-                  style: GoogleFonts.inter(color: dialogTextColor, fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Department:',
-                  style: GoogleFonts.inter(
-                    color: dialogSubTextColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  request.department ?? 'N/A',
-                  style: GoogleFonts.inter(color: dialogTextColor, fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Priority:',
-                  style: GoogleFonts.inter(
-                    color: dialogSubTextColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getPriorityColor(request.priority).withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    request.priority ?? 'N/A',
-                    style: GoogleFonts.inter(
-                      color: _getPriorityColor(request.priority),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Target Audience:',
-                  style: GoogleFonts.inter(
-                    color: dialogSubTextColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  request.targetAudience ?? 'N/A',
-                  style: GoogleFonts.inter(color: dialogTextColor, fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Proposed Announcement:',
-                  style: GoogleFonts.inter(
-                    color: dialogSubTextColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _isDarkMode ? aViolet.withOpacity(0.08) : pViolet.withValues(alpha:0.05),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: _isDarkMode ? aViolet.withOpacity(0.2) : pViolet.withValues(alpha:0.15)),
-                  ),
-                  child: Text(
-                    request.proposedAnnouncement?.isNotEmpty == true
-                        ? request.proposedAnnouncement!
-                        : (request.details.isNotEmpty
-                            ? request.details
-                            : 'No announcement content'),
-                    style: GoogleFonts.inter(color: dialogSubTextColor, fontSize: 13, height: 1.5),
-                  ),
-                ),
-              ] else ...[
-                // Regular Request Format
-                Text(
-                  'Office:',
-                  style: GoogleFonts.inter(
-                    color: dialogSubTextColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  officeInfo[request.office]?['name'] ?? request.office,
-                  style: GoogleFonts.inter(color: dialogTextColor, fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Request Type:',
-                  style: GoogleFonts.inter(
-                    color: dialogSubTextColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  request.requestType,
-                  style: GoogleFonts.inter(color: dialogTextColor, fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Details:',
-                  style: GoogleFonts.inter(
-                    color: dialogSubTextColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  request.details.isNotEmpty
-                      ? request.details
-                      : 'No additional details',
-                  style: GoogleFonts.inter(color: dialogSubTextColor, fontSize: 14),
-                ),
-              ],
-              const SizedBox(height: 16),
-              Text(
-                'Submitted:',
-                style: GoogleFonts.inter(
-                  color: dialogSubTextColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _formatDateTime(request.createdAt),
-                style: GoogleFonts.inter(color: _isDarkMode ? Colors.white54 : Colors.black54, fontSize: 12),
-              ),
+              _filterChip('all', 'Universal Feed', LucideIcons.layers, aViolet),
+              const SizedBox(width: 8),
+              ...officeInfo.entries.map((e) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: _filterChip(e.key, e.value['name'], e.value['icon'],
+                        e.value['color']),
+                  )),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Close',
-              style: GoogleFonts.inter(color: dialogSubTextColor),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              _rejectRequest(request.id);
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-            ),
-            child: Text(
-              'Reject',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+      ],
+    );
+  }
+
+  Widget _filterChip(String id, String label, IconData icon, Color color) {
+    bool isSelected = _selectedOfficeFilter == id;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedOfficeFilter = id),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? color : Colors.white.withOpacity(0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+              color: isSelected ? Colors.transparent : Colors.white10),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 14, color: isSelected ? Colors.white : color),
+            const SizedBox(width: 10),
+            Text(label.toUpperCase(),
+                style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: isSelected ? Colors.white : color,
+                    letterSpacing: 0.5)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRequestCard(
+      Map<String, dynamic> req, Color bg, Color text, Color sub) {
+    final String type = (req['request_type'] ?? 'Service Ticket').toString();
+    final String hash = (req['qr_hash'] ?? 'LRD-TX-PENDING').toString();
+
+    String date = "Pending Audit";
+    if (req['date_applied'] != null) {
+      try {
+        date = DateFormat('MMMM dd, hh:mm a')
+            .format(DateTime.parse(req['date_applied'].toString()));
+      } catch (e) {
+        date = "Invalid Date";
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+            color: widget.isDarkMode
+                ? Colors.white10
+                : Colors.black.withOpacity(0.05)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: FutureBuilder<Map<String, dynamic>?>(
+                  // FIX: Robust null guard for req['student_id'] and id string conversion
+                  future: (req['student_id'] == null)
+                      ? Future.value(null)
+                      : _service.client
+                          .from('profiles')
+                          .select('fn, ln, user_id_number')
+                          .eq('id', req['student_id'].toString())
+                          .maybeSingle(),
+                  builder: (context, snapshot) {
+                    final profile = snapshot.data;
+                    final String firstName =
+                        (profile?['fn'] ?? 'TBA').toString();
+                    final String lastName = (profile?['ln'] ?? '').toString();
+                    final String name = profile != null
+                        ? "$firstName $lastName"
+                        : "Identifying Applicant...";
+                    final String lrd =
+                        profile?['user_id_number']?.toString() ?? "ID-PENDING";
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name.toUpperCase(),
+                            style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w900,
+                                color: text,
+                                fontSize: 16,
+                                letterSpacing: -0.2)),
+                        Text("LRD-ID: $lrd • Submitted: $date",
+                            style: TextStyle(
+                                color: sub,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500)),
+                      ],
+                    );
+                  },
+                ),
               ),
-            ),
+              _statusChip("Pending Processing", Colors.orangeAccent),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              _approveRequest(request.id);
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: success,
-            ),
-            child: Text(
-              'Approve',
-              style: GoogleFonts.inter(
-                color: surfaceDark,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          const Divider(height: 48, color: Colors.white10),
+          Row(
+            children: [
+              _infoBlock("REQUEST CATEGORY", type, aViolet),
+              _infoBlock(
+                  "AUTHENTICATION HASH",
+                  hash.length > 20 ? "${hash.substring(0, 18)}..." : hash,
+                  Colors.blueGrey),
+              const Spacer(),
+              _actionBtn(LucideIcons.x, "REJECT", Colors.redAccent,
+                  () => _processRequest(req['id'].toString(), 'Rejected')),
+              const SizedBox(width: 12),
+              _actionBtn(LucideIcons.check, "APPROVE", success,
+                  () => _processRequest(req['id'].toString(), 'Approved')),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Color _getPriorityColor(String? priority) {
-    switch (priority?.toLowerCase()) {
-      case 'critical':
-        return const Color(0xFFEF5350); // Red
-      case 'high':
-        return const Color(0xFFFF9800); // Orange
-      case 'medium':
-        return const Color(0xFFFFD54F); // Yellow
-      case 'low':
-        return Colors.greenAccent;
-      default:
-        return Colors.white70;
-    }
-  }
-
-  String _formatDateTime(DateTime dt) {
-    return '${dt.month}/${dt.day}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Theme-aware colors
-    final textColor = _isDarkMode ? Colors.white : pViolet;
-    final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
-    final cardFillColor = _isDarkMode ? const Color(0xFF24164A) : Colors.white;
-    final detailsFillColor =
-        _isDarkMode ? aViolet.withValues(alpha: 0.08) : Colors.grey.shade50;
-    final mutedTextColor = _isDarkMode ? Colors.white60 : Colors.black54;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Filter by Office
-        Text(
-          'Filter by Office',
-          style: GoogleFonts.inter(
-            color: subTextColor,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
+  Widget _infoBlock(String l, String v, Color c) => Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l,
+                style: GoogleFonts.inter(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.blueGrey,
+                    letterSpacing: 1)),
+            const SizedBox(height: 6),
+            Text(v,
+                style: GoogleFonts.inter(
+                    color: c, fontWeight: FontWeight.w700, fontSize: 13),
+                overflow: TextOverflow.ellipsis),
+          ],
         ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
+      );
+
+  Widget _actionBtn(IconData i, String l, Color c, VoidCallback onTap) =>
+      ElevatedButton.icon(
+        onPressed: onTap,
+        icon: Icon(i, size: 14),
+        label: Text(l,
+            style: const TextStyle(
+                fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: c.withOpacity(0.1),
+          foregroundColor: c,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: c.withOpacity(0.2))),
+        ),
+      );
+
+  Widget _statusChip(String t, Color c) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+            color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+        child: Text(t.toUpperCase(),
+            style: TextStyle(
+                color: c,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5)),
+      );
+
+  Widget _buildEmptyState(Color sub) => Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 80),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedOfficeFilter = 'all'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _selectedOfficeFilter == 'all'
-                          ? (_isDarkMode ? aViolet.withOpacity(0.3) : pViolet.withValues(alpha:0.15))
-                          : (_isDarkMode ? aViolet.withOpacity(0.04) : Colors.grey.shade100),
-                      border: Border.all(
-                        color: _selectedOfficeFilter == 'all'
-                            ? (_isDarkMode ? aViolet : pViolet)
-                            : (_isDarkMode ? aViolet.withOpacity(0.12) : Colors.grey.shade300),
-                        width: _selectedOfficeFilter == 'all' ? 1.5 : 1.0,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'All Offices',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: _selectedOfficeFilter == 'all'
-                            ? FontWeight.bold
-                            : FontWeight.w500,
-                        color: _selectedOfficeFilter == 'all'
-                            ? (_isDarkMode ? Colors.white : pViolet)
-                            : subTextColor,
-                      ),
-                    ),
-                  ),
-                ),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.03),
+                    shape: BoxShape.circle),
+                child: Icon(LucideIcons.clipboardCheck,
+                    size: 48, color: sub.withOpacity(0.2)),
               ),
-              ...officeInfo.entries.map((entry) {
-                final key = entry.key;
-                final info = entry.value;
-                final isSelected = _selectedOfficeFilter == key;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedOfficeFilter = key),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? info['color'].withOpacity(0.2)
-                            : (_isDarkMode ? aViolet.withOpacity(0.04) : Colors.grey.shade100),
-                        border: Border.all(
-                          color: isSelected 
-                              ? info['color'] 
-                              : (_isDarkMode ? aViolet.withOpacity(0.12) : Colors.grey.shade300),
-                          width: isSelected ? 1.5 : 1.0,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            info['icon'],
-                            size: 16,
-                            color: isSelected
-                                ? info['color']
-                                : subTextColor,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            info['name'],
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.w500,
-                              color: isSelected
-                                  ? info['color']
-                                  : subTextColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
+              const SizedBox(height: 24),
+              Text("Institutional Queue Clear",
+                  style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: sub.withOpacity(0.5))),
+              const SizedBox(height: 4),
+              const Text("All incoming service requests have been audited.",
+                  style: TextStyle(color: Colors.blueGrey, fontSize: 13)),
             ],
           ),
         ),
-        const SizedBox(height: 24),
-        // Requests List
-        ValueListenableBuilder<List<OfficeRequest>>(
-          valueListenable: OfficeRequestService.notifier,
-          builder: (context, allRequests, _) {
-            final filtered = _getFilteredRequests(allRequests);
+      );
 
-            if (filtered.isEmpty) {
-              return Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: _isDarkMode
-                      ? Colors.white.withValues(alpha: 0.02)
-                      : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _isDarkMode
-                        ? aViolet.withValues(alpha: 0.16)
-                        : Colors.grey.shade200,
-                    width: 1.0,
-                  ),
-                ),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        LucideIcons.inbox,
-                        size: 48,
-                        color: _isDarkMode ? Colors.white30 : Colors.grey.shade400,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No pending requests',
-                        style: GoogleFonts.inter(
-                          color: subTextColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'All requests have been reviewed',
-                        style: GoogleFonts.inter(
-                          color: mutedTextColor,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filtered.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final request = filtered[index];
-                final info = officeInfo[request.office];
-                final color = info?['color'] ?? Colors.white60;
-
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: cardFillColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: _isDarkMode
-                          ? aViolet.withValues(alpha: 0.2)
-                          : Colors.black12,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: color.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              info?['icon'] ?? LucideIcons.building2,
-                              color: color,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  info?['name'] ?? request.office,
-                                  style: GoogleFonts.inter(
-                                    color: color,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  request.requestType,
-                                  style: GoogleFonts.inter(
-                                    color: textColor,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: warning.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Pending',
-                              style: GoogleFonts.inter(
-                                color: warning,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                        if (request.details.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: detailsFillColor,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: _isDarkMode
-                                  ? aViolet.withValues(alpha: 0.16)
-                                  : Colors.black12,
-                            ),
-                          ),
-                          child: Text(
-                            request.details,
-                            style: GoogleFonts.inter(
-                              color: subTextColor,
-                              fontSize: 12,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Text(
-                            _formatDateTime(request.createdAt),
-                            style: GoogleFonts.inter(
-                              color: mutedTextColor,
-                              fontSize: 11,
-                            ),
-                          ),
-                          const Spacer(),
-                          OutlinedButton.icon(
-                            onPressed: () => _rejectRequest(request.id),
-                            icon: const Icon(
-                              LucideIcons.x,
-                              size: 16,
-                            ),
-                            label: const Text('Reject'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.redAccent,
-                              side: const BorderSide(
-                                color: Colors.redAccent,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton.icon(
-                            onPressed: () => _approveRequest(request.id),
-                            icon: const Icon(
-                              LucideIcons.check,
-                              size: 16,
-                            ),
-                            label: const Text('Approve'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: success,
-                              foregroundColor: surfaceDark,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton.icon(
-                            onPressed: () =>
-                                _showRequestDetails(request),
-                            icon: const Icon(
-                              LucideIcons.eye,
-                              size: 16,
-                            ),
-                            label: const Text('Details'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _isDarkMode ? aViolet : pViolet,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+  Widget _buildErrorState(Color sub, String msg) => Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 60),
+          child: Column(
+            children: [
+              const Icon(LucideIcons.alertTriangle,
+                  color: Colors.redAccent, size: 40),
+              const SizedBox(height: 16),
+              Text(msg,
+                  style: TextStyle(color: sub, fontWeight: FontWeight.bold)),
+            ],
+          ),
         ),
-      ],
-    );
+      );
+
+  void _showToast(String m, Color c) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(m, style: const TextStyle(fontWeight: FontWeight.bold)),
+      backgroundColor: c,
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.all(32),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ));
   }
 }

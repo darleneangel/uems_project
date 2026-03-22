@@ -1,606 +1,426 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter/services.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:intl/intl.dart';
+import '../services/supabase_service.dart';
 
 class HRPanel extends StatefulWidget {
-  const HRPanel({super.key, this.isDarkMode = true});
   final bool isDarkMode;
+  final Map<String, dynamic> userData;
+
+  const HRPanel({
+    super.key,
+    required this.isDarkMode,
+    required this.userData,
+  });
 
   @override
   State<HRPanel> createState() => _HRPanelState();
 }
 
 class _HRPanelState extends State<HRPanel> {
-  final List<Map<String, String>> _employees = [];
-  final _nameCtl = TextEditingController();
-  final _deptCtl = TextEditingController();
-  final _emailCtl = TextEditingController();
-  final _empIdCtl = TextEditingController();
-  final _roleCtl = TextEditingController();
-  int? _editingIndex;
-  final TextEditingController _importCtl = TextEditingController();
+  final SupabaseService _service = SupabaseService();
+  final TextEditingController _searchController = TextEditingController();
 
-  // Theme colors
-  static const Color pViolet = Color(0xFF2E1065);
+  bool _isLoading = true;
+  bool _isActionLoading = false;
+  String _searchQuery = "";
+  String _roleFilter = "All Roles";
+
+  // Institutional Palette
   static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color success = Color(0xFF69F0AE);
   static const Color surfaceDark = Color(0xFF1E1B4B);
-  static const Color lCard = Color(0xFFFFFFFF);
-  static const Color secondaryViolet = Color(0xFF4C1D95);
 
-  late bool _isDarkMode;
-
-  @override
-  void initState() {
-    super.initState();
-    _isDarkMode = widget.isDarkMode;
-  }
-
-  @override
-  void didUpdateWidget(covariant HRPanel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.isDarkMode != widget.isDarkMode) {
-      setState(() {
-        _isDarkMode = widget.isDarkMode;
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _nameCtl.dispose();
-    _deptCtl.dispose();
-    _emailCtl.dispose();
-    _empIdCtl.dispose();
-    _roleCtl.dispose();
-    _importCtl.dispose();
-    super.dispose();
-  }
-
-  void _addEmployee() {
-    final name = _nameCtl.text.trim();
-    if (name.isEmpty) return;
-    final record = {
-      'name': name,
-      'department': _deptCtl.text.trim(),
-      'email': _emailCtl.text.trim(),
-      'employeeId': _empIdCtl.text.trim(),
-      'role': _roleCtl.text.trim(),
-    };
-    setState(() {
-      if (_editingIndex != null) {
-        _employees[_editingIndex!] = record;
-        _editingIndex = null;
-      } else {
-        _employees.insert(0, record);
-      }
-    });
-    _clearForm();
-  }
-
-  void _clearForm() {
-    _nameCtl.clear();
-    _deptCtl.clear();
-    _emailCtl.clear();
-    _empIdCtl.clear();
-    _roleCtl.clear();
-    _editingIndex = null;
-  }
-
-  void _startEdit(int index) {
-    final e = _employees[index];
-    _nameCtl.text = e['name'] ?? '';
-    _deptCtl.text = e['department'] ?? '';
-    _emailCtl.text = e['email'] ?? '';
-    _empIdCtl.text = e['employeeId'] ?? '';
-    _roleCtl.text = e['role'] ?? '';
-    setState(() {
-      _editingIndex = index;
-    });
-  }
-
-  void _deleteEmployee(int index) {
-    final dialogTextColor = _isDarkMode ? Colors.white : pViolet;
-    final dialogSubTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
-
-    showDialog(
-      context: context,
-      builder: (c) => AlertDialog(
-        backgroundColor: _isDarkMode ? const Color(0xFF1E1033) : lCard,
-        title: Text(
-          'Confirm Delete',
-          style: GoogleFonts.inter(color: dialogTextColor),
-        ),
-        content: Text(
-          'Delete ${_employees[index]['name']}?',
-          style: GoogleFonts.inter(color: dialogSubTextColor),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(c).pop(),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.inter(color: dialogSubTextColor),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() => _employees.removeAt(index));
-              Navigator.of(c).pop();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF8B5CF6),
-            ),
-            child: Text(
-              'Delete',
-              style: GoogleFonts.inter(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _exportCsv() {
-    final sb = StringBuffer();
-    sb.writeln('name,department,email,employeeId,role');
-    for (final e in _employees) {
-      final row = [
-        e['name'],
-        e['department'],
-        e['email'],
-        e['employeeId'],
-        e['role'],
-      ].map((s) => '"${(s ?? '').replaceAll('"', '""')}"').join(',');
-      sb.writeln(row);
-    }
-    return sb.toString();
-  }
-
-  void _showExportDialog() {
-    final csv = _exportCsv();
-    final dialogBgColor = _isDarkMode ? const Color(0xFF1E1033) : lCard;
-    final dialogTextColor = _isDarkMode ? Colors.white : pViolet;
-    final dialogSubTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
-    showDialog(
-      context: context,
-      builder: (c) => AlertDialog(
-        backgroundColor: dialogBgColor,
-        title: Text(
-          'Export CSV',
-          style: GoogleFonts.inter(color: dialogTextColor),
-        ),
-        content: SizedBox(
-          width: 600,
-          child: SingleChildScrollView(
-            child: SelectableText(
-              csv,
-              style: GoogleFonts.inter(color: dialogSubTextColor),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(c).pop(),
-            child: Text(
-              'Close',
-              style: GoogleFonts.inter(color: dialogSubTextColor),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: csv));
-              Navigator.of(c).pop();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF8B5CF6),
-            ),
-            child: Text('Copy', style: GoogleFonts.inter(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showImportDialog() {
-    _importCtl.clear();
-    final dialogBgColor = _isDarkMode ? const Color(0xFF1E1033) : lCard;
-    final dialogTextColor = _isDarkMode ? Colors.white : pViolet;
-    final dialogSubTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
-    final inputFillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade100;
-    final inputHintColor = _isDarkMode ? Colors.white30 : Colors.black45;
-    showDialog(
-      context: context,
-      builder: (c) => AlertDialog(
-        backgroundColor: dialogBgColor,
-        title: Text(
-          'Import CSV',
-          style: GoogleFonts.inter(color: dialogTextColor),
-        ),
-        content: SizedBox(
-          width: 600,
-          child: TextField(
-            controller: _importCtl,
-            maxLines: 10,
-            style: GoogleFonts.inter(color: dialogTextColor),
-            decoration: InputDecoration(
-              hintText: 'Paste CSV here',
-              hintStyle: TextStyle(color: inputHintColor),
-              filled: true,
-              fillColor: inputFillColor,
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(c).pop(),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.inter(color: dialogSubTextColor),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final raw = _importCtl.text.trim();
-              if (raw.isNotEmpty) {
-                final lines = raw
-                    .split(RegExp(r'\r?\n'))
-                    .where((l) => l.trim().isNotEmpty)
-                    .toList();
-                if (lines.isNotEmpty) {
-                  // assume header present
-                  final start = lines.first.toLowerCase().contains('name,')
-                      ? 1
-                      : 0;
-                  for (int i = start; i < lines.length; i++) {
-                    final cols = _parseCsvLine(lines[i]);
-                    if (cols.length >= 5) {
-                      setState(() {
-                        _employees.insert(0, {
-                          'name': cols[0],
-                          'department': cols[1],
-                          'email': cols[2],
-                          'employeeId': cols[3],
-                          'role': cols[4],
-                        });
-                      });
-                    }
-                  }
-                }
-              }
-              Navigator.of(c).pop();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF8B5CF6),
-            ),
-            child: Text(
-              'Import',
-              style: GoogleFonts.inter(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<String> _parseCsvLine(String line) {
-    // Very small CSV parser that handles quoted fields
-    final List<String> out = [];
-    final sb = StringBuffer();
-    bool inQuotes = false;
-    for (int i = 0; i < line.length; i++) {
-      final ch = line[i];
-      if (ch == '"') {
-        if (inQuotes && i + 1 < line.length && line[i + 1] == '"') {
-          sb.write('"');
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (ch == ',' && !inQuotes) {
-        out.add(sb.toString());
-        sb.clear();
-      } else {
-        sb.write(ch);
-      }
-    }
-    out.add(sb.toString());
-    return out.map((s) => s.trim()).toList();
-  }
-
-  void _showEmployeeDetails(Map<String, String> emp) {
-    final dialogBgColor = _isDarkMode ? const Color(0xFF1E1033) : lCard;
-    final dialogTextColor = _isDarkMode ? Colors.white : pViolet;
-    final dialogSubTextColor = _isDarkMode ? Colors.white70 : Colors.black87;
-    showDialog(
-      context: context,
-      builder: (c) => AlertDialog(
-        backgroundColor: dialogBgColor,
-        title: Text(
-          emp['name'] ?? '',
-          style: GoogleFonts.inter(color: dialogTextColor),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Department: ${emp['department'] ?? ''}',
-              style: GoogleFonts.inter(color: dialogSubTextColor),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Email: ${emp['email'] ?? ''}',
-              style: GoogleFonts.inter(color: dialogSubTextColor),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Employee ID: ${emp['employeeId'] ?? ''}',
-              style: GoogleFonts.inter(color: dialogSubTextColor),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Role: ${emp['role'] ?? ''}',
-              style: GoogleFonts.inter(color: dialogSubTextColor),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(c).pop(),
-            child: Text(
-              'Close',
-              style: GoogleFonts.inter(color: dialogSubTextColor),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  final List<String> _institutionalRoles = [
+    'professor',
+    'faculty',
+    'registrar',
+    'accounting',
+    'hr',
+    'admission',
+    'pchair'
+  ];
 
   @override
   Widget build(BuildContext context) {
-    // Theme-aware colors
-    final cardColor = _isDarkMode ? surfaceDark : lCard;
-    final textColor = _isDarkMode ? Colors.white : pViolet;
-    final subTextColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
-    final borderColor = _isDarkMode ? Colors.white10 : Colors.black12;
-    final fillColor = _isDarkMode ? Colors.white10 : Colors.grey.shade50;
+    final textColor =
+        widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
+    final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: _isDarkMode ? const Color(0xFF1E1033) : lCard,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: _isDarkMode ? Colors.white10 : Colors.black12,
-            ),
-          ),
-          child: Column(
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(textColor),
+          const SizedBox(height: 32),
+          _buildControlBar(cardColor, textColor),
+          const SizedBox(height: 24),
+          Expanded(child: _buildWorkforceRegistry(cardColor, textColor)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(Color t) => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Text("Workforce Intelligence",
+                  style: GoogleFonts.inter(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: t,
+                      letterSpacing: -0.5)),
+              const Text(
+                  "Manage institutional personnel, employment contracts, and digital credentials.",
+                  style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
+            ],
+          ),
+          ElevatedButton.icon(
+            onPressed: () => _showOnboardingForm(),
+            icon: const Icon(LucideIcons.userPlus, size: 18),
+            label: const Text("ONBOARD PERSONNEL"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: aViolet,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+            ),
+          ),
+        ],
+      );
+
+  Widget _buildControlBar(Color bg, Color text) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: widget.isDarkMode ? Colors.white10 : Colors.black12),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+          const Icon(LucideIcons.search, color: aViolet, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
+              style: TextStyle(color: text, fontWeight: FontWeight.bold),
+              decoration: const InputDecoration(
+                hintText: "Search by Name, ID, or Position...",
+                hintStyle: TextStyle(color: Colors.blueGrey, fontSize: 13),
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+          const VerticalDivider(color: Colors.white10, indent: 8, endIndent: 8),
+          _roleFilterDropdown(),
+        ],
+      ),
+    );
+  }
+
+  Widget _roleFilterDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _roleFilter,
+          dropdownColor: surfaceDark,
+          style: TextStyle(
+              color: widget.isDarkMode ? Colors.white : Colors.black,
+              fontSize: 12,
+              fontWeight: FontWeight.bold),
+          items: [
+            "All Roles",
+            ..._institutionalRoles.map((r) => r.toUpperCase())
+          ]
+              .map((val) => DropdownMenuItem(value: val, child: Text(val)))
+              .toList(),
+          onChanged: (v) => setState(() => _roleFilter = v!),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWorkforceRegistry(Color bg, Color text) {
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+            color: widget.isDarkMode
+                ? Colors.white10
+                : Colors.black.withOpacity(0.05)),
+      ),
+      child: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _service.client
+            .from('profiles')
+            .stream(primaryKey: ['id']).neq('role', 'student'),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData)
+            return const Center(
+                child: CircularProgressIndicator(color: aViolet));
+
+          // 📐 DYNAMIC FILTER ENGINE
+          final list = snapshot.data!.where((emp) {
+            final name = "${emp['fn']} ${emp['ln']}".toLowerCase();
+            final id = (emp['user_id_number'] ?? '').toString().toLowerCase();
+            final role = (emp['role'] ?? '').toString().toUpperCase();
+
+            final matchesSearch =
+                name.contains(_searchQuery) || id.contains(_searchQuery);
+            final matchesRole =
+                _roleFilter == "All Roles" || role == _roleFilter;
+
+            return matchesSearch && matchesRole;
+          }).toList();
+
+          if (list.isEmpty) return _buildEmptyState();
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(12),
+            itemCount: list.length,
+            separatorBuilder: (_, __) =>
+                const Divider(color: Colors.white10, height: 1),
+            itemBuilder: (context, i) {
+              final emp = list[i];
+              return _buildEmployeeRow(emp, text);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmployeeRow(Map<String, dynamic> emp, Color text) {
+    final String role = (emp['role'] ?? 'Staff').toString().toUpperCase();
+    final String status = emp['account_status'] ?? 'Active';
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      leading: CircleAvatar(
+        radius: 22,
+        backgroundColor: aViolet.withOpacity(0.1),
+        child: Text(emp['ln']?[0] ?? 'E',
+            style:
+                const TextStyle(color: aViolet, fontWeight: FontWeight.bold)),
+      ),
+      title: Text("${emp['fn']} ${emp['ln']}",
+          style: TextStyle(
+              color: text, fontWeight: FontWeight.bold, fontSize: 14)),
+      subtitle: Text("ID: ${emp['user_id_number']} • $role",
+          style: const TextStyle(color: Colors.blueGrey, fontSize: 11)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _statusBadge(status, status == 'Active' ? success : Colors.redAccent),
+          const SizedBox(width: 12),
+          IconButton(
+            icon:
+                const Icon(LucideIcons.edit3, size: 18, color: Colors.blueGrey),
+            onPressed: () => _showOnboardingForm(emp),
+          ),
+          IconButton(
+            icon: const Icon(LucideIcons.shieldCheck, size: 18, color: aViolet),
+            onPressed: () =>
+                _showToast("Identity Verified via Ledger", success),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOnboardingForm([Map<String, dynamic>? existingEmp]) {
+    final formKey = GlobalKey<FormState>();
+    final fn = TextEditingController(text: existingEmp?['fn']);
+    final ln = TextEditingController(text: existingEmp?['ln']);
+    final email = TextEditingController(text: existingEmp?['email']);
+    String role = existingEmp?['role'] ?? 'professor';
+    String status = existingEmp?['account_status'] ?? 'Active';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          backgroundColor: const Color(0xFF0F071D),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: Text(
+              existingEmp == null ? "Onboard New Personnel" : "Modify Record",
+              style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w900, color: Colors.white)),
+          content: SizedBox(
+            width: 500,
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'Create Employee Record',
-                    style: GoogleFonts.inter(
-                      color: textColor,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  _input(fn, "First Name", required: true),
+                  const SizedBox(height: 12),
+                  _input(ln, "Last Name", required: true),
+                  const SizedBox(height: 12),
+                  _input(email, "Institutional Email", required: true),
+                  const SizedBox(height: 20),
                   Row(
                     children: [
-                      TextButton.icon(
-                        onPressed: _showImportDialog,
-                        icon: Icon(Icons.file_upload, color: subTextColor),
-                        label: Text(
-                          'Import',
-                          style: GoogleFonts.inter(color: subTextColor),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      TextButton.icon(
-                        onPressed: _showExportDialog,
-                        icon: Icon(Icons.file_download, color: subTextColor),
-                        label: Text(
-                          'Export',
-                          style: GoogleFonts.inter(color: subTextColor),
-                        ),
-                      ),
+                      Expanded(
+                          child: _dropdown(
+                              "Role Assignment",
+                              role,
+                              _institutionalRoles,
+                              (v) => setModalState(() => role = v!))),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: _dropdown(
+                              "Account Status",
+                              status,
+                              ["Active", "Suspended"],
+                              (v) => setModalState(() => status = v!))),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _nameCtl,
-                style: TextStyle(color: textColor),
-                decoration: InputDecoration(
-                  hintText: 'Name',
-                  hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
-                  filled: true,
-                  fillColor: fillColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _deptCtl,
-                style: TextStyle(color: textColor),
-                decoration: InputDecoration(
-                  hintText: 'Department',
-                  hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
-                  filled: true,
-                  fillColor: fillColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _emailCtl,
-                style: TextStyle(color: textColor),
-                decoration: InputDecoration(
-                  hintText: 'Personal Email',
-                  hintStyle: TextStyle(color: subTextColor.withOpacity(0.6)),
-                  filled: true,
-                  fillColor: fillColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _empIdCtl,
-                      style: TextStyle(color: textColor),
-                      decoration: InputDecoration(
-                        hintText: 'Employee ID',
-                        hintStyle: TextStyle(
-                          color: subTextColor.withOpacity(0.6),
-                        ),
-                        filled: true,
-                        fillColor: fillColor,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _roleCtl,
-                      style: TextStyle(color: textColor),
-                      decoration: InputDecoration(
-                        hintText: 'Role',
-                        hintStyle: TextStyle(
-                          color: subTextColor.withOpacity(0.6),
-                        ),
-                        filled: true,
-                        fillColor: fillColor,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: _addEmployee,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF8B5CF6),
-                    ),
-                    child: Text(
-                      _editingIndex == null ? 'Create' : 'Save',
-                      style: GoogleFonts.inter(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton(
-                    onPressed: _clearForm,
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: borderColor),
-                    ),
-                    child: Text(
-                      'Clear',
-                      style: GoogleFonts.inter(color: subTextColor),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("CANCEL",
+                    style: TextStyle(color: Colors.blueGrey))),
+            ElevatedButton(
+              onPressed: () async {
+                if (formKey.currentState!.validate()) {
+                  final String empId = existingEmp?['user_id_number'] ??
+                      await _service.generateEmployeeId();
+                  final data = {
+                    'fn': fn.text.trim(),
+                    'ln': ln.text.trim(),
+                    'email': email.text.trim(),
+                    'role': role,
+                    'account_status': status,
+                    'user_id_number': empId,
+                  };
+
+                  if (existingEmp == null) {
+                    data['password_hash'] =
+                        ln.text.toLowerCase().trim(); // Temp pass
+                    await _service.client.from('profiles').insert(data);
+                  } else {
+                    await _service.client
+                        .from('profiles')
+                        .update(data)
+                        .eq('id', existingEmp['id']);
+                  }
+
+                  if (mounted) Navigator.pop(ctx);
+                  _showToast(
+                      existingEmp == null
+                          ? "Personnel Synchronized"
+                          : "Record Updated",
+                      success);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: aViolet),
+              child: Text(
+                  existingEmp == null ? "FINALIZE ONBOARDING" : "SAVE CHANGES"),
+            )
+          ],
         ),
-        const SizedBox(height: 16),
-        Text(
-          'Employee Directory',
-          style: GoogleFonts.inter(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
+      ),
+    );
+  }
+
+  Widget _input(TextEditingController c, String l, {bool required = false}) =>
+      TextFormField(
+        controller: c,
+        style: const TextStyle(color: Colors.white, fontSize: 14),
+        validator: required
+            ? (v) => (v == null || v.isEmpty) ? "Required" : null
+            : null,
+        decoration: InputDecoration(
+          labelText: l,
+          labelStyle: const TextStyle(color: Colors.blueGrey, fontSize: 12),
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.05),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none),
         ),
+      );
+
+  Widget _dropdown(
+      String l, String v, List<String> items, Function(String?) onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l.toUpperCase(),
+            style: const TextStyle(
+                color: Colors.blueGrey,
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1)),
         const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: _isDarkMode ? const Color(0xFF1E1033) : lCard,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: borderColor),
-          ),
-          child: _employees.isEmpty
-              ? Text(
-                  'No employees added.',
-                  style: GoogleFonts.inter(color: subTextColor),
-                )
-              : ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _employees.length,
-                  separatorBuilder: (_, __) => Divider(color: borderColor),
-                  itemBuilder: (context, idx) {
-                    final e = _employees[idx];
-                    return ListTile(
-                      onTap: () => _showEmployeeDetails(e),
-                      title: Text(
-                        e['name'] ?? '',
-                        style: GoogleFonts.inter(color: textColor),
-                      ),
-                      subtitle: Text(
-                        e['department'] ?? '',
-                        style: GoogleFonts.inter(
-                          color: subTextColor.withOpacity(0.8),
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            e['employeeId'] ?? '',
-                            style: GoogleFonts.inter(
-                              color: subTextColor.withOpacity(0.8),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            onPressed: () => _startEdit(idx),
-                            icon: Icon(
-                              Icons.edit,
-                              color: subTextColor.withOpacity(0.8),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => _deleteEmployee(idx),
-                            icon: const Icon(
-                              Icons.delete,
-                              color: Colors.redAccent,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+        DropdownButtonFormField<String>(
+          value: v,
+          dropdownColor: const Color(0xFF0F071D),
+          style: const TextStyle(color: Colors.white, fontSize: 13),
+          decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.05),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none)),
+          items: items
+              .map((i) =>
+                  DropdownMenuItem(value: i, child: Text(i.toUpperCase())))
+              .toList(),
+          onChanged: onChanged,
         ),
       ],
     );
+  }
+
+  Widget _statusBadge(String t, Color c) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+          color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+      child: Text(t.toUpperCase(),
+          style:
+              TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.w900)));
+
+  Widget _buildEmptyState() => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(LucideIcons.users,
+                size: 48, color: Colors.blueGrey.withOpacity(0.2)),
+            const SizedBox(height: 16),
+            const Text("No institutional records found.",
+                style: TextStyle(
+                    color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+
+  void _showToast(String m, Color c) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: c,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(24),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
   }
 }
