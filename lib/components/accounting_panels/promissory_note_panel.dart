@@ -3,1467 +3,658 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
+import 'package:open_file_plus/open_file_plus.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:intl/intl.dart';
+import '../../services/supabase_service.dart';
 
 class PromissoryNotePanel extends StatefulWidget {
   final bool isDarkMode;
-  const PromissoryNotePanel({super.key, required this.isDarkMode});
+  final Map<String, dynamic> userData;
+
+  const PromissoryNotePanel({
+    super.key,
+    required this.isDarkMode,
+    required this.userData,
+  });
 
   @override
   State<PromissoryNotePanel> createState() => _PromissoryNotePanelState();
 }
 
 class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
-  // Theme Colors
+  final SupabaseService _service = SupabaseService();
+
+  // Institutional Palette
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color success = Color(0xFF69F0AE);
   static const Color surfaceDark = Color(0xFF1E1B4B);
   static const Color pViolet = Color(0xFF2E1065);
 
   // Form Controllers
+  final TextEditingController _studentIdSearch = TextEditingController();
   final TextEditingController _borrowerNameController = TextEditingController();
-  final TextEditingController _borrowerAddressController =
-      TextEditingController();
-  final TextEditingController _lenderNameController = TextEditingController();
-  final TextEditingController _lenderAddressController =
-      TextEditingController();
+  final TextEditingController _parentNameController = TextEditingController();
+  final TextEditingController _courseYearController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _amountWordsController = TextEditingController();
-  final TextEditingController _interestRateController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
-  DateTime? _issueDate;
+  Map<String, dynamic>? _selectedStudent;
+  DateTime? _issueDate = DateTime.now();
   DateTime? _dueDate;
-  String _paymentTerms = 'On Demand';
-  String _interestType = 'Simple Interest';
-  bool _securedNote = false;
-  bool _showPreview = false;
+  bool _isLoading = false;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _dueDate = DateTime.now().add(const Duration(days: 30));
+  }
 
   @override
   void dispose() {
+    _studentIdSearch.dispose();
     _borrowerNameController.dispose();
-    _borrowerAddressController.dispose();
-    _lenderNameController.dispose();
-    _lenderAddressController.dispose();
+    _parentNameController.dispose();
+    _courseYearController.dispose();
     _amountController.dispose();
     _amountWordsController.dispose();
-    _interestRateController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
-  String _convertToWords(double amount) {
-    final ones = [
-      '',
-      'One',
-      'Two',
-      'Three',
-      'Four',
-      'Five',
-      'Six',
-      'Seven',
-      'Eight',
-      'Nine',
-    ];
-    final teens = [
-      'Ten',
-      'Eleven',
-      'Twelve',
-      'Thirteen',
-      'Fourteen',
-      'Fifteen',
-      'Sixteen',
-      'Seventeen',
-      'Eighteen',
-      'Nineteen',
-    ];
-    final tens = [
-      '',
-      '',
-      'Twenty',
-      'Thirty',
-      'Forty',
-      'Fifty',
-      'Sixty',
-      'Seventy',
-      'Eighty',
-      'Ninety',
-    ];
+  /// 🛰️ DATABASE: Resolves student identity and academic program
+  Future<void> _fetchStudentForNote() async {
+    final id = _studentIdSearch.text.trim();
+    if (id.isEmpty) return;
 
-    int whole = amount.toInt();
-    int cents = ((amount - whole) * 100).toInt();
+    setState(() => _isLoading = true);
+    try {
+      final res = await _service.client
+          .from('profiles')
+          .select(
+              '*, student_details(*, courses(name), year_levels(definition))')
+          .ilike('user_id_number', id)
+          .maybeSingle();
 
-    String convertHundreds(int num) {
-      String result = '';
-      int hundreds = num ~/ 100;
-      int remainder = num % 100;
-
-      if (hundreds > 0) {
-        result += '${ones[hundreds]} Hundred ';
+      if (res != null) {
+        final details = res['student_details'];
+        setState(() {
+          _selectedStudent = res;
+          _borrowerNameController.text =
+              "${res['fn']} ${res['ln']}".toUpperCase();
+          _courseYearController.text =
+              "${details['courses']?['name'] ?? 'N/A'} - ${details['year_levels']?['definition'] ?? 'N/A'}";
+          _amountController.text =
+              (details?['account_balance'] ?? 0).toString();
+          _updateAmountWords();
+        });
+      } else {
+        _showToast("Student not found.", Colors.orangeAccent);
       }
+    } catch (e) {
+      _showToast("Search failed.", Colors.redAccent);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
-      if (remainder >= 20) {
-        result += '${tens[remainder ~/ 10]} ';
-        if (remainder % 10 > 0) {
-          result += '${ones[remainder % 10]} ';
-        }
-      } else if (remainder >= 10) {
-        result += '${teens[remainder - 10]} ';
-      } else if (remainder > 0) {
-        result += '${ones[remainder]} ';
-      }
-
-      return result.trim();
+  /// 🛰️ DATABASE: Commits the note and issues the Official PDF
+  Future<void> _commitNoteToLedger() async {
+    if (_selectedStudent == null || _amountController.text.isEmpty) {
+      _showToast("Please identify a student and amount.", Colors.orangeAccent);
+      return;
     }
 
-    String words = '';
-    if (whole == 0) {
-      words = 'Zero';
-    } else {
-      int millions = whole ~/ 1000000;
-      int thousands = (whole % 1000000) ~/ 1000;
-      int remainder = whole % 1000;
+    setState(() => _isSaving = true);
+    try {
+      final String refNo =
+          "PN-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}";
 
-      if (millions > 0) {
-        words += '${convertHundreds(millions)} Million ';
-      }
-      if (thousands > 0) {
-        words += '${convertHundreds(thousands)} Thousand ';
-      }
-      if (remainder > 0) {
-        words += convertHundreds(remainder);
-      }
+      await _service.client.from('office_requests').insert({
+        'student_id': _selectedStudent!['id'],
+        'request_type': 'Promissory Note',
+        'request_status': 'Approved',
+        'amount_due': double.tryParse(_amountController.text) ?? 0.0,
+        'due_date': _dueDate?.toIso8601String(),
+        'qr_hash': refNo,
+        'processed_by': widget.userData['id'],
+        'remarks':
+            'Issued Grace Period until ${DateFormat('MMMM dd, yyyy').format(_dueDate!)}. Parent: ${_parentNameController.text}',
+      });
+
+      await _generateProfessionalPDF(refNo);
+
+      _showToast("Promissory Note Logged & PDF Generated", success);
+      _clearForm();
+    } catch (e) {
+      _showToast("Ledger Error: $e", Colors.redAccent);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-
-    words = '${words.trim()} Pesos';
-    if (cents > 0) {
-      words += ' and $cents Centavos';
-    }
-
-    return words;
   }
 
   void _updateAmountWords() {
     if (_amountController.text.isNotEmpty) {
       try {
         double amount = double.parse(_amountController.text);
-        _amountWordsController.text = _convertToWords(amount);
+        int whole = amount.toInt();
+        int cents = ((amount - whole) * 100).toInt();
+        _amountWordsController.text =
+            "${whole.toString()} Pesos and $cents/100 Only";
       } catch (e) {
         _amountWordsController.text = '';
       }
     }
   }
 
-  Future<void> _generatePDF() async {
-    if (_borrowerNameController.text.isEmpty ||
-        _lenderNameController.text.isEmpty ||
-        _amountController.text.isEmpty ||
-        _issueDate == null ||
-        _dueDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill in all required fields'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
-    }
+  // --- 📄 PROFESSIONAL PDF RECONSTRUCTION ---
 
-    try {
-      final pdf = pw.Document();
+  Future<void> _generateProfessionalPDF(String refNo) async {
+    final pdf = pw.Document();
+    final dateIssued = DateFormat('MMMM dd, yyyy').format(_issueDate!);
+    final dueDateStr = DateFormat('MMMM dd, yyyy').format(_dueDate!);
+    final adminName =
+        "${widget.userData['fn']} ${widget.userData['ln']}".toUpperCase();
 
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(40),
-          build: (pw.Context context) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                // Header
-                pw.Center(
-                  child: pw.Text(
-                    'PROMISSORY NOTE',
-                    style: pw.TextStyle(
-                      fontSize: 24,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-
-                // Document Details
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(12),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(width: 0.5),
-                  ),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        'NOTE DETAILS',
-                        style: pw.TextStyle(
-                          fontSize: 12,
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(48),
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // 1. Header / School Identification
+              pw.Center(
+                  child: pw.Text('BRIGHT FUTURE ACADEMY',
+                      style: pw.TextStyle(
+                          fontSize: 22,
                           fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                      pw.SizedBox(height: 8),
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text(
-                                'Issue Date: ${DateFormat('MMMM dd, yyyy').format(_issueDate!)}',
-                                style: const pw.TextStyle(fontSize: 10),
-                              ),
-                              pw.Text(
-                                'Payment Terms: $_paymentTerms',
-                                style: const pw.TextStyle(fontSize: 10),
-                              ),
-                            ],
-                          ),
-                          pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text(
-                                'Due Date: ${DateFormat('MMMM dd, yyyy').format(_dueDate!)}',
-                                style: const pw.TextStyle(fontSize: 10),
-                              ),
-                              pw.Text(
-                                'Interest: ${_interestRateController.text}% $_interestType',
-                                style: const pw.TextStyle(fontSize: 10),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-
-                // Main Promise Paragraph
-                pw.Text(
-                  'It is hereby promised and agreed that I, the undersigned, promise to pay unconditionally to:',
-                  style: const pw.TextStyle(fontSize: 11),
-                ),
-                pw.SizedBox(height: 12),
-
-                // Payee Section
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: const pw.BoxDecoration(
-                    border: pw.Border(left: pw.BorderSide(width: 3)),
-                  ),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        'PAYEE (LENDER)',
-                        style: pw.TextStyle(
-                          fontSize: 10,
+                          color: PdfColors.indigo900))),
+              pw.Center(
+                  child: pw.Text('OFFICE OF THE ACCOUNTING',
+                      style:
+                          const pw.TextStyle(fontSize: 10, letterSpacing: 1))),
+              pw.SizedBox(height: 12),
+              pw.Center(
+                  child: pw.Text('PROMISSORY NOTE',
+                      style: pw.TextStyle(
+                          fontSize: 16,
                           fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                      pw.SizedBox(height: 6),
-                      pw.Text(
-                        _lenderNameController.text,
-                        style: pw.TextStyle(
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                      pw.SizedBox(height: 4),
-                      pw.Text(
-                        _lenderAddressController.text,
-                        style: const pw.TextStyle(fontSize: 10),
-                      ),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 20),
+                          decoration: pw.TextDecoration.underline))),
+              pw.SizedBox(height: 32),
 
-                // Amount Section
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(12),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(width: 1.5),
-                  ),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        'PRINCIPAL AMOUNT',
-                        style: pw.TextStyle(
-                          fontSize: 11,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                      pw.SizedBox(height: 8),
-                      pw.Row(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text('PHP ', style: const pw.TextStyle(fontSize: 11)),
-                          pw.Expanded(
-                            child: pw.Text(
-                              _amountController.text,
-                              style: pw.TextStyle(
-                                fontSize: 18,
-                                fontWeight: pw.FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      pw.Divider(),
-                      pw.Text(
-                        '(${_amountWordsController.text})',
-                        style: pw.TextStyle(
-                          fontSize: 10,
-                          fontStyle: pw.FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-
-                // Payment Terms Section
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(12),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(width: 0.5),
-                  ),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        'PAYMENT TERMS',
-                        style: pw.TextStyle(
-                          fontSize: 11,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                      pw.SizedBox(height: 8),
-                      pw.Text(
-                        'The undersigned agrees to pay the above principal amount in full on or before ${DateFormat('MMMM dd, yyyy').format(_dueDate!)}.',
-                        style: const pw.TextStyle(fontSize: 10),
-                      ),
-                      if (_interestRateController.text.isNotEmpty)
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.only(top: 8),
-                          child: pw.Text(
-                            'Interest Rate: ${_interestRateController.text}% per annum ($_interestType)',
-                            style: const pw.TextStyle(fontSize: 10),
-                          ),
-                        ),
-                      if (_securedNote)
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.only(top: 8),
-                          child: pw.Text(
-                            'This note is secured by collateral as described herein.',
-                            style: const pw.TextStyle(fontSize: 10),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-
-                if (_notesController.text.isNotEmpty) ...[
-                  pw.SizedBox(height: 20),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.all(12),
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 0.5),
-                    ),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text(
-                          'ADDITIONAL TERMS & CONDITIONS',
-                          style: pw.TextStyle(
-                            fontSize: 11,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.SizedBox(height: 8),
-                        pw.Text(
-                          _notesController.text,
-                          style: const pw.TextStyle(fontSize: 10),
-                        ),
-                      ],
-                    ),
-                  ),
+              // 2. Reference Details
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text("Note Ref No.: $refNo",
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                  pw.Text("Date Issued: $dateIssued",
+                      style: const pw.TextStyle(fontSize: 10)),
                 ],
+              ),
+              pw.SizedBox(height: 32),
 
-                pw.Spacer(),
-
-                // Signature Section
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              // 3. Main Declaration (Debtor Info)
+              pw.RichText(
+                text: pw.TextSpan(
+                  style: pw.TextStyle(fontSize: 11, lineSpacing: 1.5),
                   children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.center,
-                      children: [
-                        pw.SizedBox(height: 40),
-                        pw.Container(
-                          width: 150,
-                          height: 1,
-                          color: PdfColors.black,
-                        ),
-                        pw.Text(
-                          _borrowerNameController.text,
-                          style: pw.TextStyle(
-                            fontSize: 10,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.Text(
-                          'MAKER (BORROWER)',
-                          style: const pw.TextStyle(fontSize: 9),
-                        ),
-                        pw.Text(
-                          'Date: ${DateFormat('MM/dd/yyyy').format(_issueDate!)}',
-                          style: const pw.TextStyle(fontSize: 9),
-                        ),
-                      ],
-                    ),
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.center,
-                      children: [
-                        pw.SizedBox(height: 40),
-                        pw.Container(
-                          width: 150,
-                          height: 1,
-                          color: PdfColors.black,
-                        ),
-                        pw.Text(
-                          _lenderNameController.text,
-                          style: pw.TextStyle(
-                            fontSize: 10,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.Text(
-                          'PAYEE (LENDER)',
-                          style: const pw.TextStyle(fontSize: 9),
-                        ),
-                        pw.Text(
-                          'Date: ${DateFormat('MM/dd/yyyy').format(_issueDate!)}',
-                          style: const pw.TextStyle(fontSize: 9),
-                        ),
-                      ],
-                    ),
+                    const pw.TextSpan(text: "I, "),
+                    pw.TextSpan(
+                        text: _borrowerNameController.text,
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    const pw.TextSpan(
+                        text:
+                            ", a student of Bright Future Academy with Student ID No. "),
+                    pw.TextSpan(
+                        text: _selectedStudent?['user_id_number'] ?? 'N/A',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    const pw.TextSpan(text: ", currently enrolled in "),
+                    pw.TextSpan(
+                        text: _courseYearController.text,
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    const pw.TextSpan(
+                        text:
+                            ", hereby promise to pay to the order of the Office of the Comptroller the total amount of:"),
                   ],
                 ),
-              ],
-            );
-          },
-        ),
-      );
+              ),
+              pw.SizedBox(height: 24),
 
-      // Save and open PDF
-      final output = await getApplicationDocumentsDirectory();
-      final fileName =
-          'PromissoryNote_${_borrowerNameController.text.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      final file = File('${output.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
+              // 4. Amount Details
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(border: pw.Border.all(width: 1.5)),
+                child: pw.Column(
+                  children: [
+                    pw.Text("PHP ${_amountController.text}",
+                        style: pw.TextStyle(
+                            fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                    pw.SizedBox(height: 4),
+                    pw.Text("(${_amountWordsController.text})",
+                        style: pw.TextStyle(
+                            fontSize: 10, fontStyle: pw.FontStyle.italic)),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 32),
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('PDF saved: $fileName'),
-            backgroundColor: success,
-            action: SnackBarAction(
-              label: 'Open',
-              onPressed: () => OpenFile.open(file.path),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error generating PDF: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    }
-  }
+              // 5. Payment Terms & Obligations
+              pw.Text("Payment Terms:",
+                  style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold, fontSize: 11)),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                  "I agree to settle the above amount on or before $dueDateStr.",
+                  style: const pw.TextStyle(fontSize: 11)),
+              pw.SizedBox(height: 16),
+              pw.Text("Failure to pay within the agreed period may result in:",
+                  style: const pw.TextStyle(fontSize: 11)),
+              pw.Bullet(
+                  text: "Suspension of clearance processing",
+                  style: const pw.TextStyle(fontSize: 10)),
+              pw.Bullet(
+                  text:
+                      "Withholding of academic records (TOR, Diploma, Certifications)",
+                  style: const pw.TextStyle(fontSize: 10)),
+              pw.Bullet(
+                  text: "Additional penalties as determined by the institution",
+                  style: const pw.TextStyle(fontSize: 10)),
+              pw.SizedBox(height: 24),
 
-  void _printPreview() {
-    setState(() => _showPreview = true);
-    // Switch to Preview & Print tab
-    DefaultTabController.of(context).animateTo(1);
-  }
+              pw.Text(
+                "I hereby acknowledge my obligation and voluntarily commit to pay the stated amount under the terms and conditions set by Bright Future Academy.",
+                style: pw.TextStyle(
+                  fontSize: 11,
+                  fontStyle: pw.FontStyle.italic,
+                  height: 1.5,
+                ),
+                textAlign: pw.TextAlign.justify,
+              ),
 
-  void _clearForm() {
-    _borrowerNameController.clear();
-    _borrowerAddressController.clear();
-    _lenderNameController.clear();
-    _lenderAddressController.clear();
-    _amountController.clear();
-    _amountWordsController.clear();
-    _interestRateController.clear();
-    _notesController.clear();
-    setState(() {
-      _issueDate = null;
-      _dueDate = null;
-      _paymentTerms = 'On Demand';
-      _interestType = 'Simple Interest';
-      _securedNote = false;
-      _showPreview = false;
-    });
+              pw.Spacer(),
+
+              // 6. Triple Signature Section
+              pw.Text("Signed:",
+                  style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold, fontSize: 11)),
+              pw.SizedBox(height: 32),
+
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  // Student Signature Block
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Container(
+                          width: 180,
+                          decoration: const pw.BoxDecoration(
+                              border: pw.Border(top: pw.BorderSide(width: 1)))),
+                      pw.Text("Student Name: ${_borrowerNameController.text}",
+                          style: pw.TextStyle(
+                              fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                      pw.Text("Date Signed: _________________",
+                          style: const pw.TextStyle(fontSize: 8)),
+                    ],
+                  ),
+                  // Parent/Guardian Signature Block
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Container(
+                          width: 180,
+                          decoration: const pw.BoxDecoration(
+                              border: pw.Border(top: pw.BorderSide(width: 1)))),
+                      pw.Text("Parent/Guardian: ${_parentNameController.text}",
+                          style: pw.TextStyle(
+                              fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                      pw.Text("Date Signed: _________________",
+                          style: const pw.TextStyle(fontSize: 8)),
+                    ],
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 40),
+              // School Representative Block
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Container(
+                      width: 250,
+                      decoration: const pw.BoxDecoration(
+                          border: pw.Border(top: pw.BorderSide(width: 1)))),
+                  pw.Text("Authorized Representative: $adminName",
+                      style: pw.TextStyle(
+                          fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                  pw.Text("Office: Office of the Comptroller",
+                      style: const pw.TextStyle(fontSize: 8)),
+                  pw.Text("Date: $dateIssued",
+                      style: const pw.TextStyle(fontSize: 8)),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    final bytes = await pdf.save();
+    final output = await getTemporaryDirectory();
+    final file = File('${output.path}/Note_$refNo.pdf');
+    await file.writeAsBytes(bytes);
+    await OpenFile.open(file.path);
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(
-              color: widget.isDarkMode ? surfaceDark : Colors.white,
-              border: Border(
-                bottom: BorderSide(
-                  color:
-                      widget.isDarkMode ? Colors.white12 : Colors.grey.shade200,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: aViolet.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(LucideIcons.fileText, color: aViolet),
-                ),
-                const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Promissory Note / Print',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: widget.isDarkMode ? Colors.white : Colors.black,
-                      ),
-                    ),
-                    Text(
-                      'Create and print professional promissory notes',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: widget.isDarkMode
-                            ? Colors.white54
-                            : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+    final textColor = widget.isDarkMode ? Colors.white : pViolet;
+    final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-          // TabBar
-          Container(
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color:
-                      widget.isDarkMode ? Colors.white12 : Colors.grey.shade200,
-                ),
-              ),
-            ),
-            child: TabBar(
-              labelColor: aViolet,
-              unselectedLabelColor:
-                  widget.isDarkMode ? Colors.white54 : Colors.grey,
-              indicatorColor: aViolet,
-              tabs: const [
-                Tab(
-                  icon: Icon(LucideIcons.edit),
-                  text: 'Create Note',
-                  height: 50,
-                ),
-                Tab(
-                  icon: Icon(LucideIcons.eye),
-                  text: 'Preview & Print',
-                  height: 50,
-                ),
-              ],
-            ),
-          ),
-
-          // Tab Content
-          Expanded(
-            child: TabBarView(
-              children: [
-                // Tab 1: Create Note
-                _buildCreateNoteTab(),
-                // Tab 2: Preview & Print
-                _buildPreviewTab(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCreateNoteTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Borrower Section
-          _buildSectionCard(
-            title: 'Borrower Information',
-            icon: LucideIcons.user,
-            child: Column(
-              children: [
-                _buildTextField(
-                  label: 'Full Name *',
-                  controller: _borrowerNameController,
-                  hint: 'Enter borrower full name',
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  label: 'Address *',
-                  controller: _borrowerAddressController,
-                  hint: 'Enter complete address',
-                  maxLines: 2,
-                ),
-              ],
-            ),
-          ),
+          _buildHeader(textColor),
+          const SizedBox(height: 32),
+          _buildSearchSection(cardColor, textColor),
           const SizedBox(height: 24),
-
-          // Lender Section
-          _buildSectionCard(
-            title: 'Lender Information',
-            icon: LucideIcons.building,
-            child: Column(
-              children: [
-                _buildTextField(
-                  label: 'Full Name *',
-                  controller: _lenderNameController,
-                  hint: 'Enter lender full name',
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  label: 'Address *',
-                  controller: _lenderAddressController,
-                  hint: 'Enter complete address',
-                  maxLines: 2,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Amount Section
-          _buildSectionCard(
-            title: 'Principal Amount',
-            icon: LucideIcons.dollarSign,
-            child: Column(
-              children: [
-                _buildTextField(
-                  label: 'Amount (PHP) *',
-                  controller: _amountController,
-                  hint: '0.00',
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  onChanged: (_) => _updateAmountWords(),
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  label: 'Amount in Words *',
-                  controller: _amountWordsController,
-                  hint: 'Auto-generated',
-                  readOnly: true,
-                  maxLines: 2,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Dates Section
-          _buildSectionCard(
-            title: 'Important Dates',
-            icon: LucideIcons.calendar,
-            child: Column(
-              children: [
-                InkWell(
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _issueDate ?? DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (date != null) {
-                      setState(() => _issueDate = date);
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: widget.isDarkMode
-                            ? Colors.white24
-                            : Colors.grey.shade300,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(LucideIcons.calendar, size: 18, color: aViolet),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Issue Date *',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: widget.isDarkMode
-                                      ? Colors.white54
-                                      : Colors.grey.shade600,
-                                ),
-                              ),
-                              Text(
-                                _issueDate == null
-                                    ? 'Select date'
-                                    : DateFormat(
-                                        'MMMM dd, yyyy',
-                                      ).format(_issueDate!),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: widget.isDarkMode
-                                      ? Colors.white
-                                      : Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                InkWell(
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _dueDate ?? DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (date != null) {
-                      setState(() => _dueDate = date);
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: widget.isDarkMode
-                            ? Colors.white24
-                            : Colors.grey.shade300,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(LucideIcons.calendar, size: 18, color: aViolet),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Due Date *',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: widget.isDarkMode
-                                      ? Colors.white54
-                                      : Colors.grey.shade600,
-                                ),
-                              ),
-                              Text(
-                                _dueDate == null
-                                    ? 'Select date'
-                                    : DateFormat(
-                                        'MMMM dd, yyyy',
-                                      ).format(_dueDate!),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: widget.isDarkMode
-                                      ? Colors.white
-                                      : Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Payment Terms Section
-          _buildSectionCard(
-            title: 'Payment Terms',
-            icon: LucideIcons.fileText,
-            child: Column(
-              children: [
-                _buildDropdown(
-                  label: 'Payment Terms *',
-                  value: _paymentTerms,
-                  items: [
-                    'On Demand',
-                    'Within 30 Days',
-                    'Within 60 Days',
-                    'Within 90 Days',
-                    'Custom',
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _paymentTerms = value ?? 'On Demand'),
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  label: 'Interest Rate (%) *',
-                  controller: _interestRateController,
-                  hint: '0.00',
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildDropdown(
-                  label: 'Interest Type *',
-                  value: _interestType,
-                  items: ['Simple Interest', 'Compound Interest'],
-                  onChanged: (value) => setState(
-                    () => _interestType = value ?? 'Simple Interest',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Additional Options
-          _buildSectionCard(
-            title: 'Additional Options',
-            icon: LucideIcons.settings,
-            child: Column(
-              children: [
-                CheckboxListTile(
-                  value: _securedNote,
-                  onChanged: (value) => setState(() => _securedNote = value!),
-                  title: const Text('This is a Secured Note'),
-                  subtitle: const Text(
-                    'Check if the note is backed by collateral',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  label: 'Additional Terms & Conditions',
-                  controller: _notesController,
-                  hint: 'Enter any additional terms...',
-                  maxLines: 4,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Action Buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              ElevatedButton.icon(
-                onPressed: _clearForm,
-                icon: const Icon(LucideIcons.rotateCcw),
-                label: const Text('Clear Form'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade600,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: _printPreview,
-                icon: const Icon(LucideIcons.eye),
-                label: const Text('View Preview'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: aViolet,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          if (_selectedStudent != null) ...[
+            _buildMainForm(cardColor, textColor),
+            const SizedBox(height: 32),
+            _buildActionButtons(),
+          ] else
+            _buildEmptyState(textColor),
         ],
       ),
     );
   }
 
-  Widget _buildPreviewTab() {
-    if (!_showPreview) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(LucideIcons.eyeOff, size: 64, color: aViolet.withOpacity(0.5)),
-            const SizedBox(height: 16),
-            Text(
-              'No Preview Available',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Fill in the form and click "View Preview" to see the promissory note',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color:
-                    widget.isDarkMode ? Colors.white54 : Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
+  Widget _buildHeader(Color t) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Promissory Note Terminal",
+              style: GoogleFonts.inter(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: t,
+                  letterSpacing: -0.5)),
+          const Text(
+              "Official school version: Issue legally binding credit extensions for student tuition.",
+              style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
+        ],
       );
-    }
 
-    return SingleChildScrollView(
+  Widget _buildSearchSection(Color cardColor, Color textColor) {
+    return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
+      decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: widget.isDarkMode ? Colors.white10 : Colors.black12)),
+      child: Row(
         children: [
-          // Preview Document
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(40),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Center(
-                  child: Text(
-                    'PROMISSORY NOTE',
-                    style: GoogleFonts.poppins(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Details Box
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'NOTE DETAILS',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Issue Date: ${_issueDate == null ? 'Not selected' : DateFormat('MMMM dd, yyyy').format(_issueDate!)}',
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                              Text(
-                                'Payment Terms: $_paymentTerms',
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Due Date: ${_dueDate == null ? 'Not selected' : DateFormat('MMMM dd, yyyy').format(_dueDate!)}',
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                              Text(
-                                'Interest: ${_interestRateController.text}% $_interestType',
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Promise Text
-                const Text(
-                  'It is hereby promised and agreed that I, the undersigned, promise to pay unconditionally to:',
-                  style: TextStyle(fontSize: 11, height: 1.6),
-                ),
-                const SizedBox(height: 12),
-
-                // Payee Box
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: const BoxDecoration(
-                    border: Border(left: BorderSide(color: aViolet, width: 3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'PAYEE (LENDER)',
-                        style: GoogleFonts.poppins(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _lenderNameController.text.isEmpty
-                            ? '[Lender Name]'
-                            : _lenderNameController.text,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _lenderAddressController.text.isEmpty
-                            ? '[Lender Address]'
-                            : _lenderAddressController.text,
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Amount Box
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400, width: 1.5),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'PRINCIPAL AMOUNT',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('PHP ', style: TextStyle(fontSize: 11)),
-                          Expanded(
-                            child: Text(
-                              _amountController.text.isEmpty
-                                  ? '0.00'
-                                  : _amountController.text,
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Divider(color: Colors.grey.shade400),
-                      Text(
-                        '(${_amountWordsController.text.isEmpty ? '[Amount in words]' : _amountWordsController.text})',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Terms Box
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'PAYMENT TERMS',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'The undersigned agrees to pay the above principal amount in full on or before ${_dueDate == null ? '[Due Date]' : DateFormat('MMMM dd, yyyy').format(_dueDate!)}.',
-                        style: const TextStyle(fontSize: 10, height: 1.5),
-                      ),
-                      if (_interestRateController.text.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Interest Rate: ${_interestRateController.text}% per annum ($_interestType)',
-                          style: const TextStyle(fontSize: 10),
-                        ),
-                      ],
-                      if (_securedNote) ...[
-                        const SizedBox(height: 8),
-                        const Text(
-                          'This note is secured by collateral as described herein.',
-                          style: TextStyle(fontSize: 10),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-
-                if (_notesController.text.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade400),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'ADDITIONAL TERMS & CONDITIONS',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _notesController.text,
-                          style: const TextStyle(fontSize: 10, height: 1.5),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 40),
-
-                // Signature Lines
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 150,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: Colors.grey.shade400,
-                                width: 1,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _borrowerNameController.text.isEmpty
-                              ? '[Borrower Signature]'
-                              : _borrowerNameController.text,
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'MAKER (BORROWER)',
-                          style: TextStyle(fontSize: 9),
-                        ),
-                        Text(
-                          'Date: ${_issueDate == null ? '__________' : DateFormat('MM/dd/yyyy').format(_issueDate!)}',
-                          style: const TextStyle(fontSize: 9),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 150,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: Colors.grey.shade400,
-                                width: 1,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _lenderNameController.text.isEmpty
-                              ? '[Lender Signature]'
-                              : _lenderNameController.text,
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'PAYEE (LENDER)',
-                          style: TextStyle(fontSize: 9),
-                        ),
-                        Text(
-                          'Date: ${_issueDate == null ? '__________' : DateFormat('MM/dd/yyyy').format(_issueDate!)}',
-                          style: const TextStyle(fontSize: 9),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Print Button
-          ElevatedButton.icon(
-            onPressed: _generatePDF,
-            icon: const Icon(LucideIcons.printer),
-            label: const Text('Generate & Print PDF'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: success,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            ),
-          ),
-          const SizedBox(height: 16),
+          const Icon(LucideIcons.search, color: aViolet, size: 20),
+          const SizedBox(width: 16),
+          Expanded(
+              child: TextField(
+            controller: _studentIdSearch,
+            onSubmitted: (_) => _fetchStudentForNote(),
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+            decoration: const InputDecoration(
+                hintText: "Enter Student ID for Formal Note...",
+                border: InputBorder.none),
+          )),
+          ElevatedButton(
+              onPressed: _fetchStudentForNote,
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: aViolet,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12))),
+              child: const Text("FETCH IDENTITY")),
         ],
       ),
     );
   }
 
-  Widget _buildSectionCard({
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
+  Widget _buildMainForm(Color cardColor, Color textColor) {
     return Container(
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: widget.isDarkMode ? pViolet : Colors.blue.shade50,
-        border: Border.all(
-          color: widget.isDarkMode ? Colors.white12 : Colors.blue.shade200,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(20),
+          color: cardColor,
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: aViolet.withOpacity(0.2))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text("FORMAL OBLIGATION DATA",
+              style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  color: aViolet,
+                  letterSpacing: 1.5)),
+          const SizedBox(height: 24),
           Row(
             children: [
-              Icon(icon, color: aViolet, size: 20),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: widget.isDarkMode ? Colors.white : Colors.black,
-                ),
-              ),
+              Expanded(
+                  child: _buildTextField(
+                      label: 'Maker (Student Name)',
+                      controller: _borrowerNameController,
+                      hint: '',
+                      readOnly: true)),
+              const SizedBox(width: 16),
+              Expanded(
+                  child: _buildTextField(
+                      label: 'Parent/Guardian Full Name *',
+                      controller: _parentNameController,
+                      hint: 'Name for legal signature')),
             ],
           ),
           const SizedBox(height: 16),
-          child,
+          Row(
+            children: [
+              Expanded(
+                  flex: 2,
+                  child: _buildTextField(
+                      label: 'Program & Year Level',
+                      controller: _courseYearController,
+                      hint: '',
+                      readOnly: true)),
+              const SizedBox(width: 16),
+              Expanded(
+                  flex: 1,
+                  child: _buildTextField(
+                      label: 'Principal Amount (PHP)',
+                      controller: _amountController,
+                      hint: '0.00',
+                      onChanged: (_) => _updateAmountWords())),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+              label: 'Amount in Words',
+              controller: _amountWordsController,
+              hint: 'Auto-generated...',
+              readOnly: true),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                  child: _buildDateField("Date Issued", _issueDate,
+                      (d) => setState(() => _issueDate = d))),
+              const SizedBox(width: 16),
+              Expanded(
+                  child: _buildDateField("Settlement Deadline (Due Date)",
+                      _dueDate, (d) => setState(() => _dueDate = d))),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildTextField(
+              label: 'Institutional Remarks / Justification',
+              controller: _notesController,
+              hint: 'Context for final audit...',
+              maxLines: 2),
         ],
       ),
     );
   }
 
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required String hint,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-    bool readOnly = false,
-    ValueChanged<String>? onChanged,
-  }) {
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: _isSaving ? null : _commitNoteToLedger,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2))
+                : const Icon(LucideIcons.printer),
+            label: const Text("GENERATE & PRINT PROMISSORY NOTE",
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: success,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 22),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16))),
+          ),
+        ),
+        const SizedBox(width: 16),
+        OutlinedButton.icon(
+          onPressed: _clearForm,
+          icon: const Icon(LucideIcons.rotateCcw),
+          label: const Text("CANCEL"),
+          style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16))),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField(
+      {required String label,
+      required TextEditingController controller,
+      required String hint,
+      bool readOnly = false,
+      int maxLines = 1,
+      ValueChanged<String>? onChanged}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: widget.isDarkMode ? Colors.white : Colors.black,
-          ),
-        ),
+        Text(label.toUpperCase(),
+            style: const TextStyle(
+                color: Colors.blueGrey,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
           readOnly: readOnly,
+          maxLines: maxLines,
           onChanged: onChanged,
           style: TextStyle(
-            color: widget.isDarkMode ? Colors.white : Colors.black,
-          ),
+              color: widget.isDarkMode ? Colors.white : pViolet, fontSize: 14),
           decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(
-              color: widget.isDarkMode ? Colors.white38 : Colors.grey.shade500,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color:
-                    widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color:
-                    widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: aViolet, width: 2),
-            ),
-            filled: true,
-            fillColor: widget.isDarkMode ? surfaceDark : Colors.white,
-            contentPadding: const EdgeInsets.all(12),
-          ),
+              hintText: hint,
+              filled: true,
+              fillColor: widget.isDarkMode
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.black.withOpacity(0.02),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none)),
         ),
       ],
     );
   }
 
-  Widget _buildDropdown({
-    required String label,
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: widget.isDarkMode ? Colors.white : Colors.black,
+  Widget _buildDateField(
+      String label, DateTime? value, Function(DateTime) onPicked) {
+    return InkWell(
+      onTap: () async {
+        final d = await showDatePicker(
+            context: context,
+            initialDate: value ?? DateTime.now(),
+            firstDate: DateTime(2000),
+            lastDate: DateTime(2100));
+        if (d != null) onPicked(d);
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label.toUpperCase(),
+              style: const TextStyle(
+                  color: Colors.blueGrey,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+                color: widget.isDarkMode
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.black.withOpacity(0.02),
+                borderRadius: BorderRadius.circular(12)),
+            child: Row(children: [
+              const Icon(LucideIcons.calendar, size: 16, color: aViolet),
+              const SizedBox(width: 12),
+              Text(
+                  value == null
+                      ? "Select Date"
+                      : DateFormat('MM/dd/yyyy').format(value),
+                  style: TextStyle(
+                      color: widget.isDarkMode ? Colors.white : pViolet))
+            ]),
           ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: widget.isDarkMode ? Colors.white24 : Colors.grey.shade300,
-            ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: DropdownButton<String>(
-            value: value,
-            items: items
-                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-                .toList(),
-            onChanged: onChanged,
-            isExpanded: true,
-            underline: const SizedBox(),
-            style: TextStyle(
-              color: widget.isDarkMode ? Colors.white : Colors.black,
-            ),
-            dropdownColor: widget.isDarkMode ? surfaceDark : Colors.white,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+
+  void _clearForm() {
+    setState(() {
+      _selectedStudent = null;
+      _borrowerNameController.clear();
+      _parentNameController.clear();
+      _courseYearController.clear();
+      _amountController.clear();
+      _amountWordsController.clear();
+      _notesController.clear();
+      _dueDate = DateTime.now().add(const Duration(days: 30));
+    });
+  }
+
+  Widget _buildEmptyState(Color t) => Center(
+      child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 100),
+          child: Column(children: [
+            Icon(LucideIcons.fileSignature,
+                size: 64, color: t.withOpacity(0.05)),
+            const SizedBox(height: 24),
+            const Text(
+                "Search a student to begin issuing a formal Promissory Note.",
+                style: TextStyle(color: Colors.blueGrey))
+          ])));
+
+  void _showToast(String m, Color c) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(m),
+          backgroundColor: c,
+          behavior: SnackBarBehavior.floating));
 }

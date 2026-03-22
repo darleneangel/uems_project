@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'dart:math' as math;
+import 'dart:math';
 
 // Dashboard Imports
 import 'student_dashboard_view.dart';
@@ -297,7 +298,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   Widget _buildSplitLogin() {
     final bgColor = _isDarkMode ? tDark : const Color(0xFFF1F5F9);
     final cardColor = _isDarkMode ? const Color(0xFF160D2B) : Colors.white;
-    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final textColor = _isDarkMode ? Colors.white : Colors.black;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -328,7 +329,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                   flex: 5,
                   child: Container(
                     padding: const EdgeInsets.all(60),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [pViolet, sViolet, aViolet],
                         begin: Alignment.topLeft,
@@ -336,18 +337,10 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                       ),
                     ),
                     child: Stack(
+                      // Use Stack to layer the moving background and content
                       children: [
-                        Positioned(
-                          top: -50,
-                          right: -50,
-                          child: _buildBlurNode(
-                              200, Colors.white.withOpacity(0.08)),
-                        ),
-                        Positioned(
-                          bottom: 100,
-                          left: -100,
-                          child: _buildBlurNode(300, aViolet.withOpacity(0.15)),
-                        ),
+                        // Moving 3D-like background
+                        _MovingBackground(isDarkMode: _isDarkMode),
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,7 +373,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                             _animateEntrance(
                                 2,
                                 Text(
-                                  "UEMS: The Intelligent Core for Academic Excellence at Bright Future Academy.",
+                                  "UEMSSP: The Intelligent Core for Academic Excellence at Bright Future Academy.",
                                   style: TextStyle(
                                       color: Colors.white.withOpacity(0.7),
                                       fontSize: 18,
@@ -425,14 +418,17 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                               Text("WELCOME",
                                   style: GoogleFonts.inter(
                                       fontSize: 34,
-                                      fontWeight: FontWeight.w900,
-                                      color: textColor,
+                                      fontWeight:
+                                          FontWeight.w900, // Keep font weight
+                                      color:
+                                          textColor, // Use theme-aware text color
                                       letterSpacing: -2))),
                           _animateEntrance(
                               1,
                               Text(
                                   "Initialize your secure institutional session.",
                                   style: TextStyle(
+                                      // Keep font size and weight
                                       color: Colors.blueGrey.withOpacity(0.7),
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500))),
@@ -466,19 +462,20 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                               4,
                               Row(
                                 children: [
-                                  Checkbox(
-                                    value: _rememberMe,
-                                    activeColor: aViolet,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(6)),
-                                    onChanged: (v) =>
-                                        setState(() => _rememberMe = v!),
-                                  ),
-                                  Text("Trust this device",
-                                      style: TextStyle(
-                                          color: textColor.withOpacity(0.5),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600)),
+                                  // Removed "Trust this device" checkbox as per request
+                                  // Checkbox(
+                                  //   value: _rememberMe,
+                                  //   activeColor: aViolet,
+                                  //   shape: RoundedRectangleBorder(
+                                  //       borderRadius: BorderRadius.circular(6)),
+                                  //   onChanged: (v) =>
+                                  //       setState(() => _rememberMe = v!),
+                                  // ),
+                                  // Text("Trust this device",
+                                  //     style: TextStyle(
+                                  //         color: textColor.withOpacity(0.5),
+                                  //         fontSize: 14,
+                                  //         fontWeight: FontWeight.w600)),
                                   const Spacer(),
                                   TextButton(
                                       onPressed: () => ForgotPasswordHandler
@@ -489,6 +486,50 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                                               color: aViolet,
                                               fontSize: 14,
                                               fontWeight: FontWeight.w900)))
+                                ],
+                              )),
+                          const SizedBox(height: 40),
+                          _animateEntrance(
+                              3, // Adjusted index due to removal of checkbox
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("VISION",
+                                      style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight
+                                              .w900, // Keep font weight
+                                          color: _isDarkMode
+                                              ? Colors.white.withOpacity(0.6)
+                                              : Colors.black.withOpacity(0.6),
+                                          letterSpacing: 1.5)),
+                                  Text(
+                                      "Bright Future Academy envisions becoming a center of excellence in education that nurtures knowledgeable, skilled, and values-driven individuals who contribute positively to society.",
+                                      style: TextStyle(
+                                          // Keep font size and height
+                                          color: _isDarkMode
+                                              ? Colors.white.withOpacity(0.5)
+                                              : Colors.black.withOpacity(1),
+                                          fontSize: 11,
+                                          height: 1.4)),
+                                  const SizedBox(height: 16),
+                                  Text("MISSION",
+                                      style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight
+                                              .w900, // Keep font weight
+                                          color: _isDarkMode
+                                              ? Colors.white.withOpacity(0.6)
+                                              : Colors.black.withOpacity(0.6),
+                                          letterSpacing: 1.5)),
+                                  Text(
+                                      "Bright Future Academy is committed to: Providing quality and accessible education to all learners. Developing students’ academic competence, creativity, and critical thinking skills. Promoting discipline, respect, and integrity within the school community. Preparing students for higher education, employment, and responsible citizenship. Creating a safe and supportive learning environment.",
+                                      style: TextStyle(
+                                          color: _isDarkMode
+                                              ? Colors.white.withOpacity(0.5)
+                                              : Colors.black.withOpacity(1),
+                                          fontSize: 11,
+                                          height: 1.4)),
                                 ],
                               )),
                           const SizedBox(height: 40),
@@ -542,7 +583,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   Widget _buildWelcomeLoading() {
     final bgColor = _isDarkMode ? tDark : const Color(0xFFF1F5F9);
-    final textColor = _isDarkMode ? Colors.white : pViolet;
+    final textColor = _isDarkMode ? Colors.white : Colors.black;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -595,6 +636,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
               Text(
                   "VERIFIED: Access granted to ${_loggedInUserData?['fn'] ?? 'Academic Node'}",
                   style: const TextStyle(
+                      // Keep font size, weight, and letter spacing
                       color: success,
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
@@ -618,7 +660,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                     Text("Synchronizing encrypted academic pipeline...",
                         style: TextStyle(
                             color: _isDarkMode
-                                ? Colors.blueGrey
+                                ? Colors.blueGrey // Keep blueGrey for dark mode
                                 : pViolet.withOpacity(0.6),
                             fontSize: 13,
                             letterSpacing: 1)),
@@ -645,14 +687,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     );
   }
 
-  Widget _buildBlurNode(double size, Color color) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-    );
-  }
-
   Widget _buildThemeToggle() {
     return Container(
       decoration: BoxDecoration(
@@ -674,6 +708,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   Widget _buildLabel(String t) {
     final labelColor = _isDarkMode ? Colors.blueGrey : pViolet.withOpacity(0.7);
     return Padding(
+      // Keep padding
       padding: const EdgeInsets.only(bottom: 12, left: 6),
       child: Text(t.toUpperCase(),
           style: TextStyle(
@@ -703,7 +738,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         cursorColor: aViolet,
         style: TextStyle(
             color: _isDarkMode ? Colors.white : pViolet,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w600, // Keep font weight
             fontSize: 16),
         decoration: InputDecoration(
           hintText: h,
@@ -725,4 +760,151 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       ),
     );
   }
+}
+
+// New widget for the moving background
+class _MovingBackground extends StatefulWidget {
+  final bool isDarkMode;
+  const _MovingBackground({required this.isDarkMode});
+
+  @override
+  _MovingBackgroundState createState() => _MovingBackgroundState();
+}
+
+class _MovingBackgroundState extends State<_MovingBackground>
+    with TickerProviderStateMixin {
+  late AnimationController _controller;
+  List<_MovingShape> _shapes = [];
+  final Random _random = Random();
+
+  // Institutional Palette (copied from _UEMSLoginPageState for self-containment)
+  static const Color pViolet = Color(0xFF1E1033);
+  static const Color sViolet = Color(0xFF2E1065);
+  static const Color aViolet = Color(0xFF8B5CF6);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration:
+          const Duration(seconds: 30), // Longer duration for subtle movement
+      vsync: this,
+    )..addListener(() {
+        setState(() {
+          _updateShapes();
+        });
+      });
+
+    _generateShapes();
+    _controller.repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _generateShapes() {
+    _shapes = List.generate(
+      10, // Number of moving shapes
+      (index) => _MovingShape(
+        color: _randomColor(),
+        size: _random.nextDouble() * 100 + 50, // Size between 50 and 150
+        x: _random.nextDouble() * 1.5, // Initial x position (can be off-screen)
+        y: _random.nextDouble() * 1.5, // Initial y position
+        speed: _random.nextDouble() * 0.005 +
+            0.001, // Speed between 0.001 and 0.006
+        direction: _random.nextBool() ? 1 : -1, // Random direction
+      ),
+    );
+  }
+
+  Color _randomColor() {
+    return widget.isDarkMode
+        ? Color.fromRGBO(
+            _random.nextInt(50) + 50,
+            _random.nextInt(50) + 50,
+            _random.nextInt(50) + 50,
+            _random.nextDouble() * 0.2 + 0.1, // Opacity between 0.1 and 0.3
+          )
+        : Color.fromRGBO(
+            _random.nextInt(50) + 200,
+            _random.nextInt(50) + 200,
+            _random.nextInt(50) + 200,
+            _random.nextDouble() * 0.2 + 0.1,
+          );
+  }
+
+  void _updateShapes() {
+    for (var shape in _shapes) {
+      shape.x += shape.speed * shape.direction;
+      shape.y +=
+          shape.speed * shape.direction * 0.5; // Slower vertical movement
+
+      // Reset position if it goes off-screen
+      if (shape.x > 1.5 || shape.x < -0.5 || shape.y > 1.5 || shape.y < -0.5) {
+        shape.x = _random.nextDouble() * 1.5;
+        shape.y = _random.nextDouble() * 1.5;
+        shape.speed = _random.nextDouble() * 0.005 + 0.001;
+        shape.direction = _random.nextBool() ? 1 : -1;
+        shape.color = _randomColor();
+        shape.size = _random.nextDouble() * 100 + 50;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: _shapes.map((shape) {
+        return Positioned.fill(
+          child: Align(
+            alignment: Alignment(
+                shape.x * 2 - 1, shape.y * 2 - 1), // Convert 0-1 to -1 to 1
+            child: Transform.scale(
+              scale: shape.size / 150, // Scale based on size
+              child: Opacity(
+                opacity: shape.color.opacity,
+                child: Container(
+                  width: shape.size,
+                  height: shape.size,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: shape.color.withOpacity(
+                        1.0), // Use full opacity for the shape itself
+                    boxShadow: [
+                      BoxShadow(
+                        color: shape.color.withOpacity(0.5),
+                        blurRadius: shape.size / 4,
+                        spreadRadius: shape.size / 8,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _MovingShape {
+  Color color;
+  double size;
+  double x; // 0 to 1, relative to screen width
+  double y; // 0 to 1, relative to screen height
+  double speed;
+  int direction; // 1 for right, -1 for left
+
+  _MovingShape({
+    required this.color,
+    required this.size,
+    required this.x,
+    required this.y,
+    required this.speed,
+    required this.direction,
+  });
 }
