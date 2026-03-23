@@ -493,11 +493,11 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                                   Text("VISION",
                                       style: GoogleFonts.inter(
                                           fontSize: 10,
-                                          fontWeight: FontWeight
-                                              .w900, // Keep font weight
+                                          fontWeight: FontWeight.w900,
                                           color: _isDarkMode
                                               ? Colors.white.withOpacity(0.6)
-                                              : Colors.black.withOpacity(0.6),
+                                              : Colors
+                                                  .black, // Full opacity for black in light mode
                                           letterSpacing: 1.5)),
                                   Text(
                                       "Bright Future Academy envisions becoming a center of excellence in education that nurtures knowledgeable, skilled, and values-driven individuals who contribute positively to society.",
@@ -505,25 +505,27 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                                           // Keep font size and height
                                           color: _isDarkMode
                                               ? Colors.white.withOpacity(0.5)
-                                              : Colors.black.withOpacity(1),
+                                              : Colors
+                                                  .black, // Full opacity for black in light mode
                                           fontSize: 11,
                                           height: 1.4)),
                                   const SizedBox(height: 16),
                                   Text("MISSION",
                                       style: GoogleFonts.inter(
                                           fontSize: 10,
-                                          fontWeight: FontWeight
-                                              .w900, // Keep font weight
+                                          fontWeight: FontWeight.w900,
                                           color: _isDarkMode
                                               ? Colors.white.withOpacity(0.6)
-                                              : Colors.black.withOpacity(0.6),
+                                              : Colors
+                                                  .black, // Full opacity for black in light mode
                                           letterSpacing: 1.5)),
                                   Text(
                                       "Bright Future Academy is committed to: Providing quality and accessible education to all learners. Developing students’ academic competence, creativity, and critical thinking skills. Promoting discipline, respect, and integrity within the school community. Preparing students for higher education, employment, and responsible citizenship. Creating a safe and supportive learning environment.",
                                       style: TextStyle(
                                           color: _isDarkMode
                                               ? Colors.white.withOpacity(0.5)
-                                              : Colors.black.withOpacity(1),
+                                              : Colors
+                                                  .black, // Full opacity for black in light mode
                                           fontSize: 11,
                                           height: 1.4)),
                                 ],

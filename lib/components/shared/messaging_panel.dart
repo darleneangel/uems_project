@@ -231,7 +231,6 @@ class _MessagingPanelState extends State<MessagingPanel> {
                             color: textColor,
                             fontSize: 26,
                             letterSpacing: -0.5)),
-                    Icon(LucideIcons.edit, size: 18, color: textColor),
                   ],
                 ),
                 const SizedBox(height: 16),

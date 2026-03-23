@@ -434,7 +434,9 @@ class _AcademicLifecyclePanelState extends State<AcademicLifecyclePanel> {
         labelText: h,
         labelStyle: const TextStyle(color: Colors.blueGrey, fontSize: 12),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: widget.isDarkMode
+            ? Colors.white.withOpacity(0.05)
+            : Colors.grey.shade200, // Ensure visibility in light mode
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none),

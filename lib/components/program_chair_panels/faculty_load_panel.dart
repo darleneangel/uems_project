@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 
 class FacultyLoadPanel extends StatefulWidget {
@@ -18,10 +19,11 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
   final TextEditingController _searchController = TextEditingController();
   final SupabaseService _service = SupabaseService();
 
-  String _activeLoadFilter = "All"; // All, Overloaded, Underloaded, Regular
+  String _activeLoadFilter = "All";
   bool _isLoading = true;
   String? _chairDeptId;
   String? _chairDeptName;
+  Map<String, dynamic>? _activeTerm;
 
   List<Map<String, dynamic>> _facultyList = [];
   List<Map<String, dynamic>> _globalSubjectCatalog = [];
@@ -43,7 +45,7 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
     _initializeFacultyOversight();
   }
 
-  /// 🛰️ INITIALIZE: Resolve identity and load analytics
+  /// 🛰️ INITIALIZE: Resolve Chair context, Active Term, and load Analytics
   Future<void> _initializeFacultyOversight() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
@@ -52,14 +54,18 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
       if (userIdNum == null) return;
 
       final chairData = await _service.getChairContext(userIdNum);
+      final termRes = await _service.getActiveTerm();
+
       if (chairData != null) {
         _chairDeptId = chairData['department_id']?.toString();
         _chairDeptName = chairData['departments']?['name'];
+        _activeTerm = termRes;
+
         await _fetchSubjectCatalog();
         await _fetchFacultyLoadData();
       }
     } catch (e) {
-      debugPrint("Init Error: $e");
+      debugPrint("Institutional Oversight Init Error: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -67,30 +73,31 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
 
   Future<void> _fetchSubjectCatalog() async {
     final response = await _service.client.from('subjects').select('*');
-    setState(() =>
-        _globalSubjectCatalog = List<Map<String, dynamic>>.from(response));
+    if (mounted) {
+      setState(() =>
+          _globalSubjectCatalog = List<Map<String, dynamic>>.from(response));
+    }
   }
 
+  /// 🛰️ DATABASE: Aggregate Faculty Loads with Full Profile Context
   Future<void> _fetchFacultyLoadData() async {
     if (_chairDeptId == null) return;
     try {
       final List<Map<String, dynamic>> profData =
-          await _service.getFacultyForChair(_chairDeptId!);
+          await _service.getFacultyDetailed(_chairDeptId!);
 
       int overloaded = 0;
       int underloaded = 0;
 
       for (var prof in profData) {
-        final List<dynamic> loads = await _service.client
-            .from('study_loads')
-            .select('*, subjects(*)')
-            .eq('professor_id', prof['id'])
-            .filter('student_id', 'is', null);
+        final List<Map<String, dynamic>> loads =
+            await _service.getMasterLoads(prof['id']);
 
-        int totalUnits = loads.fold(
-            0,
-            (sum, l) =>
-                sum + (int.tryParse(l['subjects']['units'].toString()) ?? 0));
+        int totalUnits = 0;
+        for (var l in loads) {
+          totalUnits +=
+              int.tryParse(l['subjects']?['units']?.toString() ?? "0") ?? 0;
+        }
 
         prof['current_units'] = totalUnits;
         prof['master_loads'] = loads;
@@ -112,7 +119,7 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
     }
   }
 
-  /// 🛠️ CRUD Actions
+  /// 🛠️ DATABASE: Insert new assignment into the Master Schedule
   Future<void> _assignSubject(
       String profId, String subId, String day, String time) async {
     final prof = _facultyList.firstWhere((p) => p['id'] == profId);
@@ -122,8 +129,7 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
 
     if ((prof['current_units'] ?? 0) + unitsToAdd > 21) {
       _showToast(
-          "ASSIGNMENT REJECTED: Professor is at maximum capacity (21 Units).",
-          danger);
+          "ASSIGNMENT REJECTED: Maximum capacity (21 Units) reached.", danger);
       return;
     }
 
@@ -136,18 +142,24 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
         'time_end': time.contains('-') ? time.split('-')[1].trim() : "TBD",
         'student_id': null,
         'section_block': 'MASTER',
+        'is_locked': false,
       });
-      _showToast("Master Schedule Updated.", success);
+
+      _showToast("Institutional Master Schedule Updated.", success);
       await _fetchFacultyLoadData();
     } catch (e) {
-      _showToast("Error: $e", danger);
+      _showToast("Sync Error: $e", danger);
     }
   }
 
   Future<void> _deleteMasterLoad(String loadId) async {
-    await _service.client.from('study_loads').delete().eq('id', loadId);
-    await _fetchFacultyLoadData();
-    _showToast("Schedule Entry Deleted.", warning);
+    try {
+      await _service.client.from('study_loads').delete().eq('id', loadId);
+      await _fetchFacultyLoadData();
+      _showToast("Schedule Entry Revoked.", warning);
+    } catch (e) {
+      _showToast("Deletion Error.", danger);
+    }
   }
 
   /// 🔍 FILTER LOGIC
@@ -155,7 +167,7 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
     final query = _searchController.text.toLowerCase();
     return _facultyList.where((f) {
       final name = "${f['fn']} ${f['ln']}".toLowerCase();
-      final id = f['user_id_number'].toString();
+      final id = (f['user_id_number'] ?? '').toString().toLowerCase();
       final units = f['current_units'] ?? 0;
 
       bool matchesSearch = name.contains(query) || id.contains(query);
@@ -163,10 +175,11 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
 
       if (_activeLoadFilter == "Overloaded") {
         matchesLoad = units > 21;
-      } else if (_activeLoadFilter == "Underloaded")
+      } else if (_activeLoadFilter == "Underloaded") {
         matchesLoad = units < 12;
-      else if (_activeLoadFilter == "Regular")
+      } else if (_activeLoadFilter == "Regular") {
         matchesLoad = units >= 12 && units <= 21;
+      }
 
       return matchesSearch && matchesLoad;
     }).toList();
@@ -174,7 +187,8 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = widget.isDarkMode ? Colors.white : Colors.black87;
+    final textColor =
+        widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
     if (_isLoading) {
@@ -189,8 +203,6 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
         children: [
           _buildHeader(textColor),
           const SizedBox(height: 32),
-
-          // 1. ANALYTICS OVERVIEW
           Row(
             children: [
               _statCard("Total Faculty", _totalFaculty.toString(),
@@ -202,12 +214,8 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
             ],
           ),
           const SizedBox(height: 32),
-
-          // 2. SEARCH & FILTER BAR
           _buildFilterBar(cardColor, textColor),
           const SizedBox(height: 24),
-
-          // 3. FACULTY LIST
           _buildFacultyList(cardColor, textColor),
         ],
       ),
@@ -217,14 +225,14 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
   Widget _buildHeader(Color t) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Academic Resource Oversight",
+          Text("Faculty Load Balancing",
               style: GoogleFonts.inter(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
                   color: t,
                   letterSpacing: -1)),
           Text(
-              "Department: ${_chairDeptName ?? 'N/A'} | Real-time workload management & load balancing.",
+              "Department: ${_chairDeptName ?? 'N/A'} | Master Schedule Oversight.",
               style: const TextStyle(color: Colors.blueGrey, fontSize: 14)),
         ],
       );
@@ -238,7 +246,10 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
           decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white10)),
+              border: Border.all(
+                  color: widget.isDarkMode
+                      ? Colors.white10
+                      : Colors.black.withOpacity(0.05))),
           child: Row(
             children: [
               Container(
@@ -275,7 +286,8 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
         decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white10)),
+            border: Border.all(
+                color: widget.isDarkMode ? Colors.white10 : Colors.black12)),
         child: Row(
           children: [
             const SizedBox(width: 12),
@@ -326,13 +338,14 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
         decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white10)),
+            border: Border.all(
+                color: widget.isDarkMode ? Colors.white10 : Colors.black12)),
         child: ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: _filteredFaculty.length,
           separatorBuilder: (_, __) =>
-              const Divider(height: 1, color: Colors.white10),
+              const Divider(color: Colors.white10, height: 1),
           itemBuilder: (context, i) {
             final f = _filteredFaculty[i];
             final int units = f['current_units'] ?? 0;
@@ -342,18 +355,13 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
 
             return ListTile(
               contentPadding: const EdgeInsets.all(24),
-              leading: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                    color: isGenEd
-                        ? Colors.blueAccent.withOpacity(0.1)
-                        : aViolet.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12)),
-                child: Center(
-                    child: Icon(isGenEd ? LucideIcons.book : LucideIcons.cpu,
-                        color: isGenEd ? Colors.blueAccent : aViolet,
-                        size: 20)),
+              leading: CircleAvatar(
+                radius: 25,
+                backgroundColor: isGenEd
+                    ? Colors.blueAccent.withOpacity(0.1)
+                    : aViolet.withOpacity(0.1),
+                child: Icon(isGenEd ? LucideIcons.book : LucideIcons.cpu,
+                    color: isGenEd ? Colors.blueAccent : aViolet, size: 20),
               ),
               title: Text("${f['fn']} ${f['ln']}",
                   style: TextStyle(
@@ -362,7 +370,7 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                      "ID: ${f['user_id_number']} • ${f['employee_details']?['departments']?['name'] ?? 'Gen Ed Unit'}",
+                      "ID: ${f['user_id_number'] ?? 'N/A'} • ${f['employee_details']?['position_title'] ?? 'Faculty'}",
                       style: const TextStyle(
                           color: Colors.blueGrey, fontSize: 12)),
                   const SizedBox(height: 4),
@@ -389,7 +397,7 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
-                                value: units / 21,
+                                value: (units / 21).clamp(0.0, 1.0),
                                 color: units > 21
                                     ? danger
                                     : (units < 12 ? warning : success),
@@ -402,6 +410,8 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
                     const SizedBox(width: 24),
                     ElevatedButton(
                         onPressed: () => _showManageLoadDialog(f),
+                        style:
+                            ElevatedButton.styleFrom(backgroundColor: aViolet),
                         child: const Text("SCHEDULE")),
                   ],
                 ),
@@ -415,88 +425,119 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
     final String type = prof['employee_details']?['faculty_type'] ?? "";
     final bool isGenEd = type == "Gen Ed";
 
-    // SMART CATALOG FILTERING
     final filteredSubjects = _globalSubjectCatalog.where((s) {
-      if (isGenEd) {
-        // Gen Ed: only non-professional subjects
-        return (s['is_professional_course'] == false);
-      } else {
-        // Specialist: only subjects from the IT department (using Chair's context)
-        return (s['department_id']?.toString() == _chairDeptId);
-      }
+      if (isGenEd) return (s['is_professional_course'] == false);
+      return (s['department_id']?.toString() == _chairDeptId);
     }).toList();
 
     String? selSubId;
     final dayCtrl = TextEditingController();
     final timeCtrl = TextEditingController();
+    final List masterLoads = prof['master_loads'] ?? [];
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
+          scrollable: false,
           backgroundColor: surfaceDark,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           title: Text("Schedule Master: ${prof['fn']}",
               style: const TextStyle(color: Colors.white)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                  "ASSIGNING TO: ${isGenEd ? 'GENERAL EDUCATION' : 'SPECIALIZED (IT)'}",
-                  style: const TextStyle(
-                      color: aViolet,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                dropdownColor: surfaceDark,
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-                decoration: const InputDecoration(
-                    labelText: "Select Subject",
-                    labelStyle: TextStyle(color: Colors.blueGrey)),
-                items: filteredSubjects
-                    .map((s) => DropdownMenuItem(
-                        value: s['id'].toString(),
-                        child: Text("${s['code']} - ${s['name']}",
-                            overflow: TextOverflow.ellipsis)))
-                    .toList(),
-                onChanged: (v) => setModalState(() => selSubId = v),
+          content: SizedBox(
+            width: 500,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                      "ASSIGNING TO: ${isGenEd ? 'GENERAL EDUCATION' : 'SPECIALIZED'}",
+                      style: const TextStyle(
+                          color: aViolet,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1)),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selSubId,
+                    isExpanded: true,
+                    dropdownColor: surfaceDark,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    decoration: _modalInput("Select Subject"),
+                    items: filteredSubjects
+                        .map((s) => DropdownMenuItem(
+                            value: s['id'].toString(),
+                            child: Text("${s['code']} - ${s['name']}",
+                                overflow: TextOverflow.ellipsis)))
+                        .toList(),
+                    onChanged: (v) => setModalState(() => selSubId = v),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                      controller: dayCtrl,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _modalInput("Day (e.g. MWF)")),
+                  const SizedBox(height: 12),
+                  TextField(
+                      controller: timeCtrl,
+                      style: const TextStyle(color: Colors.white),
+                      decoration:
+                          _modalInput("Time Slot (e.g. 09:00 - 10:30)")),
+                  const SizedBox(height: 24),
+                  const Text("EXISTING ASSIGNMENTS",
+                      style: TextStyle(
+                          color: Colors.blueGrey,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  if (masterLoads.isEmpty)
+                    const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Text("No master schedules assigned.",
+                            style:
+                                TextStyle(color: Colors.white24, fontSize: 11)))
+                  else
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: masterLoads.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(color: Colors.white10),
+                        itemBuilder: (ctx, i) {
+                          final l = masterLoads[i];
+                          return ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l['subjects']?['name'] ?? 'Subject',
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 12)),
+                            subtitle: Text(
+                                "${l['day_schedule']} | ${l['time_start']}",
+                                style: const TextStyle(
+                                    color: Colors.blueGrey, fontSize: 10)),
+                            trailing: IconButton(
+                                icon: const Icon(LucideIcons.trash2,
+                                    size: 14, color: danger),
+                                onPressed: () {
+                                  _deleteMasterLoad(l['id']);
+                                  Navigator.pop(context);
+                                }),
+                          );
+                        },
+                      ),
+                    ),
+                ],
               ),
-              TextField(
-                  controller: dayCtrl,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: "Day (Manual)")),
-              TextField(
-                  controller: timeCtrl,
-                  style: const TextStyle(color: Colors.white),
-                  decoration:
-                      const InputDecoration(labelText: "Time Slot (Manual)")),
-              const SizedBox(height: 20),
-              const Text("EXISTING ASSIGNMENTS",
-                  style: TextStyle(
-                      color: Colors.blueGrey,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold)),
-              ...(prof['master_loads'] as List).map((l) => ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(l['subjects']['name'],
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 12)),
-                    trailing: IconButton(
-                        icon: const Icon(LucideIcons.trash2,
-                            size: 14, color: danger),
-                        onPressed: () {
-                          _deleteMasterLoad(l['id']);
-                          Navigator.pop(context);
-                        }),
-                  )),
-            ],
+            ),
           ),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text("CLOSE")),
+                child: const Text("CANCEL",
+                    style: TextStyle(color: Colors.blueGrey))),
             ElevatedButton(
                 onPressed: selSubId == null
                     ? null
@@ -505,12 +546,25 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
                             prof['id'], selSubId!, dayCtrl.text, timeCtrl.text);
                         Navigator.pop(context);
                       },
-                child: const Text("SAVE")),
+                style: ElevatedButton.styleFrom(backgroundColor: aViolet),
+                child: const Text("SAVE ASSIGNMENT")),
           ],
         ),
       ),
     );
   }
+
+  InputDecoration _modalInput(String l) => InputDecoration(
+        labelText: l,
+        labelStyle: const TextStyle(color: Colors.blueGrey, fontSize: 11),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.05),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      );
 
   Widget _typeBadge(String t, Color c) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -522,9 +576,14 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
           style:
               TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.w900)));
 
-  void _showToast(String m, Color c) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(m),
-          backgroundColor: c,
-          behavior: SnackBarBehavior.floating));
+  void _showToast(String m, Color c) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: c,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(20),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
+  }
 }

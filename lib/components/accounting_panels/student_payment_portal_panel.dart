@@ -1249,7 +1249,9 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                   value: v,
                   isExpanded: true,
                   dropdownColor: const Color(0xFF1E1B4B),
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  style: TextStyle(
+                      color: widget.isDarkMode ? Colors.white : Colors.black,
+                      fontSize: 13), // Ensure text is visible in light mode
                   items: i
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                       .toList(),
@@ -1337,12 +1339,13 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
   BoxDecoration _containerStyle() => BoxDecoration(
       color: widget.isDarkMode
           ? Colors.white.withOpacity(0.05)
-          : Colors.black.withOpacity(0.02),
+          : Colors.grey
+              .shade200, // Use a solid light grey for better visibility in light mode
       borderRadius: BorderRadius.circular(12));
 
   Widget _buildEmptyState(Color t) => Center(
           child: Column(children: [
-        const SizedBox(height: 100),
+        const SizedBox(height: 100), // Keep spacing
         Icon(LucideIcons.landmark,
             size: 64, color: Colors.blueGrey.withOpacity(0.1)),
         const SizedBox(height: 24),

@@ -483,8 +483,10 @@ class _PaymentChannelsPanelState extends State<PaymentChannelsPanel> {
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: widget.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
+      decoration: BoxDecoration( // Ensure visibility in light mode
+        color: widget.isDarkMode
+            ? Colors.white.withOpacity(0.05)
+            : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: widget.isDarkMode ? Colors.white10 : Colors.black12),
       ),

@@ -145,7 +145,7 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
             ],
           ),
           const SizedBox(height: 32),
-          _buildActionButtons(textColor),
+
           const SizedBox(height: 40),
         ],
       ),
@@ -205,13 +205,6 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
             Text("S.Y. 2025-2026 | 2nd Semester",
                 style: TextStyle(color: sub, fontSize: 13)),
           ],
-        ),
-        ElevatedButton.icon(
-          onPressed: () => _generatePdfExport(),
-          icon: const Icon(LucideIcons.fileDown, size: 16),
-          label: const Text("DOWNLOAD STATEMENT"),
-          style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF8B5CF6)),
         ),
       ],
     );
@@ -334,41 +327,6 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
                   fontStyle: FontStyle.italic)),
         ],
       ),
-    );
-  }
-
-  Widget _buildActionButtons(Color text) {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF69F0AE),
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text("PAY NOW (ONLINE)",
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () {},
-            style: OutlinedButton.styleFrom(
-              foregroundColor: text,
-              side: const BorderSide(color: Colors.white10),
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text("VIEW PAYMENT HISTORY"),
-          ),
-        ),
-      ],
     );
   }
 

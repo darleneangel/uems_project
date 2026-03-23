@@ -349,10 +349,15 @@ class _HRPanelState extends State<HRPanel> {
             ? (v) => (v == null || v.isEmpty) ? "Required" : null
             : null,
         decoration: InputDecoration(
+          // Ensure text is visible in light mode
+          hintStyle: TextStyle(
+              color: widget.isDarkMode ? Colors.white54 : Colors.black54),
+          fillColor: widget.isDarkMode
+              ? Colors.white.withOpacity(0.05)
+              : Colors.grey.shade200,
           labelText: l,
           labelStyle: const TextStyle(color: Colors.blueGrey, fontSize: 12),
           filled: true,
-          fillColor: Colors.white.withOpacity(0.05),
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none),
@@ -376,6 +381,10 @@ class _HRPanelState extends State<HRPanel> {
           dropdownColor: const Color(0xFF0F071D),
           style: const TextStyle(color: Colors.white, fontSize: 13),
           decoration: InputDecoration(
+              // Ensure text is visible in light mode
+              hintStyle: TextStyle(
+                  color: widget.isDarkMode ? Colors.white54 : Colors.black54),
+              labelStyle: TextStyle(color: Colors.blueGrey),
               filled: true,
               fillColor: Colors.white.withOpacity(0.05),
               border: OutlineInputBorder(
