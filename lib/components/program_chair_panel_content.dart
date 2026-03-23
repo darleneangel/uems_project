@@ -6,6 +6,7 @@ import 'program_chair_panels/assessment_summary_panel.dart';
 import 'program_chair_panels/student_masterlist_panel.dart';
 import 'shared/messaging_panel.dart';
 import 'shared/staff_profile_portal.dart';
+import 'program_chair_panels/subject_management_panel.dart';
 
 class ProgramChairPanelContent extends StatelessWidget {
   final int selectedIndex;
@@ -66,6 +67,11 @@ class ProgramChairPanelContent extends StatelessWidget {
       case 6:
         // Profile: View and edit the Program Chair's own profile
         return StaffProfilePortal(
+          isDarkMode: isDarkMode,
+          userData: userData,
+        );
+      case 7:
+        return SubjectManagementPanel(
           isDarkMode: isDarkMode,
           userData: userData,
         );

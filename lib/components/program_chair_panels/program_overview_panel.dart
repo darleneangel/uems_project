@@ -259,7 +259,7 @@ class _ProgramOverviewPanelState extends State<ProgramOverviewPanel> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: const Color.fromARGB(255, 136, 133, 133).withOpacity(0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: DropdownButtonHideUnderline(
@@ -306,7 +306,10 @@ class _ProgramOverviewPanelState extends State<ProgramOverviewPanel> {
           child: Padding(
         padding: const EdgeInsets.all(48),
         child: Text("No records found.",
-            style: TextStyle(color: text.withOpacity(0.3))),
+            style: TextStyle(color: text.withOpacity(1)
+                // fontWeight: FontWeight.bold,
+                // fontSize: 15
+                )),
       ));
     }
 
@@ -320,7 +323,7 @@ class _ProgramOverviewPanelState extends State<ProgramOverviewPanel> {
               Expanded(flex: 2, child: _tableHead("ID NUMBER")),
               Expanded(flex: 3, child: _tableHead("STUDENT NAME")),
               Expanded(flex: 2, child: _tableHead("YEAR LEVEL")),
-              Expanded(flex: 2, child: _tableHead("LIFECYCLE STATUS")),
+              Expanded(flex: 2, child: _tableHead("ENROLLMENT STATUS")),
             ],
           ),
         ),
@@ -345,17 +348,17 @@ class _ProgramOverviewPanelState extends State<ProgramOverviewPanel> {
                   Expanded(
                       flex: 2,
                       child: Text(s['user_id_number'].toString(),
-                          style: GoogleFonts.orbitron(
-                              color: aViolet,
-                              fontSize: 12,
+                          style: GoogleFonts.inter(
+                              color: const Color.fromARGB(255, 255, 255, 255),
+                              fontSize: 15,
                               fontWeight: FontWeight.bold))),
                   Expanded(
                       flex: 3,
                       child: Text("${s['fn']} ${s['ln']}",
                           style: TextStyle(
                               color: text,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13))),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15))),
                   Expanded(
                       flex: 2,
                       child: Text(
@@ -377,7 +380,7 @@ class _ProgramOverviewPanelState extends State<ProgramOverviewPanel> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               color: isEnrolled ? success : Colors.orangeAccent,
-                              fontSize: 9,
+                              fontSize: 15,
                               fontWeight: FontWeight.w900)),
                     ),
                   ),
@@ -392,8 +395,8 @@ class _ProgramOverviewPanelState extends State<ProgramOverviewPanel> {
 
   Widget _tableHead(String t) => Text(t,
       style: const TextStyle(
-          color: Colors.blueGrey,
-          fontSize: 10,
+          color: Color.fromARGB(255, 255, 255, 255),
+          fontSize: 20,
           fontWeight: FontWeight.w900,
           letterSpacing: 1));
 
@@ -419,7 +422,7 @@ class _ProgramOverviewPanelState extends State<ProgramOverviewPanel> {
               ),
               const SizedBox(height: 16),
               Text(val,
-                  style: GoogleFonts.orbitron(
+                  style: GoogleFonts.inter(
                       fontSize: 26, fontWeight: FontWeight.bold, color: text)),
               Text(label.toUpperCase(),
                   style: const TextStyle(

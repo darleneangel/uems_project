@@ -36,22 +36,31 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
     _loadAnalytics();
   }
 
-  /// 🛰️ DATABASE: Corrected to join 'grades' table to fix "final_grade does not exist" error
+  /// 🛰️ DATABASE: Aggregate institutional metrics for the faculty overview
   Future<void> _loadAnalytics() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
+
+    // We use the 'id' (UUID) for precise database querying
     final String profId = widget.userData['id'];
 
     try {
-      // FIX: Joining grades table correctly according to the SQL schema
+      // 1. Fetch all enrollment loads associated with this teacher
+      // This includes the joined 'grades' to check for encoding completion
       final response = await _service.client
           .from('study_loads')
           .select('id, student_id, subject_id, grades(final_numeric_grade)')
           .eq('professor_id', profId);
 
       final List<dynamic> data = response as List;
-      final Set<String> uniqueStudents = {};
-      final Set<String> uniqueSubjects = {};
+
+      // 🛡️ UNIQUE IDENTITY SETS: Resolves redundant data issues for analytics
+      final Set<String> uniqueStudentHeadcount = {};
+      final Set<String> uniqueSubjectCatalog = {};
+
+      // Tracking unique (student + subject) slots to handle redundant enrollments
+      final Set<String> processedEnrollmentSlots = {};
+
       int pending = 0;
       Map<String, int> distroMap = {
         "1.00": 0,
@@ -62,22 +71,42 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
       };
 
       for (var row in data) {
-        if (row['student_id'] != null) {
-          uniqueStudents.add(row['student_id'].toString());
-          uniqueSubjects.add(row['subject_id'].toString());
+        final String? studentId = row['student_id']?.toString();
+        final String? subjectId = row['subject_id']?.toString();
 
-          // Check joined grades record
-          final gradeRecord = row['grades'] as List?;
-          if (gradeRecord == null || gradeRecord.isEmpty) {
+        // Only process rows that are actual student enrollments (student_id is not null)
+        if (studentId != null && subjectId != null) {
+          final String slotKey = "${studentId}_$subjectId";
+
+          // If we've already processed this specific student for this subject, skip it
+          if (processedEnrollmentSlots.contains(slotKey)) continue;
+          processedEnrollmentSlots.add(slotKey);
+
+          uniqueStudentHeadcount.add(studentId);
+          uniqueSubjectCatalog.add(subjectId);
+
+          // 🛡️ SAFE EXTRACTION ENGINE
+          // FIX: Resolves "Map is not a subtype of List" by checking data type before processing
+          final dynamic gradeData = row['grades'];
+          Map<String, dynamic>? gradeMap;
+
+          if (gradeData is List && gradeData.isNotEmpty) {
+            gradeMap = gradeData.first;
+          } else if (gradeData is Map<String, dynamic>) {
+            gradeMap = gradeData;
+          }
+
+          if (gradeMap == null) {
             pending++;
           } else {
             final double g = double.tryParse(
-                    gradeRecord.first['final_numeric_grade']?.toString() ??
-                        "0.0") ??
+                    gradeMap['final_numeric_grade']?.toString() ?? "0.0") ??
                 0.0;
+
             if (g == 0) {
               pending++;
             } else {
+              // Map into the visualization distro
               String key = g <= 1.0
                   ? "1.00"
                   : g <= 1.25
@@ -95,21 +124,28 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
 
       if (mounted) {
         setState(() {
-          _totalStudents = uniqueStudents.length;
-          _activeClasses = uniqueSubjects.length;
+          _totalStudents = uniqueStudentHeadcount.length;
+          _activeClasses = uniqueSubjectCatalog.length;
           _pendingGrades = pending;
-          _completionRate =
-              data.isEmpty ? 0.0 : (data.length - pending) / data.length;
 
-          int maxCount = distroMap.values.reduce(math.max);
+          // Completion Rate logic based on unique slots
+          _completionRate = processedEnrollmentSlots.isEmpty
+              ? 0.0
+              : (processedEnrollmentSlots.length - pending) /
+                  processedEnrollmentSlots.length;
+
+          // Normalize distribution for the bar chart
+          int maxCount = distroMap.values
+              .fold(0, (prev, element) => element > prev ? element : prev);
           if (maxCount == 0) maxCount = 1;
           _gradeDistroValues =
               distroMap.values.map((v) => v / maxCount).toList();
+
           _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint("Analytics Sync Error: $e");
+      debugPrint("Faculty Analytics Sync Error: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -124,147 +160,208 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
     }
 
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.all(40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(textColor),
           const SizedBox(height: 32),
-          Row(children: [
-            _statCard("Students", _totalStudents.toString(), LucideIcons.users,
-                aViolet, bgColor, textColor),
-            _statCard("Subjects", _activeClasses.toString(),
-                LucideIcons.bookOpen, Colors.blue, bgColor, textColor),
-            _statCard("Pending", _pendingGrades.toString(), LucideIcons.clock,
-                Colors.orangeAccent, bgColor, textColor),
-          ]),
+          Row(
+            children: [
+              _statCard("Unique Students", _totalStudents.toString(),
+                  LucideIcons.users, aViolet, bgColor, textColor),
+              _statCard("Active Subjects", _activeClasses.toString(),
+                  LucideIcons.bookOpen, Colors.blue, bgColor, textColor),
+              _statCard("Pending Encoding", _pendingGrades.toString(),
+                  LucideIcons.clock, Colors.orangeAccent, bgColor, textColor),
+            ],
+          ),
           const SizedBox(height: 32),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
-                flex: 6,
-                child: _chart(
-                    "Grade Distribution",
-                    "Count per transmuted bracket",
-                    _bar(),
-                    bgColor,
-                    textColor)),
-            const SizedBox(width: 24),
-            Expanded(
-                flex: 4,
-                child: _chart("Grading Completion", "Roster progress",
-                    _pie(textColor), bgColor, textColor)),
-          ]),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                  flex: 6,
+                  child: _chart(
+                      "Performance Distribution",
+                      "Headcount per transmuted GWA bracket",
+                      _buildBarChart(),
+                      bgColor,
+                      textColor)),
+              const SizedBox(width: 24),
+              Expanded(
+                  flex: 4,
+                  child: _chart(
+                      "Encoding Completion",
+                      "Institutional roster progress",
+                      _buildProgressDonut(textColor),
+                      bgColor,
+                      textColor)),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(Color t) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text("Faculty Management Hub",
-            style: GoogleFonts.inter(
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                color: t,
-                letterSpacing: -1)),
-        const Text("Institutional Ceiling: 95.0 | GWA 1.00 - 5.00 Scale",
-            style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
-      ]);
+  Widget _buildHeader(Color t) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Faculty Insight Dashboard",
+              style: GoogleFonts.inter(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: t,
+                  letterSpacing: -1)),
+          const Text(
+              "Real-time synchronization with the Grade Ledger and Student Roster.",
+              style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
+        ],
+      );
 
   Widget _statCard(
           String l, String v, IconData i, Color c, Color bg, Color t) =>
       Expanded(
-          child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                  color: bg,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                      color:
-                          widget.isDarkMode ? Colors.white10 : Colors.black12)),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(i, color: c),
-                    const SizedBox(height: 15),
-                    Text(v,
-                        style: GoogleFonts.inter(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: t)),
-                    Text(l,
-                        style: const TextStyle(
-                            color: Colors.blueGrey,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold))
-                  ])));
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+                color: widget.isDarkMode
+                    ? Colors.white10
+                    : Colors.black.withOpacity(0.05)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(i, color: c, size: 20),
+              const SizedBox(height: 15),
+              Text(v,
+                  style: GoogleFonts.inter(
+                      fontSize: 24, fontWeight: FontWeight.w900, color: t)),
+              Text(l.toUpperCase(),
+                  style: const TextStyle(
+                      color: Colors.blueGrey,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1)),
+            ],
+          ),
+        ),
+      );
 
   Widget _chart(String t, String s, Widget c, Color bg, Color tx,
           {double h = 220}) =>
       Container(
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                  color: widget.isDarkMode ? Colors.white10 : Colors.black12)),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(t,
-                style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w800, color: tx, fontSize: 16)),
-            Text(s,
-                style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
-            const SizedBox(height: 24),
-            SizedBox(height: h, child: c)
-          ]));
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+              color: widget.isDarkMode
+                  ? Colors.white10
+                  : Colors.black.withOpacity(0.05)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(t.toUpperCase(),
+              style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w900,
+                  color: tx,
+                  fontSize: 12,
+                  letterSpacing: 1)),
+          Text(s, style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+          const SizedBox(height: 32),
+          SizedBox(height: h, child: c),
+        ]),
+      );
 
-  Widget _bar() => Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: List.generate(
-          _gradeDistroValues.length,
-          (i) => Container(
-              width: 35,
-              height: 150 * _gradeDistroValues[i],
-              decoration: BoxDecoration(
+  Widget _buildBarChart() => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: List.generate(_gradeDistroValues.length, (i) {
+          final double val = _gradeDistroValues[i];
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 500),
+                width: 40,
+                height: (160 * val).clamp(4.0, 160.0),
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                      colors: [aViolet, aViolet.withOpacity(0.3)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter),
-                  borderRadius: BorderRadius.circular(6)))));
+                    colors: [aViolet, aViolet.withOpacity(0.4)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(["1.0", "1.2", "1.5", "1.7", "2.0+"][i],
+                  style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueGrey)),
+            ],
+          );
+        }),
+      );
 
-  Widget _pie(Color t) => Center(
-          child: Stack(alignment: Alignment.center, children: [
-        SizedBox(
-            width: 140,
-            height: 140,
+  Widget _buildProgressDonut(Color t) => Center(
+        child: Stack(alignment: Alignment.center, children: [
+          SizedBox(
+            width: 150,
+            height: 150,
             child: CustomPaint(
-                painter:
-                    DonutPainter(progress: _completionRate, color: success))),
-        Text("${(_completionRate * 100).toInt()}%",
-            style: GoogleFonts.inter(
-                fontSize: 24, fontWeight: FontWeight.w900, color: t))
-      ]));
+                painter: DonutPainter(
+                    progress: _completionRate.clamp(0.0, 1.0), color: success)),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("${(_completionRate * 100).toInt()}%",
+                  style: GoogleFonts.inter(
+                      fontSize: 28, fontWeight: FontWeight.w900, color: t)),
+              const Text("COMPLETED",
+                  style: TextStyle(
+                      color: Colors.blueGrey,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1)),
+            ],
+          ),
+        ]),
+      );
 }
 
 class DonutPainter extends CustomPainter {
   final double progress;
   final Color color;
   DonutPainter({required this.progress, required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final paint = Paint()
+    final radius = size.width / 2;
+
+    final bgPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 14
-      ..strokeCap = StrokeCap.round;
-    paint.color = Colors.white.withOpacity(0.05);
-    canvas.drawCircle(center, size.width / 2, paint);
-    paint.color = color;
-    canvas.drawArc(Rect.fromCircle(center: center, radius: size.width / 2),
-        -math.pi / 2, 2 * math.pi * progress, false, paint);
+      ..color = Colors.white.withOpacity(0.03);
+
+    canvas.drawCircle(center, radius, bgPaint);
+
+    final progressPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 14
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+
+    canvas.drawArc(Rect.fromCircle(center: center, radius: radius),
+        -math.pi / 2, 2 * math.pi * progress, false, progressPaint);
   }
 
   @override

@@ -19,18 +19,21 @@ class _StudentMasterListPanelState extends State<StudentMasterListPanel> {
   final SupabaseService _service = SupabaseService();
 
   bool _isLoading = true;
+  bool _isActionLoading = false;
   String? _chairDeptId;
   List<Map<String, dynamic>> _students = [];
 
   // --- 🎯 FILTERS ---
   String _activeTypeFilter = "All"; // All, Regular, Irregular
-  String _activeStatusFilter = "All"; // All, Enrolled, Not Enrolled/Pending
+  String _activeStatusFilter =
+      "All"; // All, Enrolled, Not Enrolled/Pending, Dropped
 
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color surfaceDark = Color(0xFF1E1B4B);
   static const Color success = Color(0xFF69F0AE);
   static const Color pViolet = Color(0xFF2E1065);
   static const Color warning = Color(0xFFFFD740);
+  static const Color danger = Color(0xFFFF5252);
 
   @override
   void initState() {
@@ -92,6 +95,59 @@ class _StudentMasterListPanelState extends State<StudentMasterListPanel> {
     }
   }
 
+  /// 🛰️ DATABASE ACTION: Administrative Drop
+  /// Permanently updates the student's status to 'Dropped' in the institutional ledger.
+  Future<void> _dropStudent(String profileId, String name) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: surfaceDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(LucideIcons.alertTriangle, color: danger),
+            SizedBox(width: 12),
+            Text("Administrative Drop",
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          "Are you sure you want to drop $name from the academic roster? \n\n"
+          "This action will flag the student as 'Dropped' and restrict further enrollment actions for this term.",
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("CANCEL",
+                  style: TextStyle(color: Colors.blueGrey))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: danger, foregroundColor: Colors.white),
+            child: const Text("CONFIRM DROP"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isActionLoading = true);
+      try {
+        await _service.client.from('student_details').update(
+            {'enrollment_status': 'Dropped'}).eq('profile_id', profileId);
+
+        _showToast("Student $name has been dropped.", success);
+        await _fetchStudents();
+      } catch (e) {
+        _showToast("Drop Action Failed: Connection Error", danger);
+      } finally {
+        if (mounted) setState(() => _isActionLoading = false);
+      }
+    }
+  }
+
   /// 📐 DYNAMIC FILTER ENGINE
   List<Map<String, dynamic>> get _filteredStudents {
     final query = _searchController.text.toLowerCase();
@@ -99,7 +155,6 @@ class _StudentMasterListPanelState extends State<StudentMasterListPanel> {
       final name = "${s['fn']} ${s['ln']}".toLowerCase();
       final id = (s['user_id_number'] ?? '').toString().toLowerCase();
 
-      // Extraction logic for status and type
       final details = s['student_details'];
       final status = details?['enrollment_status'] ?? "Pending";
       final rawType = (details?['student_type'] ?? "Regular").toString();
@@ -107,8 +162,6 @@ class _StudentMasterListPanelState extends State<StudentMasterListPanel> {
 
       bool matchesSearch = name.contains(query) || id.contains(query);
 
-      // 🛠️ FIX: Student Type Filter logic synchronized with UI labels
-      // If user selects "Regular", show anyone who IS NOT "Irregular" (handles "New Student", etc.)
       bool matchesType = true;
       if (_activeTypeFilter == "Regular") {
         matchesType = !isActuallyIrregular;
@@ -116,12 +169,14 @@ class _StudentMasterListPanelState extends State<StudentMasterListPanel> {
         matchesType = isActuallyIrregular;
       }
 
-      // Enrollment Status Filter
       bool matchesStatus = true;
       if (_activeStatusFilter == "Enrolled") {
         matchesStatus = status == "Enrolled" || status == "Cleared";
       } else if (_activeStatusFilter == "Not Enrolled") {
-        matchesStatus = status != "Enrolled" && status != "Cleared";
+        matchesStatus =
+            status != "Enrolled" && status != "Cleared" && status != "Dropped";
+      } else if (_activeStatusFilter == "Dropped") {
+        matchesStatus = status == "Dropped";
       }
 
       return matchesSearch && matchesType && matchesStatus;
@@ -187,31 +242,36 @@ class _StudentMasterListPanelState extends State<StudentMasterListPanel> {
                     onChanged: (_) => setState(() {}),
                     style: TextStyle(color: text),
                     decoration: const InputDecoration(
-                        hintText: "Search Name or LRD ID...",
+                        hintText: "Search Name or Student ID...",
                         border: InputBorder.none),
                   ),
                 ),
               ],
             ),
             const Divider(color: Colors.white10, height: 24),
-            Row(
-              children: [
-                _filterLabel("STATUS: "),
-                _chip("All", _activeStatusFilter == "All",
-                    (v) => setState(() => _activeStatusFilter = v)),
-                _chip("Enrolled", _activeStatusFilter == "Enrolled",
-                    (v) => setState(() => _activeStatusFilter = v)),
-                _chip("Not Enrolled", _activeStatusFilter == "Not Enrolled",
-                    (v) => setState(() => _activeStatusFilter = v)),
-                const SizedBox(width: 24),
-                _filterLabel("TYPE: "),
-                _chip("All", _activeTypeFilter == "All",
-                    (v) => setState(() => _activeTypeFilter = v)),
-                _chip("Regular", _activeTypeFilter == "Regular",
-                    (v) => setState(() => _activeTypeFilter = v)),
-                _chip("Irregular", _activeTypeFilter == "Irregular",
-                    (v) => setState(() => _activeTypeFilter = v)),
-              ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _filterLabel("STATUS: "),
+                  _chip("All", _activeStatusFilter == "All",
+                      (v) => setState(() => _activeStatusFilter = v)),
+                  _chip("Enrolled", _activeStatusFilter == "Enrolled",
+                      (v) => setState(() => _activeStatusFilter = v)),
+                  _chip("Not Enrolled", _activeStatusFilter == "Not Enrolled",
+                      (v) => setState(() => _activeStatusFilter = v)),
+                  _chip("Dropped", _activeStatusFilter == "Dropped",
+                      (v) => setState(() => _activeStatusFilter = v)),
+                  const SizedBox(width: 24),
+                  _filterLabel("TYPE: "),
+                  _chip("All", _activeTypeFilter == "All",
+                      (v) => setState(() => _activeTypeFilter = v)),
+                  _chip("Regular", _activeTypeFilter == "Regular",
+                      (v) => setState(() => _activeTypeFilter = v)),
+                  _chip("Irregular", _activeTypeFilter == "Irregular",
+                      (v) => setState(() => _activeTypeFilter = v)),
+                ],
+              ),
             ),
           ],
         ),
@@ -233,24 +293,31 @@ class _StudentMasterListPanelState extends State<StudentMasterListPanel> {
         itemBuilder: (context, i) {
           final s = list[i];
           final details = s['student_details'];
-          final String status = details?['enrollment_status'] ?? "Pending";
+          final String status =
+              (details?['enrollment_status'] ?? "Pending").toString();
           final bool isEnrolled = status == "Enrolled" || status == "Cleared";
+          final bool isDropped = status == "Dropped";
           final bool isIrreg = details?['student_type'] == 'Irregular';
+
+          final studentName = "${s['fn']} ${s['ln']}";
 
           return ListTile(
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             leading: CircleAvatar(
               radius: 24,
-              backgroundColor: isEnrolled
-                  ? success.withOpacity(0.1)
-                  : warning.withOpacity(0.1),
+              backgroundColor: isDropped
+                  ? danger.withOpacity(0.1)
+                  : (isEnrolled
+                      ? success.withOpacity(0.1)
+                      : warning.withOpacity(0.1)),
               child: Text(s['ln'][0],
                   style: TextStyle(
-                      color: isEnrolled ? success : warning,
+                      color:
+                          isDropped ? danger : (isEnrolled ? success : warning),
                       fontWeight: FontWeight.bold)),
             ),
-            title: Text("${s['fn']} ${s['ln']}".toUpperCase(),
+            title: Text(studentName.toUpperCase(),
                 style: TextStyle(
                     color: text, fontWeight: FontWeight.bold, fontSize: 14)),
             subtitle: Column(
@@ -264,8 +331,8 @@ class _StudentMasterListPanelState extends State<StudentMasterListPanel> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    _badge(
-                        status.toUpperCase(), isEnrolled ? success : warning),
+                    _badge(status.toUpperCase(),
+                        isDropped ? danger : (isEnrolled ? success : warning)),
                     const SizedBox(width: 8),
                     _badge(isIrreg ? "IRREGULAR" : "REGULAR",
                         isIrreg ? Colors.orange : Colors.blueAccent),
@@ -273,20 +340,52 @@ class _StudentMasterListPanelState extends State<StudentMasterListPanel> {
                 ),
               ],
             ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text("${_calculateTotalUnits(s['study_loads'] as List)} Units",
-                    style: GoogleFonts.orbitron(
-                        fontSize: 11,
-                        color: text,
-                        fontWeight: FontWeight.bold)),
-                const Text("LOADED",
-                    style: TextStyle(
-                        color: Colors.blueGrey,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold)),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                        "${_calculateTotalUnits(s['study_loads'] as List)} Units",
+                        style: GoogleFonts.orbitron(
+                            fontSize: 11,
+                            color: text,
+                            fontWeight: FontWeight.bold)),
+                    const Text("LOADED",
+                        style: TextStyle(
+                            color: Colors.blueGrey,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(width: 24),
+                if (!isDropped)
+                  PopupMenuButton<String>(
+                    onSelected: (val) {
+                      if (val == 'drop') _dropStudent(s['id'], studentName);
+                    },
+                    icon: const Icon(LucideIcons.moreVertical,
+                        color: Colors.blueGrey, size: 18),
+                    color: surfaceDark,
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'drop',
+                        child: Row(
+                          children: [
+                            Icon(LucideIcons.userX, color: danger, size: 16),
+                            SizedBox(width: 12),
+                            Text("Drop Student",
+                                style: TextStyle(
+                                    color: danger,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           );
@@ -321,6 +420,7 @@ class _StudentMasterListPanelState extends State<StudentMasterListPanel> {
         ),
       );
 
+  /// 📐 CALCULATION: Sums up units from the subjects linked to the study loads
   double _calculateTotalUnits(List loads) {
     double total = 0;
     for (var l in loads) {
@@ -343,4 +443,15 @@ class _StudentMasterListPanelState extends State<StudentMasterListPanel> {
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.5)),
       );
+
+  void _showToast(String m, Color c) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: c,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(24),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
+  }
 }
