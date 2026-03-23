@@ -91,7 +91,7 @@ class RegistrarPanelContent extends StatelessWidget {
         return RegistrarOverviewPanel(
           key: const ValueKey('overview'),
           isDarkMode: isDarkMode,
-          userData: {},
+          userData: const {},
         );
     }
   }

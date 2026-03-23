@@ -222,13 +222,13 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
               onChanged: (v) => setState(() {}),
               style: TextStyle(
                   color: text, fontWeight: FontWeight.bold, fontSize: 14),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: "Search Name, ID, or Transaction...",
                 prefixIcon:
-                    const Icon(LucideIcons.search, color: aViolet, size: 18),
+                    Icon(LucideIcons.search, color: aViolet, size: 18),
                 border: InputBorder.none,
                 hintStyle:
-                    const TextStyle(color: Colors.blueGrey, fontSize: 13),
+                    TextStyle(color: Colors.blueGrey, fontSize: 13),
               ),
             ),
           ),
@@ -270,8 +270,9 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
           .from('office_requests')
           .stream(primaryKey: ['id']).order('date_applied', ascending: false),
       builder: (context, snapshot) {
-        if (!snapshot.hasData)
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator(color: aViolet));
+        }
 
         return FutureBuilder<List<dynamic>>(
             future: _service.client
@@ -280,9 +281,10 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
                     '*, profiles(*, student_details(courses(code), year_levels(definition)))')
                 .order('date_applied', ascending: false),
             builder: (context, futureSnap) {
-              if (!futureSnap.hasData)
+              if (!futureSnap.hasData) {
                 return const Center(
                     child: LinearProgressIndicator(color: aViolet));
+              }
 
               final rawData = List<Map<String, dynamic>>.from(futureSnap.data!);
 
@@ -306,8 +308,9 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
                 // - Archives view shows: Status is 'Archived' OR it is older than 30 days
                 // - Active view shows: Status is NOT 'Archived' AND it is newer than 30 days
                 if (_isArchivedView) {
-                  if (!(reqStatus == 'Archived' || isSystemArchived))
+                  if (!(reqStatus == 'Archived' || isSystemArchived)) {
                     return false;
+                  }
                 } else {
                   if (reqStatus == 'Archived' || isSystemArchived) return false;
                 }
@@ -318,10 +321,13 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
                     fullName.contains(query) || idNum.contains(query);
                 if (!matchesSearch) return false;
 
-                if (_statusFilter != 'All Status' && reqStatus != _statusFilter)
+                if (_statusFilter != 'All Status' && reqStatus != _statusFilter) {
                   return false;
+                }
                 if (_docTypeFilter != 'All Documents' &&
-                    reqType != _docTypeFilter) return false;
+                    reqType != _docTypeFilter) {
+                  return false;
+                }
 
                 return true;
               }).toList();
@@ -571,7 +577,7 @@ class _AuditTrailPanelState extends State<AuditTrailPanel> {
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(LucideIcons.fileX, size: 48, color: t.withOpacity(0.05)),
         const SizedBox(height: 16),
-        Text("No records match your audit criteria.",
+        const Text("No records match your audit criteria.",
             style:
                 TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold))
       ]));

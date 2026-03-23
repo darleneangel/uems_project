@@ -22,8 +22,8 @@ class _HRPanelState extends State<HRPanel> {
   final SupabaseService _service = SupabaseService();
   final TextEditingController _searchController = TextEditingController();
 
-  bool _isLoading = true;
-  bool _isActionLoading = false;
+  final bool _isLoading = true;
+  final bool _isActionLoading = false;
   String _searchQuery = "";
   String _roleFilter = "All Roles";
 
@@ -166,9 +166,10 @@ class _HRPanelState extends State<HRPanel> {
             .from('profiles')
             .stream(primaryKey: ['id']).neq('role', 'student'),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(
                 child: CircularProgressIndicator(color: aViolet));
+          }
 
           // 📐 DYNAMIC FILTER ENGINE
           final list = snapshot.data!.where((emp) {
@@ -377,7 +378,7 @@ class _HRPanelState extends State<HRPanel> {
                 letterSpacing: 1)),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: v,
+          initialValue: v,
           dropdownColor: const Color(0xFF0F071D),
           style: const TextStyle(color: Colors.white, fontSize: 13),
           decoration: InputDecoration(

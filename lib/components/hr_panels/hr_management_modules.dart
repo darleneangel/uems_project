@@ -221,10 +221,11 @@ class _AttendanceLeavePanelState extends State<AttendanceLeavePanel> {
                                   .maybeSingle(),
                       builder: (context, profSnap) {
                         final profile = profSnap.data;
-                        if (profile == null)
+                        if (profile == null) {
                           return const SizedBox(
                               height: 60,
                               child: Center(child: LinearProgressIndicator()));
+                        }
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(

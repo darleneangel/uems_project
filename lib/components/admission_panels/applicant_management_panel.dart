@@ -173,7 +173,7 @@ class _ApplicationsManagementPanelState
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: selectedCourseId,
+                      initialValue: selectedCourseId,
                       dropdownColor: const Color(0xFF1E1B4B),
                       style: const TextStyle(color: Colors.white),
                       decoration: _fieldInput("Target Program of Choice"),

@@ -80,7 +80,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
       'Basic ${base64Encode(utf8.encode('$_paymongoSecretKey:'))}';
   // ==========================================
 
-  String _selectedSemester = '2nd Semester 2025-2026';
+  final String _selectedSemester = '2nd Semester 2025-2026';
   String _paymentPlan = 'Installment';
   String _paymentMethod = 'Cash';
   double _lateSurcharge = 0.0;
@@ -103,8 +103,9 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
   }
 
   void _updateCalculatedAmount() {
-    if (_activeStudent == null || _paymentPlan == 'Promissory Note')
+    if (_activeStudent == null || _paymentPlan == 'Promissory Note') {
       return; // Added condition
+    }
     final double balance = double.tryParse(_activeStudent!['student_details']
                     ?['account_balance']
                 ?.toString() ??
@@ -234,7 +235,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                               fontWeight: pw.FontWeight.bold, fontSize: 18))),
                   pw.Center(
                       child: pw.Text("STATEMENT OF ACCOUNT",
-                          style: pw.TextStyle(fontSize: 12))),
+                          style: const pw.TextStyle(fontSize: 12))),
                   pw.SizedBox(height: 30),
                   pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -321,7 +322,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                             ? pw.FontWeight.bold
                             : pw.FontWeight.normal)),
                 pw.Text(
-                    "${NumberFormat('#,###.00').format(double.tryParse(val.toString()) ?? 0.0)}",
+                    NumberFormat('#,###.00').format(double.tryParse(val.toString()) ?? 0.0),
                     style: pw.TextStyle(
                         fontSize: 10,
                         fontWeight: isBold
@@ -710,7 +711,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
               pw.SizedBox(height: 32),
               pw.RichText(
                 text: pw.TextSpan(
-                  style: pw.TextStyle(fontSize: 11, height: 1.5),
+                  style: const pw.TextStyle(fontSize: 11, height: 1.5),
                   children: [
                     const pw.TextSpan(text: "I, "),
                     pw.TextSpan(
@@ -1169,7 +1170,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
             TextField(
                 controller: _cashReceivedController,
                 keyboardType: TextInputType.number,
-                style: TextStyle(
+                style: const TextStyle(
                     color: success, fontWeight: FontWeight.bold, fontSize: 20),
                 decoration: _fieldStyle("Enter Amount Received", prefix: "₱ "))
           ],

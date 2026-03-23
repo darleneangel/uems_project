@@ -23,7 +23,7 @@ class _MessagingPanelState extends State<MessagingPanel> {
 
   Map<String, dynamic>? _selectedContact;
   List<Map<String, dynamic>> _allProfiles = [];
-  Map<String, Map<String, dynamic>> _lastMessagesByContact = {};
+  final Map<String, Map<String, dynamic>> _lastMessagesByContact = {};
   bool _isLoading = true;
   Timer? _refreshTimer;
 
@@ -453,6 +453,7 @@ class _MessagingPanelState extends State<MessagingPanel> {
                   ],
                 ),
                 const Spacer(),
+                const Icon(LucideIcons.info, color: aViolet, size: 22),
               ],
             ),
           ),
@@ -463,9 +464,10 @@ class _MessagingPanelState extends State<MessagingPanel> {
               stream:
                   _service.client.from('messages').stream(primaryKey: ['id']),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(
                       child: CircularProgressIndicator(color: aViolet));
+                }
 
                 // PRIVACY FILTER: Strictly show conversation between current user and target only
                 final messages = snapshot.data!.where((m) {

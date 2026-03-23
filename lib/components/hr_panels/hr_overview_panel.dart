@@ -69,10 +69,11 @@ class _HROverviewPanelState extends State<HROverviewPanel> {
       for (var row in data) {
         final status =
             row['employee_details']?['employment_status'] ?? 'Active';
-        if (status == 'Archived')
+        if (status == 'Archived') {
           archived++;
-        else
+        } else {
           active++;
+        }
 
         String r = row['role'].toString().toUpperCase();
         roles[r] = (roles[r] ?? 0) + 1;
@@ -107,8 +108,9 @@ class _HROverviewPanelState extends State<HROverviewPanel> {
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(40),

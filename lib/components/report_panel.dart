@@ -240,9 +240,10 @@ class _ReportPanelState extends State<ReportPanel> {
               stream: _service.client.from('system_reports').stream(
                   primaryKey: ['id']).order('created_at', ascending: false),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(
                       child: CircularProgressIndicator(color: aViolet));
+                }
                 final list = snapshot.data!;
 
                 if (list.isEmpty) return _emptyState();

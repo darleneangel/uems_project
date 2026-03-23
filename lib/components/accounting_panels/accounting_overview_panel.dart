@@ -152,7 +152,7 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
                     fontWeight: FontWeight.w900,
                     color: textColor,
                     letterSpacing: -0.5)),
-            Text(
+            const Text(
                 "Institutional financial health and real-time ledger analytics.",
                 style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
           ],

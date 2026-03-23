@@ -153,8 +153,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
         ? Colors.white.withOpacity(0.05)
         : Colors.grey.shade100;
 
-    // Safety check for uninitialized data
-    if (_isSyncing || _currentData.isEmpty) {
+    if (_isSyncing) {
       return const Center(
           child: CircularProgressIndicator(color: Color(0xFF8B5CF6)));
     }

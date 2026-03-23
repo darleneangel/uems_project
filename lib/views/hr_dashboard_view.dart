@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../components/hr_panel_content.dart';
-import '../services/supabase_service.dart';
-import '../components/shared/staff_profile_portal.dart';
 
 class HRDashboardView extends StatefulWidget {
   final VoidCallback onLogout;

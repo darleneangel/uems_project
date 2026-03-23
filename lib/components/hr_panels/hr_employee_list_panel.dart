@@ -380,9 +380,9 @@ class _HrEmployeeListPanelState extends State<HrEmployeeListPanel> {
                       Expanded(child: _roleChip(emp['role'])),
                       Expanded(
                           child: Text("₱${d?['base_salary'] ?? 0}",
-                              style: TextStyle(
+                              style: const TextStyle(
                                   fontSize: 16,
-                                  color: const Color.fromARGB(
+                                  color: Color.fromARGB(
                                       255, 255, 255, 255)))),
                       Expanded(
                           child: Text(d?['contract_type'] ?? 'N/A',
@@ -423,7 +423,7 @@ class _HrEmployeeListPanelState extends State<HrEmployeeListPanel> {
         enabledBorder: OutlineInputBorder(
             // Ensure consistent border style
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.transparent)),
+            borderSide: const BorderSide(color: Colors.transparent)),
         focusedBorder: OutlineInputBorder(
             // Focused border with accent color
             borderRadius: BorderRadius.circular(12),
@@ -476,7 +476,7 @@ class _HrEmployeeListPanelState extends State<HrEmployeeListPanel> {
             ),
             DropdownButtonHideUnderline(
               child: DropdownButtonFormField<String>(
-                value: value,
+                initialValue: value,
                 items: items
                     .map((i) => DropdownMenuItem(
                         value: i,
@@ -495,7 +495,7 @@ class _HrEmployeeListPanelState extends State<HrEmployeeListPanel> {
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.transparent),
+                    borderSide: const BorderSide(color: Colors.transparent),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),

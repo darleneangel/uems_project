@@ -203,7 +203,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
               // 3. Main Declaration (Debtor Info)
               pw.RichText(
                 text: pw.TextSpan(
-                  style: pw.TextStyle(fontSize: 11, lineSpacing: 1.5),
+                  style: const pw.TextStyle(fontSize: 11, lineSpacing: 1.5),
                   children: [
                     const pw.TextSpan(text: "I, "),
                     pw.TextSpan(

@@ -203,10 +203,11 @@ class _HRAttendancePanelState extends State<HRAttendancePanel> {
                                 .maybeSingle(),
                     builder: (context, profSnap) {
                       final profile = profSnap.data;
-                      if (profile == null)
+                      if (profile == null) {
                         return const SizedBox(
                             height: 60,
                             child: Center(child: LinearProgressIndicator()));
+                      }
 
                       final name =
                           "${profile['fn']} ${profile['ln']}".toLowerCase();

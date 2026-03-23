@@ -70,7 +70,7 @@ class _AccountingPayrollManagerState extends State<AccountingPayrollManager> {
 
   List<Map<String, dynamic>> _payrollLedger = [];
   bool _isLoading = true;
-  String _statusFilter = 'Active Staff';
+  final String _statusFilter = 'Active Staff';
 
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color success = Color(0xFF69F0AE);
@@ -90,11 +90,12 @@ class _AccountingPayrollManagerState extends State<AccountingPayrollManager> {
           .select('*, employee_details(*)')
           .neq('role', 'student')
           .order('ln', ascending: true);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _payrollLedger = List<Map<String, dynamic>>.from(res);
           _isLoading = false;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -221,7 +222,7 @@ class _AccountingPayrollManagerState extends State<AccountingPayrollManager> {
       double net) async {
     final pdf = pw.Document();
     final d = emp['employee_details'];
-    final dateRange = "03/01/2025 - 03/15/2025";
+    const dateRange = "03/01/2025 - 03/15/2025";
     final payDate = DateFormat('MM/dd/yyyy').format(DateTime.now());
 
     // Load specialized fonts for the receipt look
@@ -278,7 +279,7 @@ class _AccountingPayrollManagerState extends State<AccountingPayrollManager> {
                   // --- DATA GRID ---
                   pw.Table(
                       border: pw.TableBorder.symmetric(
-                          inside: pw.BorderSide(
+                          inside: const pw.BorderSide(
                               width: 0.5, color: PdfColors.grey400)),
                       children: [
                         // Header Titles

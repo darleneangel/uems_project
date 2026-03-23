@@ -94,8 +94,9 @@ class _ScholasticControlPanelState extends State<ScholasticControlPanel> {
         widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return Padding(
       padding: const EdgeInsets.all(32),
@@ -214,7 +215,7 @@ class _ScholasticControlPanelState extends State<ScholasticControlPanel> {
                 const SizedBox(width: 8),
                 Switch(
                   value: !isLocked,
-                  activeColor: success,
+                  activeThumbColor: success,
                   onChanged: (v) =>
                       _updatePeriod(period['id'], {'is_hard_locked': !v}),
                 ),
@@ -268,7 +269,7 @@ class _ScholasticControlPanelState extends State<ScholasticControlPanel> {
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         subtitle: Text(s,
             style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
-        trailing: Switch(value: val, activeColor: aViolet, onChanged: (v) {}),
+        trailing: Switch(value: val, activeThumbColor: aViolet, onChanged: (v) {}),
       );
 
   void _pickEncodingWindow(Map<String, dynamic> period) async {

@@ -107,8 +107,9 @@ class _AccessSecurityPanelState extends State<AccessSecurityPanel> {
         widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return Padding(
       padding: const EdgeInsets.all(32),
@@ -190,7 +191,7 @@ class _AccessSecurityPanelState extends State<AccessSecurityPanel> {
               else
                 Switch(
                   value: isLocked,
-                  activeColor: Colors.redAccent,
+                  activeThumbColor: Colors.redAccent,
                   onChanged: (v) => _toggleLockdown(v),
                 ),
             ],
@@ -239,8 +240,9 @@ class _AccessSecurityPanelState extends State<AccessSecurityPanel> {
                   .from('profiles')
                   .stream(primaryKey: ['id']).order('ln', ascending: true),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
+                }
 
                 final list = snapshot.data!.where((u) {
                   final name = "${u['fn']} ${u['ln']}".toLowerCase();

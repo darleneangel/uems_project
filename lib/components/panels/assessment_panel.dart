@@ -253,7 +253,7 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
                       ],
                     ),
                   ))
-              .toList(),
+              ,
         ],
       ),
     );
@@ -308,12 +308,12 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(LucideIcons.calendar,
+              Icon(LucideIcons.calendar,
                   size: 14, color: Color(0xFF8B5CF6)),
-              const SizedBox(width: 8),
-              const Text("INSTALLMENT OPTION",
+              SizedBox(width: 8),
+              Text("INSTALLMENT OPTION",
                   style: TextStyle(
                       color: Color(0xFF8B5CF6),
                       fontSize: 10,
