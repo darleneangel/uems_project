@@ -247,7 +247,7 @@ class _AcademicLifecyclePanelState extends State<AcademicLifecyclePanel> {
                   child: CircularProgressIndicator(strokeWidth: 2))
               : Switch(
                   value: isOpen,
-                  activeColor: success,
+                  activeThumbColor: success,
                   onChanged: (v) => _toggleGlobalEnrollment(v)),
         ],
       ),
@@ -297,7 +297,7 @@ class _AcademicLifecyclePanelState extends State<AcademicLifecyclePanel> {
                   child: CircularProgressIndicator(strokeWidth: 2))
               : Switch(
                   value: active,
-                  activeColor: success,
+                  activeThumbColor: success,
                   onChanged: (v) => _toggleTermStatus(term['id'], v)),
         ],
       ),
@@ -351,7 +351,7 @@ class _AcademicLifecyclePanelState extends State<AcademicLifecyclePanel> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: semester,
+                initialValue: semester,
                 dropdownColor: surfaceDark,
                 style: const TextStyle(color: Colors.white),
                 decoration: _inputStyle("Semester Type"),

@@ -256,9 +256,10 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
   }
 
   pw.Widget _buildPdfFinancialSummary(PdfColor color) {
-    if (_billingBreakdown == null)
+    if (_billingBreakdown == null) {
       return pw.Text("Assessment Pending",
           style: const pw.TextStyle(fontSize: 8));
+    }
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -325,8 +326,9 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
     final Color subTextColor =
         widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

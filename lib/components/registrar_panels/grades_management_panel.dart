@@ -263,9 +263,10 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
                   .from('profiles')
                   .stream(primaryKey: ['id']).eq('role', 'student'),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(
                       child: CircularProgressIndicator(color: aViolet));
+                }
 
                 final list = snapshot.data!.where((s) {
                   final name = "${s['fn']} ${s['ln']}".toUpperCase();
@@ -276,8 +277,9 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
                       id.contains(query);
                 }).toList();
 
-                if (list.isEmpty)
+                if (list.isEmpty) {
                   return _emptyState("No students found in cloud records.");
+                }
 
                 return ListView.separated(
                   itemCount: list.length,
@@ -318,8 +320,9 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
   }
 
   Widget _buildGradeLedgerView(Color cardColor, Color textColor) {
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     final gwa = _calculateGWA();
 

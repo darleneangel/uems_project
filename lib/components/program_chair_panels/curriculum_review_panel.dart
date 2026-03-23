@@ -310,10 +310,12 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
     final bgColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    if (_isContextLoading)
+    if (_isContextLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
-    if (_errorMessage != null)
+    }
+    if (_errorMessage != null) {
       return _buildErrorState(_errorMessage!, textColor);
+    }
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -372,9 +374,10 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
         FutureBuilder<List<Map<String, dynamic>>>(
           future: _service.getStudentQueue(_chairDepartmentId!),
           builder: (context, snapshot) {
-            if (!snapshot.hasData)
+            if (!snapshot.hasData) {
               return const Center(
                   child: CircularProgressIndicator(color: aViolet));
+            }
             final list = snapshot.data!.where((s) {
               return s['fn']
                   .toString()
@@ -563,10 +566,10 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
             color: aViolet.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: aViolet.withOpacity(0.3))),
-        child: Row(
+        child: const Row(
           children: [
-            const Icon(LucideIcons.copy, size: 16, color: aViolet),
-            const SizedBox(width: 8),
+            Icon(LucideIcons.copy, size: 16, color: aViolet),
+            SizedBox(width: 8),
             Text("TEMPLATES",
                 style: TextStyle(
                     color: aViolet, fontSize: 11, fontWeight: FontWeight.bold)),
@@ -632,10 +635,11 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
   }
 
   Widget _buildAssignedList(Color textColor) {
-    if (_assignedSubjects.isEmpty)
+    if (_assignedSubjects.isEmpty) {
       return Center(
           child: Text("No subjects added.",
               style: TextStyle(color: textColor.withOpacity(0.2))));
+    }
     return Column(
       children: List.generate(_assignedSubjects.length, (i) {
         final s = _assignedSubjects[i];

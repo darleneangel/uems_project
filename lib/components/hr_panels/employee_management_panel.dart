@@ -626,7 +626,7 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: DropdownButtonFormField<String>(
-              value: value,
+              initialValue: value,
               dropdownColor: surfaceDark,
               style: const TextStyle(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(

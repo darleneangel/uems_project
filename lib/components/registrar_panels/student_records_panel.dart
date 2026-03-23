@@ -527,8 +527,9 @@ class _StudentRecordsPanelState extends State<StudentRecordsPanel> {
         addresses (*)
       ''').eq('id', _selectedStudentId!).single(),
       builder: (context, snap) {
-        if (!snap.hasData)
+        if (!snap.hasData) {
           return const Center(child: CircularProgressIndicator());
+        }
         final s = snap.data!;
         final details = s['student_details'];
 

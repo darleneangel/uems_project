@@ -377,7 +377,7 @@ class _RegistrarOverviewPanelState extends State<RegistrarOverviewPanel> {
           children: [
             Icon(icon, color: color, size: 20),
             const SizedBox(height: 20),
-            Text("${isInt ? val.toInt().toString() : val.toString()}",
+            Text(isInt ? val.toInt().toString() : val.toString(),
                 style: GoogleFonts.inter(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,

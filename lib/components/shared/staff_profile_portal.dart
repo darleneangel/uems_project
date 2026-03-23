@@ -388,8 +388,8 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )
-              : LinearGradient(
-                  colors: [Colors.white, const Color(0xFFF8FAFC)],
+              : const LinearGradient(
+                  colors: [Colors.white, Color(0xFFF8FAFC)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -435,7 +435,7 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
             const SizedBox(height: 32),
             _buildLabel("Type of Leave"),
             DropdownButtonFormField<String>(
-              value: _leaveType,
+              initialValue: _leaveType,
               dropdownColor: surfaceDark,
               style: TextStyle(color: textColor),
               decoration: _inputStyle(),

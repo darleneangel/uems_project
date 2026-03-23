@@ -83,7 +83,7 @@ class _EnrollmentVerificationPanelState
             children: [
               _fieldLabel("ADMISSION DECISION"),
               DropdownButtonFormField<String>(
-                value: ['Pending', 'Verified', 'Rejected', 'Conditional']
+                initialValue: ['Pending', 'Verified', 'Rejected', 'Conditional']
                         .contains(selectedStatus)
                     ? selectedStatus
                     : 'Pending',
@@ -107,19 +107,22 @@ class _EnrollmentVerificationPanelState
               const SizedBox(height: 20),
               _fieldLabel("OFFICIAL POLICY BASIS"),
               DropdownButtonFormField<String>(
-                value: selectedBylawId,
+                initialValue: selectedBylawId,
                 isExpanded: true,
                 dropdownColor: const Color(0xFF1E1B4B),
                 style: const TextStyle(color: Colors.white, fontSize: 11),
                 decoration: _fieldInput("Institutional Clause"),
                 items: _allBylaws
                     .where((b) {
-                      if (selectedStatus == 'Verified')
+                      if (selectedStatus == 'Verified') {
                         return b['category'] == 'Approval';
-                      if (selectedStatus == 'Rejected')
+                      }
+                      if (selectedStatus == 'Rejected') {
                         return b['category'] == 'Rejection';
-                      if (selectedStatus == 'Conditional')
+                      }
+                      if (selectedStatus == 'Conditional') {
                         return b['category'] == 'Conditional';
+                      }
                       return false;
                     })
                     .map((b) => DropdownMenuItem(

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'program_chair_panel_content.dart';
-import 'shared/staff_profile_portal.dart';
 
 class ProgramChairDashboardView extends StatefulWidget {
   final VoidCallback onLogout;

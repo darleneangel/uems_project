@@ -35,7 +35,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   String _targetView = '';
   bool _isDarkMode = true;
   bool _isLoading = false;
-  bool _rememberMe = false;
+  final bool _rememberMe = false;
   bool _isPasswordVisible = false;
   Map<String, dynamic>? _loggedInUserData;
 
@@ -150,10 +150,10 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1B4B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(
+        title: const Row(
           children: [
-            const Icon(Icons.report_problem, color: Colors.redAccent),
-            const SizedBox(width: 12),
+            Icon(Icons.report_problem, color: Colors.redAccent),
+            SizedBox(width: 12),
             Text("Access Restricted",
                 style: TextStyle(
                     color: Colors.white, fontWeight: FontWeight.bold)),
@@ -329,7 +329,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                   flex: 5,
                   child: Container(
                     padding: const EdgeInsets.all(60),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         colors: [pViolet, sViolet, aViolet],
                         begin: Alignment.topLeft,

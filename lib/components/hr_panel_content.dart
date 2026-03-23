@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'hr_panels/hr_overview_panel.dart';
 import 'hr_panels/employee_management_panel.dart';
 import 'shared/messaging_panel.dart';
-import 'hr_panels/hr_management_modules.dart';
 import 'shared/staff_profile_portal.dart';
 import 'hr_panels/hr_attendance_panel.dart';
 import 'hr_panels/hr_leave_requests_panel.dart';
