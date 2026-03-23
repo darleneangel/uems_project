@@ -26,11 +26,43 @@ class SupabaseService {
       String idNumber, String password) async {
     return await _client
         .from('profiles')
-        .select(
-            '*, student_details(*, courses(name)), employee_details(*), study_loads(subjects(units))')
+        .select('''
+          *, 
+          student_details(*, courses(name)), 
+          employee_details(*), 
+          study_loads!study_loads_student_id_fkey(
+            subjects(units),
+            semesters(description),
+            academic_years(description)
+          )
+        ''')
         .ilike('user_id_number', idNumber)
         .eq('password_hash', password)
         .maybeSingle();
+  }
+
+  Future<double> getGwaStanding(String profileId) async {
+    try {
+      final res = await _client
+          .from('student_details')
+          .select('current_gwa')
+          .eq('profile_id', profileId)
+          .maybeSingle();
+
+      if (res == null) {
+        debugPrint(
+            "🔍 GWA DIAGNOSTIC: No student_details found for UUID: $profileId");
+        return 0.0;
+      }
+
+      final rawValue = res['current_gwa'];
+      debugPrint("🔍 GWA DIAGNOSTIC: Raw Database Value: $rawValue");
+
+      return double.tryParse(rawValue?.toString() ?? "0.0") ?? 0.0;
+    } catch (e) {
+      debugPrint("❌ GWA DIAGNOSTIC ERROR: $e");
+      return 0.0;
+    }
   }
   // ==========================================
   // 📢 ANNOUNCEMENTS & NOTIFICATIONS

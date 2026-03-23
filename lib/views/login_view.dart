@@ -146,10 +146,10 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1B4B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.report_problem, color: Colors.redAccent),
-            SizedBox(width: 12),
+            const Icon(Icons.report_problem, color: Colors.redAccent),
+            const SizedBox(width: 12),
             Text("Access Restricted",
                 style: TextStyle(
                     color: Colors.white, fontWeight: FontWeight.bold)),

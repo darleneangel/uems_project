@@ -355,17 +355,6 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
                 cardColor,
                 textColor)),
         const SizedBox(width: 16),
-        // 🛠️ FIX: Using the dynamic state variable _currentUnits resolved via the new fetch logic
-        _buildAnimatedCard(
-            index: 1,
-            child: _statCard(
-                "Units Enrolled",
-                _currentUnits.toStringAsFixed(1),
-                LucideIcons.layers,
-                const Color.fromARGB(255, 242, 64, 255),
-                cardColor,
-                textColor)),
-        const SizedBox(width: 16),
         _buildAnimatedCard(
             index: 2,
             child: _statCard(
