@@ -5,7 +5,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart'; // Changed from OpenFilePlus.open to OpenFile.open
 import 'package:open_file/open_file.dart';
 import '../../services/supabase_service.dart';

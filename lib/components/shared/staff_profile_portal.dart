@@ -513,8 +513,10 @@ class _StaffProfilePortalState extends State<StaffProfilePortal> {
                   elevation: 0,
                 ),
                 child: Text(isHR ? "SUBMIT TO ADMIN" : "SUBMIT TO HR OFFICE",
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w900, letterSpacing: 1)),
+                    style: TextStyle(
+                        color: widget.isDarkMode ? Colors.white : Colors.white,
+                        fontWeight: FontWeight.w900, 
+                        letterSpacing: 1)),
               ),
             ),
           ],

@@ -60,20 +60,23 @@ class _WindowsQRScannerState extends State<WindowsQRScanner>
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: const Color(0xFF0F071D), // Deep Space Violet
-      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(48)),
       elevation: 32,
       child: Container(
         width: 800, // Ultra-wide presence
-        height: 900, // Tall terminal aesthetic
-        padding: const EdgeInsets.all(56),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.9, // Max 90% of screen height
+        ),
+        padding: const EdgeInsets.all(40),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             _buildHeader(),
-            const SizedBox(height: 48),
+            const SizedBox(height: 32),
 
             // --- THE ENLARGED TERMINAL VIEWPORT ---
-            Expanded(
+            Flexible(
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -231,15 +234,15 @@ class _WindowsQRScannerState extends State<WindowsQRScanner>
           // THE PRIMARY HARDWARE TRIGGER
           SizedBox(
             width: double.infinity,
-            height: 85,
+            height: 70,
             child: ElevatedButton.icon(
               onPressed: () => _launchHardwareScanner(context),
-              icon: const Icon(LucideIcons.maximize, size: 28),
+              icon: const Icon(LucideIcons.maximize, size: 24),
               label: Text("ACTIVATE SCANNER WINDOW",
                   style: GoogleFonts.inter(
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1,
-                      fontSize: 16)),
+                      fontSize: 14)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF8B5CF6),
                 foregroundColor: Colors.white,
@@ -250,20 +253,20 @@ class _WindowsQRScannerState extends State<WindowsQRScanner>
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // THE MANUAL FAIL-SAFE
           SizedBox(
             width: double.infinity,
-            height: 70,
+            height: 60,
             child: TextButton.icon(
               onPressed: widget.onManualEntry,
-              icon: const Icon(LucideIcons.keyboard, size: 20),
+              icon: const Icon(LucideIcons.keyboard, size: 18),
               label: const Text("USE SECURE MANUAL ENTRY",
                   style: TextStyle(
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1,
-                      fontSize: 14)),
+                      fontSize: 12)),
               style: TextButton.styleFrom(
                 foregroundColor: Colors.white38,
                 shape: RoundedRectangleBorder(

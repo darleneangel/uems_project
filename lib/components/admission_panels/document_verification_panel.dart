@@ -389,14 +389,18 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
                                           child: CircularProgressIndicator(
                                               strokeWidth: 2,
                                               color: Colors.white))
-                                      : const Icon(LucideIcons.checkCircle),
-                                  label: const Text(
+                                      : Icon(LucideIcons.checkCircle, 
+                                          color: widget.isDarkMode ? Colors.white : Colors.white),
+                                  label: Text(
                                       "FINALIZE & PROMOTE TO AUDIT",
                                       style: TextStyle(
+                                          color: widget.isDarkMode ? Colors.white : Colors.white,
                                           fontWeight: FontWeight.bold,
                                           letterSpacing: 0.5)),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF8B5CF6),
+                                    backgroundColor: widget.isDarkMode 
+                                        ? const Color(0xFF8B5CF6) 
+                                        : const Color(0xFF8B5CF6),
                                     disabledBackgroundColor:
                                         Colors.white.withOpacity(0.05),
                                     shape: RoundedRectangleBorder(

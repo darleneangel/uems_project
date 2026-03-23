@@ -1,9 +1,7 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 
 class RegistrarOverviewPanel extends StatefulWidget {
@@ -414,8 +412,11 @@ class _RegistrarOverviewPanelState extends State<RegistrarOverviewPanel> {
         ),
         ElevatedButton.icon(
           onPressed: _loadRegistrarIntelligence,
-          icon: const Icon(LucideIcons.refreshCw, size: 16),
-          label: const Text("SYNC LEDGER"),
+          icon: Icon(LucideIcons.refreshCw, 
+              color: widget.isDarkMode ? Colors.white : Colors.white, size: 16),
+          label: Text("SYNC LEDGER",
+              style: TextStyle(
+                  color: widget.isDarkMode ? Colors.white : Colors.white)),
           style: ElevatedButton.styleFrom(
               backgroundColor: aViolet,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),

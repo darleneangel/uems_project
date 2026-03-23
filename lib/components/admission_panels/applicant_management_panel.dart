@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -449,10 +448,15 @@ class _ApplicationsManagementPanelState
               ),
               ElevatedButton.icon(
                 onPressed: _showPreRegistrationForm,
-                icon: const Icon(LucideIcons.userPlus),
-                label: const Text("NEW APPLICANT"),
+                icon: Icon(LucideIcons.userPlus, 
+                    color: widget.isDarkMode ? Colors.white : Colors.white),
+                label: Text("NEW APPLICANT",
+                    style: TextStyle(
+                        color: widget.isDarkMode ? Colors.white : Colors.white)),
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8B5CF6),
+                    backgroundColor: widget.isDarkMode 
+                        ? const Color(0xFF8B5CF6) 
+                        : const Color(0xFF8B5CF6),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24, vertical: 22),
                     shape: RoundedRectangleBorder(

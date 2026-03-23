@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 
 class EnrollmentVerificationPanel extends StatefulWidget {
@@ -146,7 +145,10 @@ class _EnrollmentVerificationPanelState
               },
               style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8B5CF6)),
-              child: const Text("SUBMIT EVALUATION"),
+              child: Text("SUBMIT EVALUATION",
+                  style: TextStyle(
+                      color: widget.isDarkMode ? Colors.white : Colors.white,
+                      fontWeight: FontWeight.bold)),
             )
           ],
         ),

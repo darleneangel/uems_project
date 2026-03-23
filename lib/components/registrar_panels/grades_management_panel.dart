@@ -218,8 +218,11 @@ class _GradesManagementPanelState extends State<GradesManagementPanel> {
         if (_selectedStudentId != null)
           ElevatedButton.icon(
             onPressed: _generateTranscript,
-            icon: const Icon(LucideIcons.fileText, size: 16),
-            label: const Text("GENERATE TRANSCRIPT"),
+            icon: Icon(LucideIcons.fileText, 
+                color: widget.isDarkMode ? Colors.white : Colors.white, size: 16),
+            label: Text("GENERATE TRANSCRIPT",
+                style: TextStyle(
+                    color: widget.isDarkMode ? Colors.white : Colors.white)),
             style: ElevatedButton.styleFrom(
                 backgroundColor: aViolet,
                 padding:

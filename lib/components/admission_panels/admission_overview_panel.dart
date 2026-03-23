@@ -332,11 +332,14 @@ class _AdmissionOverviewPanelState extends State<AdmissionOverviewPanel> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(e.key,
-                              style: const TextStyle(
-                                  fontSize: 11, fontWeight: FontWeight.bold)),
+                              style: TextStyle(
+                                  fontSize: 11, 
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor)),
                           Text("${(percent * 100).toInt()}%",
-                              style: const TextStyle(
-                                  fontSize: 10, color: Colors.blueGrey)),
+                              style: TextStyle(
+                                  fontSize: 10, 
+                                  color: widget.isDarkMode ? Colors.white70 : Colors.blueGrey)),
                         ],
                       ),
                       const SizedBox(height: 8),
