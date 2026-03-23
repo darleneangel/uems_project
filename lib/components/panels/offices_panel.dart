@@ -254,7 +254,10 @@ class _OfficesPanelState extends State<OfficesPanel>
         // FIX: Replaced Expanded with ConstrainedBox.
         // Dashboard SingleChildScrollView + Expanded = Unbounded height crash.
         ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 500, maxHeight: 800),
+          constraints: BoxConstraints(
+            minHeight: 400,
+            maxHeight: MediaQuery.of(context).size.height * 0.7, // Responsive max height
+          ),
           child: TabBarView(
             controller: _tabController,
             children: [
@@ -309,40 +312,43 @@ class _OfficesPanelState extends State<OfficesPanel>
           color: bg,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: Colors.white10)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _label("Institutional Document Catalog"),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _catalog.length,
-              itemBuilder: (context, i) {
-                final item = _catalog[i];
-                bool isSelected = _selectedDocs.contains(item['name']);
-                return CheckboxListTile(
-                  title: Text(item['name'],
-                      style: TextStyle(
-                          color: text,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14)),
-                  subtitle: Text("₱${item['price']}",
-                      style: const TextStyle(color: aViolet, fontSize: 12)),
-                  value: isSelected,
-                  activeColor: aViolet,
-                  onChanged: (val) {
-                    setState(() {
-                      if (val!) {
-                        _selectedDocs.add(item['name']);
-                      } else {
-                        _selectedDocs.remove(item['name']);
-                      }
-                    });
-                  },
-                );
-              },
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _label("Institutional Document Catalog"),
+            const SizedBox(height: 16),
+            Container(
+              height: 200,
+              child: ListView.builder(
+                itemCount: _catalog.length,
+                itemBuilder: (context, i) {
+                  final item = _catalog[i];
+                  bool isSelected = _selectedDocs.contains(item['name']);
+                  return CheckboxListTile(
+                    title: Text(item['name'],
+                        style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14)),
+                    subtitle: Text("₱${item['price']}",
+                        style: const TextStyle(color: aViolet, fontSize: 12)),
+                    value: isSelected,
+                    activeColor: aViolet,
+                    onChanged: (val) {
+                      setState(() {
+                        if (val!) {
+                          _selectedDocs.add(item['name']);
+                        } else {
+                          _selectedDocs.remove(item['name']);
+                        }
+                      });
+                    },
+                  );
+                },
+              ),
             ),
-          ),
           const Divider(height: 32, color: Colors.white10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -395,13 +401,16 @@ class _OfficesPanelState extends State<OfficesPanel>
           ),
         ],
       ),
-    );
+    ),  // SingleChildScrollView
+  );  // Container
   }
 
   Widget _buildHistoryQueue(Color bg, Color text) {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: SupabaseService().client.from('office_requests').stream(
-          primaryKey: ['id']).eq('student_id', widget.studentData['id']),
+      stream: SupabaseService().client
+          .from('office_requests')
+          .stream(primaryKey: ['id'])
+          .eq('student_id', widget.studentData['id']),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: aViolet));

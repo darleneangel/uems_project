@@ -229,8 +229,12 @@ class _AdmissionTransactionsPanelState
               ),
               ElevatedButton.icon(
                 onPressed: _generateMasterReport,
-                icon: const Icon(LucideIcons.fileDown, size: 18),
-                label: const Text("GENERATE LEDGER REPORT"),
+                icon: Icon(LucideIcons.fileDown, 
+                    color: widget.isDarkMode ? Colors.white : Colors.white, size: 18),
+                label: Text("GENERATE LEDGER REPORT",
+                    style: TextStyle(
+                        color: widget.isDarkMode ? Colors.white : Colors.white,
+                        fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: aViolet,
                   padding:

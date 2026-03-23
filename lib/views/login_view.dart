@@ -1,11 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'dart:math' as math;
 import 'dart:math';
 
 // Dashboard Imports
@@ -18,7 +15,6 @@ import 'hr_dashboard_view.dart';
 import '../components/program_chair_dashboard_view.dart'; // Verified Path
 import '../components/teacher_dashboard_view.dart';
 import '../services/supabase_service.dart';
-import '../components/hr_panel_content.dart';
 
 import 'forgot_password_handler.dart';
 

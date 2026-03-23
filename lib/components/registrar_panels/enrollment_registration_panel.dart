@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -369,10 +368,12 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
                                         color: Colors.blueGrey, fontSize: 11)),
                                 trailing: ElevatedButton.icon(
                                     onPressed: () => _showRegistrationForm(app),
-                                    icon: const Icon(LucideIcons.userCheck,
+                                    icon: Icon(LucideIcons.userCheck,
+                                        color: widget.isDarkMode ? Colors.white : Colors.white,
                                         size: 14),
-                                    label: const Text("VERIFY & ENROLL",
+                                    label: Text("VERIFY & ENROLL",
                                         style: TextStyle(
+                                            color: widget.isDarkMode ? Colors.white : Colors.white,
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold)),
                                     style: ElevatedButton.styleFrom(

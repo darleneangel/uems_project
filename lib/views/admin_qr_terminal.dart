@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 import '../services/supabase_service.dart';
-import 'package:open_file/open_file.dart';
 
 // ITO AY QR FOR ACCOUNTING PAYMENT VERIFICATION AT REGISTRAR RELEASE AUTHORIZATION.
 class AdminQRTerminal extends StatefulWidget {

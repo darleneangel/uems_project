@@ -48,7 +48,9 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("CANCEL")),
+              child: Text("CANCEL",
+                  style: TextStyle(
+                      color: _isDarkMode ? Colors.white : Colors.black87))),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);

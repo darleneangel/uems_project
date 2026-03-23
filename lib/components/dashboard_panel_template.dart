@@ -20,6 +20,7 @@ class DashboardPanelTemplate extends StatefulWidget {
   final String? logoText;
   final IconData? logoIcon;
   final Map<String, dynamic>? userData;
+  final List<Map<String, dynamic>> notifications;
 
   const DashboardPanelTemplate({
     super.key,
@@ -503,5 +504,5 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
 class PanelMenuItem {
   final String title;
   final IconData icon;
-  PanelMenuItem({required this.title, required this.icon});
+  const PanelMenuItem({required this.title, required this.icon});
 }

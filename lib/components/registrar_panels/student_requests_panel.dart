@@ -180,8 +180,11 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
           ]),
           ElevatedButton.icon(
             onPressed: _isProcessing ? null : _openRequestScanner,
-            icon: const Icon(LucideIcons.scanLine),
-            label: const Text("TICKET SCANNER"),
+            icon: Icon(LucideIcons.scanLine,
+                color: widget.isDarkMode ? Colors.white : Colors.white),
+            label: Text("TICKET SCANNER",
+                style: TextStyle(
+                    color: widget.isDarkMode ? Colors.white : Colors.white)),
             style: ElevatedButton.styleFrom(
               backgroundColor: aViolet,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
