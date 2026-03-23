@@ -319,7 +319,7 @@ class _OfficesPanelState extends State<OfficesPanel>
           children: [
             _label("Institutional Document Catalog"),
             const SizedBox(height: 16),
-            Container(
+            SizedBox(
               height: 200,
               child: ListView.builder(
                 itemCount: _catalog.length,

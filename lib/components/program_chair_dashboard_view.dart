@@ -34,6 +34,40 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
       setState(() => _isSidebarExpanded = !_isSidebarExpanded);
   void _toggleTheme() => setState(() => _isDarkMode = !_isDarkMode);
 
+  Future<void> _confirmLogout() async {
+    final bool? shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: _isDarkMode ? surfaceDark : Colors.white,
+        title: Text(
+          "Confirm Logout",
+          style: GoogleFonts.inter(
+            color: Colors.red,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          "Are you sure you want to logout?",
+          style: GoogleFonts.inter(color: Colors.red),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("Logout"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      widget.onLogout();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bgColor = _isDarkMode ? tDark : const Color(0xFFF8FAFC);
@@ -180,7 +214,7 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
             "Logout",
             9,
             isDestructive: true,
-            onTap: widget.onLogout,
+            onTap: _confirmLogout,
           ),
           const SizedBox(height: 20),
         ],

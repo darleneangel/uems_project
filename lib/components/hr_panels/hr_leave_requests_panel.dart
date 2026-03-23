@@ -113,6 +113,9 @@ class _HRLeaveRequestPanelState extends State<HRLeaveRequestPanel> {
   }
 
   Widget _buildList(Color textColor) {
+    final periodTextColor =
+        widget.isDarkMode ? Colors.white70 : const Color(0xFF334155);
+
     final filtered = _requests.where((r) {
       final name =
           "${r['profiles']['fn']} ${r['profiles']['ln']}".toLowerCase();
@@ -171,8 +174,9 @@ class _HRLeaveRequestPanelState extends State<HRLeaveRequestPanel> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis)),
                     Expanded(
-                        child:
-                            Text(period, style: const TextStyle(fontSize: 11))),
+                      child: Text(period,
+                        style: TextStyle(
+                          fontSize: 11, color: periodTextColor))),
                     // REMOVED 'DOC' (attachment_url) UI column from the row
                     Expanded(child: _statusChip(req['status'])),
                     Expanded(

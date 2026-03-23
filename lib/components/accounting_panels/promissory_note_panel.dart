@@ -419,6 +419,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
               onPressed: _fetchStudentForNote,
               style: ElevatedButton.styleFrom(
                   backgroundColor: aViolet,
+                foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12))),
               child: const Text("FETCH IDENTITY")),

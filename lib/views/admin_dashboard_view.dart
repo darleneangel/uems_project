@@ -44,6 +44,47 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
 
   void _toggleTheme() => setState(() => _isDarkMode = !_isDarkMode);
 
+  Future<void> _confirmLogout() async {
+    final bool? shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _isDarkMode ? surfaceDark : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          "Confirm Logout",
+          style: GoogleFonts.inter(
+            color: _isDarkMode ? Colors.white : pViolet,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        content: Text(
+          "Are you sure you want to logout from the system?",
+          style: GoogleFonts.inter(
+            color: _isDarkMode ? Colors.white70 : Colors.blueGrey,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text("Logout"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      widget.onLogout();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bgColor = _isDarkMode ? tDark : const Color(0xFFF8FAFC);
@@ -217,7 +258,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           ),
           const Divider(color: Colors.white10, indent: 20, endIndent: 20),
           _sidebarItem(LucideIcons.logOut, "Logout System", 9,
-              isDestructive: true, onTap: widget.onLogout),
+              isDestructive: true, onTap: _confirmLogout),
           const SizedBox(height: 20),
         ],
       ),

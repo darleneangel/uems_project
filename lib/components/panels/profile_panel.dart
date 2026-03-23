@@ -307,7 +307,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                    "${fn.isEmpty ? 'Identifying User...' : '$fn $ln'}"
+                    (fn.isEmpty ? 'Identifying User...' : '$fn $ln')
                         .toUpperCase(),
                     style: GoogleFonts.inter(
                         color: Colors.white,
@@ -426,9 +426,10 @@ class _ProfilePanelState extends State<ProfilePanel> {
         initialDate: DateTime(2005),
         firstDate: DateTime(1980),
         lastDate: DateTime.now());
-    if (picked != null)
+    if (picked != null) {
       setState(() =>
           _birthdateController.text = DateFormat('yyyy-MM-dd').format(picked));
+    }
   }
 
   void _showToast(String m, Color c) =>

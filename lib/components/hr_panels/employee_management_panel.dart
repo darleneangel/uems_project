@@ -313,11 +313,15 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                  backgroundColor: aViolet,
+                  backgroundColor:
+                      widget.isDarkMode ? aViolet : const Color(0xFF6D28D9),
+                  foregroundColor: Colors.white,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 32, vertical: 20)),
               child: Text(
-                  emp == null ? "GENERATE ID & ONBOARD" : "UPDATE CONTRACT"),
+                  emp == null ? "GENERATE ID & ONBOARD" : "UPDATE CONTRACT",
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w700)),
             ),
           ],
         ),
@@ -389,6 +393,8 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
     final textColor =
         widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
+    final actionButtonColor =
+      widget.isDarkMode ? aViolet : const Color(0xFF6D28D9);
 
     return Column(
       children: [
@@ -425,11 +431,17 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
                 const SizedBox(width: 16),
                 ElevatedButton.icon(
                   onPressed: () => _showEmployeeForm(),
-                  icon: const Icon(LucideIcons.userPlus),
-                  label: const Text("ONBOARD STAFF"),
+                  icon: const Icon(LucideIcons.userPlus, color: Colors.white),
+                  label: const Text(
+                    "ONBOARD STAFF",
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w700),
+                  ),
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: aViolet,
-                      padding: const EdgeInsets.all(22)),
+                      backgroundColor: actionButtonColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 18)),
                 ),
               ],
             )
@@ -545,11 +557,22 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14))),
                     SizedBox(
-                      width: 100,
+                      width: 120,
                       child: ElevatedButton(
                           onPressed: () => _showEmployeeForm(e),
-                          child: const Text("INCREMENT",
-                              style: TextStyle(fontSize: 10))),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: aViolet,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                          ),
+                          child: const Text(
+                            "INCREMENT",
+                            maxLines: 1,
+                            overflow: TextOverflow.fade,
+                            softWrap: false,
+                            style: TextStyle(fontSize: 10),
+                          )),
                     )
                   ],
                 ),

@@ -66,13 +66,24 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
           uniqueStudents.add(row['student_id'].toString());
           uniqueSubjects.add(row['subject_id'].toString());
 
-          // Check joined grades record
-          final gradeRecord = row['grades'] as List?;
-          if (gradeRecord == null || gradeRecord.isEmpty) {
+          // Supabase relation can come back as either a list or a single map.
+          final dynamic gradeRaw = row['grades'];
+          Map<String, dynamic>? gradeEntry;
+
+          if (gradeRaw is List && gradeRaw.isNotEmpty) {
+            final first = gradeRaw.first;
+            if (first is Map) {
+              gradeEntry = Map<String, dynamic>.from(first);
+            }
+          } else if (gradeRaw is Map) {
+            gradeEntry = Map<String, dynamic>.from(gradeRaw);
+          }
+
+          if (gradeEntry == null) {
             pending++;
           } else {
             final double g = double.tryParse(
-                    gradeRecord.first['final_numeric_grade']?.toString() ??
+                    gradeEntry['final_numeric_grade']?.toString() ??
                         "0.0") ??
                 0.0;
             if (g == 0) {

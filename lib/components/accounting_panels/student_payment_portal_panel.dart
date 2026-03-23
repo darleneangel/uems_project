@@ -1019,7 +1019,8 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                     border: InputBorder.none))),
         ElevatedButton(
             onPressed: _fetchStudentLedger,
-            style: ElevatedButton.styleFrom(backgroundColor: aViolet),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: aViolet, foregroundColor: Colors.white),
             child: const Text("PULL ACCOUNT")),
       ]));
 

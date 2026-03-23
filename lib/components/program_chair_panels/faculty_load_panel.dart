@@ -410,8 +410,9 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
                     const SizedBox(width: 24),
                     ElevatedButton(
                         onPressed: () => _showManageLoadDialog(f),
-                        style:
-                            ElevatedButton.styleFrom(backgroundColor: aViolet),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: aViolet,
+                            foregroundColor: Colors.white),
                         child: const Text("SCHEDULE")),
                   ],
                 ),
@@ -461,7 +462,7 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
                           letterSpacing: 1)),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: selSubId,
+                    initialValue: selSubId,
                     isExpanded: true,
                     dropdownColor: surfaceDark,
                     style: const TextStyle(color: Colors.white, fontSize: 12),

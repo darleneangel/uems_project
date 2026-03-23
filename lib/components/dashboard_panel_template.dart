@@ -337,7 +337,7 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                  "${fn.isEmpty && ln.isEmpty ? 'Identifying User...' : '$fn $ln'}"
+                  (fn.isEmpty && ln.isEmpty ? 'Identifying User...' : '$fn $ln')
                       .toUpperCase(),
                   style: GoogleFonts.inter(
                       color: textColor,
