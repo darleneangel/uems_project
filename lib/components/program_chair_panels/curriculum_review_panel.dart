@@ -541,7 +541,10 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  // Ensure visibility in light mode
+                  color: widget.isDarkMode
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.white10)),
               child: Text(value,
@@ -640,36 +643,38 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
       children: List.generate(_assignedSubjects.length, (i) {
         final s = _assignedSubjects[i];
         return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.02),
-              borderRadius: BorderRadius.circular(12)),
-          child: Row(
-            children: [
-              const Icon(LucideIcons.bookOpen, size: 16, color: aViolet),
-              const SizedBox(width: 16),
-              Expanded(
-                  child: Text(s['code'],
-                      style: const TextStyle(
-                          color: aViolet, fontWeight: FontWeight.bold))),
-              Expanded(
-                  flex: 2,
-                  child: Text(s['professor_name'],
-                      style: TextStyle(color: textColor, fontSize: 13))),
-              Expanded(
-                  flex: 2,
-                  child: Text("${s['day']} ${s['time']}",
-                      style: const TextStyle(
-                          color: Colors.blueGrey, fontSize: 12))),
-              IconButton(
-                  onPressed: () =>
-                      setState(() => _assignedSubjects.removeAt(i)),
-                  icon: const Icon(LucideIcons.trash2,
-                      size: 16, color: Colors.redAccent)),
-            ],
-          ),
-        );
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(16), // Keep padding
+            decoration: BoxDecoration(
+                // Ensure visibility in light mode
+                color: widget.isDarkMode
+                    ? Colors.white.withOpacity(0.02)
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12)),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.bookOpen, size: 16, color: aViolet),
+                const SizedBox(width: 16),
+                Expanded(
+                    child: Text(s['code'],
+                        style: const TextStyle(
+                            color: aViolet, fontWeight: FontWeight.bold))),
+                Expanded(
+                    flex: 2,
+                    child: Text(s['professor_name'],
+                        style: TextStyle(color: textColor, fontSize: 13))),
+                Expanded(
+                    flex: 2,
+                    child: Text("${s['day']} ${s['time']}",
+                        style: const TextStyle(
+                            color: Colors.blueGrey, fontSize: 12))),
+                IconButton(
+                    onPressed: () =>
+                        setState(() => _assignedSubjects.removeAt(i)),
+                    icon: const Icon(LucideIcons.trash2,
+                        size: 16, color: Colors.redAccent)),
+              ],
+            ));
       }),
     );
   }
@@ -875,7 +880,11 @@ class _CurriculumReviewPanelState extends State<CurriculumReviewPanel> {
       child: Padding(
           padding: const EdgeInsets.all(40),
           child: Text("Queue empty.",
-              style: TextStyle(color: t.withOpacity(0.1)))));
+              style: TextStyle(
+                  // Ensure visibility in light mode
+                  color: widget.isDarkMode
+                      ? t.withOpacity(0.1)
+                      : Colors.black.withOpacity(0.1)))));
 
   void _showToast(String m, Color c) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

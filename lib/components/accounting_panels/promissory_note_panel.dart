@@ -568,8 +568,9 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
           readOnly: readOnly,
           maxLines: maxLines,
           onChanged: onChanged,
-          style: TextStyle(
-              color: widget.isDarkMode ? Colors.white : pViolet, fontSize: 14),
+          style: TextStyle( // Ensure text is visible in both modes
+              color: widget.isDarkMode ? Colors.white : Colors.black,
+              fontSize: 14),
           decoration: InputDecoration(
               hintText: hint,
               filled: true,
@@ -619,7 +620,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                       ? "Select Date"
                       : DateFormat('MM/dd/yyyy').format(value),
                   style: TextStyle(
-                      color: widget.isDarkMode ? Colors.white : pViolet))
+                      color: widget.isDarkMode ? Colors.white : Colors.black)) // Ensure text is visible in both modes
             ]),
           ),
         ],

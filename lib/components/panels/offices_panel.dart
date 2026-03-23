@@ -271,19 +271,34 @@ class _OfficesPanelState extends State<OfficesPanel>
   Widget _buildTabBar(Color t) => Container(
         height: 50,
         decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12)),
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: TabBar(
           controller: _tabController,
+
+          // ✅ makes indicator fill entire tab
+          indicatorSize: TabBarIndicatorSize.tab,
+
+          // ✅ remove spacing so it fills properly
+          indicatorPadding: EdgeInsets.zero,
+
           indicator: BoxDecoration(
-              color: aViolet, borderRadius: BorderRadius.circular(10)),
+            color: aViolet,
+            borderRadius: BorderRadius.circular(10),
+          ),
+
           labelColor: Colors.white,
           unselectedLabelColor: t.withOpacity(0.4),
-          labelStyle:
-              GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12),
+
+          labelStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+
           tabs: const [
             Tab(text: "SELECT DOCUMENTS"),
-            Tab(text: "TICKET TRACKING")
+            Tab(text: "TICKET TRACKING"),
           ],
         ),
       );

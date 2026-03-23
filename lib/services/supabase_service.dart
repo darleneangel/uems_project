@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
@@ -25,10 +26,49 @@ class SupabaseService {
       String idNumber, String password) async {
     return await _client
         .from('profiles')
-        .select('*, student_details(*), employee_details(*)')
+        .select(
+            '*, student_details(*, courses(name)), employee_details(*), study_loads(subjects(units))')
         .ilike('user_id_number', idNumber)
         .eq('password_hash', password)
         .maybeSingle();
+  }
+  // ==========================================
+  // 📢 ANNOUNCEMENTS & NOTIFICATIONS
+  // ==========================================
+
+  /// 🎯 FIX: Targeted fetch for the notification center
+  /// Returns announcements based on the user's role (All, Students, or Faculty)
+  Future<List<Map<String, dynamic>>> getTargetedAnnouncements(
+      String audience) async {
+    try {
+      final String filter =
+          audience.toLowerCase() == 'student' ? 'Students' : 'Faculty';
+
+      final res = await _client
+          .from('announcements')
+          .select('*')
+          .or('target_audience.eq.All,target_audience.eq.$filter')
+          .order('created_at', ascending: false)
+          .limit(15);
+
+      return List<Map<String, dynamic>>.from(res);
+    } catch (e) {
+      debugPrint("Announcement Sync Error: $e");
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> getProfileById(String uuid) async {
+    try {
+      return await _client
+          .from('profiles')
+          .select(
+              '*, student_details(*, courses(name), year_levels(definition)), employee_details(*)')
+          .eq('id', uuid)
+          .maybeSingle();
+    } catch (e) {
+      return null;
+    }
   }
 
   /// PROGRAM CHAIR: Resolves the managed department based on the 4-digit ID
@@ -80,6 +120,34 @@ class SupabaseService {
             'id, fn, ln, employee_details!inner(department_id, faculty_type)')
         .or('faculty_type.eq."Gen Ed", department_id.eq.$deptId',
             referencedTable: 'employee_details');
+  }
+
+  Future<List<Map<String, dynamic>>> getFacultyDetailed(String deptId) async {
+    final res = await _client
+        .from('profiles')
+        .select(
+            'id, fn, ln, user_id_number, employee_details!inner(department_id, faculty_type, position_title)')
+        .or('faculty_type.eq."Gen Ed", department_id.eq.$deptId',
+            referencedTable: 'employee_details')
+        .neq('role', 'student');
+    return List<Map<String, dynamic>>.from(res);
+  }
+
+  Future<List<Map<String, dynamic>>> getMasterLoads(String profId) async {
+    final res = await _client
+        .from('study_loads')
+        .select('*, subjects(*)')
+        .eq('professor_id', profId)
+        .filter('student_id', 'is', null);
+    return List<Map<String, dynamic>>.from(res);
+  }
+
+  Future<Map<String, dynamic>?> getActiveTerm() async {
+    return await _client
+        .from('academic_terms')
+        .select('*')
+        .eq('is_active', true)
+        .maybeSingle();
   }
 
   /// ENROLLMENT QUEUE: Finds students in the Dept who are Enrolled but have NO LOAD

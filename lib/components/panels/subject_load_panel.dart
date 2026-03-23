@@ -419,7 +419,7 @@ class _SubjectLoadPanelState extends State<SubjectLoadPanel> {
               _tableHeaderCell("DESCRIPTION"),
               _tableHeaderCell("ROOM"),
               _tableHeaderCell("DAYS/TIME"),
-              _tableHeaderCell("UNITS"),
+              _tableHeaderCell("UNITS/HRS"),
               _tableHeaderCell("BLOCK"),
             ]),
         ..._subjects.map((s) => TableRow(children: [

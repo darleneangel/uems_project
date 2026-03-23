@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -22,47 +21,51 @@ class ProfilePanel extends StatefulWidget {
 }
 
 class _ProfilePanelState extends State<ProfilePanel> {
-  File? _imageFile;
-  final ImagePicker _picker = ImagePicker();
   final SupabaseService _service = SupabaseService();
+  final ImagePicker _picker = ImagePicker();
+  File? _imageFile;
 
-  // Controllers
-  late TextEditingController _phoneController;
-  late TextEditingController _emailController;
-  late TextEditingController _birthdateController;
-  late TextEditingController _lrdController;
+  // 🛡️ INITIALIZATION: Direct initialization prevents LateInitializationErrors
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _birthdateController = TextEditingController();
+  final TextEditingController _lrdController = TextEditingController();
+  final TextEditingController _programController = TextEditingController();
 
-  // State variables
+  // State flags
   String _gender = 'Female';
   bool _isEditing = false;
   bool _isSaving = false;
   bool _isSyncing = true;
 
-  // Local copy of student data to ensure UI reflects DB changes immediately
-  late Map<String, dynamic> _currentStudentData;
+  // Standardized variable name to match error log context
+  Map<String, dynamic> _currentData = {};
 
   @override
   void initState() {
     super.initState();
-    _currentStudentData = Map<String, dynamic>.from(widget.studentData);
-
-    // Initialize controllers once
-    _phoneController = TextEditingController();
-    _emailController = TextEditingController();
-    _birthdateController = TextEditingController();
-    _lrdController = TextEditingController();
-
-    _syncControllersFromState();
+    // Immediate assignment to prevent build-time crashes
+    _currentData = Map<String, dynamic>.from(widget.studentData);
+    _syncControllersFromLedger();
   }
 
-  /// 🛰️ SYNC ENGINE: Explicitly updates the text in the controllers
-  /// This ensures that after a database fetch, the UI fields are repopulated.
-  /// Fixed to handle Supabase returning joined tables as Lists.
-  void _syncControllersFromState() {
-    final dynamic detailsRaw = _currentStudentData['student_details'];
+  @override
+  void didUpdateWidget(ProfilePanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.studentData != widget.studentData) {
+      setState(() {
+        _currentData = Map<String, dynamic>.from(widget.studentData);
+        _syncControllersFromLedger();
+      });
+    }
+  }
 
-    // Supabase often returns joined tables as a List of Maps
+  /// 🛰️ LEDGER SYNC: Robust extraction for institutional data
+  void _syncControllersFromLedger() {
+    final dynamic detailsRaw = _currentData['student_details'];
     Map<String, dynamic>? details;
+
+    // Supabase joins often return a List or a Map
     if (detailsRaw is List && detailsRaw.isNotEmpty) {
       details = detailsRaw.first;
     } else if (detailsRaw is Map<String, dynamic>) {
@@ -70,14 +73,19 @@ class _ProfilePanelState extends State<ProfilePanel> {
     }
 
     setState(() {
-      // Prioritize the phone number from the details map (student_details table)
       _phoneController.text =
-          (details?['phone'] ?? _currentStudentData['phone'] ?? "").toString();
-      _emailController.text = (_currentStudentData['email'] ?? "").toString();
-      _birthdateController.text = (_currentStudentData['dob'] ?? "").toString();
-      _lrdController.text =
-          (_currentStudentData['user_id_number'] ?? "").toString();
-      _gender = _currentStudentData['gender'] ?? 'Female';
+          (details?['phone'] ?? _currentData['phone'] ?? "").toString();
+      _emailController.text = (_currentData['email'] ?? "").toString();
+      _birthdateController.text = (_currentData['dob'] ?? "").toString();
+      _lrdController.text = (_currentData['user_id_number'] ?? "").toString();
+
+      // 🎓 PROGRAM CITATION: Mapping 'BS Computer Science' or similar from course join
+      _programController.text = (details?['courses']?['name'] ??
+              _currentData['program_name'] ??
+              "BFA Degree Program")
+          .toString();
+
+      _gender = _currentData['gender'] ?? 'Female';
       _isSyncing = false;
     });
   }
@@ -88,84 +96,50 @@ class _ProfilePanelState extends State<ProfilePanel> {
     _emailController.dispose();
     _birthdateController.dispose();
     _lrdController.dispose();
+    _programController.dispose();
     super.dispose();
   }
 
-  /// 🛰️ DATABASE SYNC: Persists changes to 'profiles' and 'student_details'
-  Future<void> _saveProfileChanges() async {
+  /// 🛰️ DATABASE PERSISTENCE: Atomic commit to Ledger
+  Future<void> _saveChanges() async {
     setState(() => _isSaving = true);
-    final String profileId = _currentStudentData['id'];
+    final String uuid = _currentData['id'] ?? '';
 
     try {
-      // 1. UPDATE 'profiles' TABLE (Email, Gender, DOB)
+      // 1. Update Core Identity
       await _service.client.from('profiles').update({
         'email': _emailController.text.trim(),
         'gender': _gender,
         'dob': _birthdateController.text.trim(),
-      }).eq('id', profileId);
+      }).eq('id', uuid);
 
-      // 2. UPDATE 'student_details' TABLE (Phone)
-      // Linked via profile_id as per your schema
+      // 2. Update Student Specifics
       await _service.client.from('student_details').update({
         'phone': _phoneController.text.trim(),
-      }).eq('profile_id', profileId);
+      }).eq('profile_id', uuid);
 
-      // 3. RE-FETCH FRESH DATA: Pull verified data back from Supabase
-      // Using .single() handles the root object, but joined records usually remain a list
-      final freshData = await _service.client
+      // 3. Full Data Reconciliation
+      final fresh = await _service.client
           .from('profiles')
           .select('*, student_details(*, courses(name))')
-          .eq('id', profileId)
+          .eq('id', uuid)
           .single();
 
       if (mounted) {
         setState(() {
-          // Update the source of truth for the header and initials
-          _currentStudentData = freshData;
+          _currentData = fresh;
           _isEditing = false;
           _isSaving = false;
         });
-
-        // 4. REFRESH CONTROLLERS: Force the text fields to show the newly saved data
-        _syncControllersFromState();
-
-        _showToast(
-            "Institutional Ledger Synchronized", const Color(0xFF69F0AE));
+        _syncControllersFromLedger();
+        _showToast("Institutional Identity Verified & Updated",
+            const Color(0xFF69F0AE));
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        _showToast(
-            "Sync Error: Unable to write to database. $e", Colors.redAccent);
+        _showToast("Sync Error: Ledger Connectivity Failed.", Colors.redAccent);
       }
-    }
-  }
-
-  Future<void> _pickImage() async {
-    if (!_isEditing) return;
-    final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) setState(() => _imageFile = File(picked.path));
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    if (!_isEditing) return;
-    DateTime initial =
-        DateTime.tryParse(_birthdateController.text) ?? DateTime(2005, 1, 1);
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(1980),
-      lastDate: DateTime.now(),
-      builder: (context, child) => Theme(
-        data: widget.isDarkMode ? ThemeData.dark() : ThemeData.light(),
-        child: child!,
-      ),
-    );
-
-    if (picked != null) {
-      setState(() {
-        _birthdateController.text = DateFormat('yyyy-MM-dd').format(picked);
-      });
     }
   }
 
@@ -179,9 +153,11 @@ class _ProfilePanelState extends State<ProfilePanel> {
         ? Colors.white.withOpacity(0.05)
         : Colors.grey.shade100;
 
-    if (_isSyncing)
+    // Safety check for uninitialized data
+    if (_isSyncing || _currentData.isEmpty) {
       return const Center(
           child: CircularProgressIndicator(color: Color(0xFF8B5CF6)));
+    }
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -189,13 +165,13 @@ class _ProfilePanelState extends State<ProfilePanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildProfileHeader(textColor),
-          const SizedBox(height: 24),
+          _buildHeroHeader(textColor),
+          const SizedBox(height: 32),
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               color: cardColor,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(28),
               border: Border.all(
                   color: widget.isDarkMode ? Colors.white10 : Colors.black12),
             ),
@@ -207,7 +183,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
                   children: [
                     Text("Cloud Identity Ledger",
                         style: GoogleFonts.inter(
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.w800,
                             color: textColor)),
                     _isSaving
@@ -216,66 +192,69 @@ class _ProfilePanelState extends State<ProfilePanel> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2))
                         : IconButton(
-                            onPressed: () {
-                              if (_isEditing) {
-                                _saveProfileChanges();
-                              } else {
-                                setState(() => _isEditing = true);
-                              }
-                            },
+                            onPressed: () => _isEditing
+                                ? _saveChanges()
+                                : setState(() => _isEditing = true),
                             icon: Icon(_isEditing
                                 ? LucideIcons.save
                                 : LucideIcons.edit3),
                             color: const Color(0xFF8B5CF6),
                             tooltip: _isEditing
-                                ? "Save to Database"
-                                : "Modify Information",
+                                ? "Finalize Changes"
+                                : "Modify Record",
                           ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                _buildLabel("Gender Representation *", textColor),
+                const SizedBox(height: 32),
+
+                // --- CITATION: ACADEMIC PROGRAM ---
+                _buildSectionLabel("Academic Program of Study"),
                 const SizedBox(height: 8),
+                _staticDisplayField(_programController.text.toUpperCase(),
+                    const Color(0xFF8B5CF6), inputFill),
+
+                const SizedBox(height: 24),
+                _buildSectionLabel("Gender Representation *"),
+                const SizedBox(height: 12),
                 Row(
                   children: [
-                    _buildGenderOption("Male", textColor),
-                    const SizedBox(width: 24),
-                    _buildGenderOption("Female", textColor),
+                    _genderOption("Male", textColor),
+                    const SizedBox(width: 32),
+                    _genderOption("Female", textColor),
                   ],
                 ),
-                const SizedBox(height: 24),
-                _buildTextField(
+                const SizedBox(height: 32),
+                _buildInputField(
                   controller: _birthdateController,
-                  label: "Legal Date of Birth (DOB) *",
+                  label: "Date of Birth *",
                   icon: LucideIcons.calendar,
                   textColor: textColor,
-                  fillColor: inputFill,
+                  fill: inputFill,
                   readOnly: true,
                   onTap: () => _selectDate(context),
                 ),
                 const SizedBox(height: 20),
-                _buildTextField(
+                _buildInputField(
                   controller: _phoneController,
-                  label: "Verified Contact Number *",
+                  label: "Mobile Contact Number *",
                   icon: LucideIcons.phone,
                   textColor: textColor,
-                  fillColor: inputFill,
+                  fill: inputFill,
                   readOnly: !_isEditing,
                 ),
                 const SizedBox(height: 20),
-                _buildTextField(
+                _buildInputField(
                   controller: _emailController,
-                  label: "Institutional Email Address *",
+                  label: "Institutional Email *",
                   icon: LucideIcons.mail,
                   textColor: textColor,
-                  fillColor: inputFill,
+                  fill: inputFill,
                   readOnly: !_isEditing,
                 ),
-                const SizedBox(height: 20),
-                _buildLabel(
-                    "Institutional LRD Identifier (User ID)", textColor),
+                const SizedBox(height: 24),
+                _buildSectionLabel("Institutional LRD Identifier"),
                 const SizedBox(height: 8),
-                _staticValueField(_lrdController.text, textColor, inputFill),
+                _staticDisplayField(_lrdController.text, textColor, inputFill),
               ],
             ),
           ),
@@ -284,38 +263,18 @@ class _ProfilePanelState extends State<ProfilePanel> {
     );
   }
 
-  Widget _buildProfileHeader(Color textColor) {
-    final String fn = _currentStudentData['fn'] ?? '';
-    final String ln = _currentStudentData['ln'] ?? '';
-    final String fullName = "$fn $ln";
-
-    // Safe extraction for program name from potentially nested student_details list
-    final dynamic detailsRaw = _currentStudentData['student_details'];
-    Map<String, dynamic>? details;
-    if (detailsRaw is List && detailsRaw.isNotEmpty) {
-      details = detailsRaw.first;
-    } else if (detailsRaw is Map<String, dynamic>) {
-      details = detailsRaw;
-    }
-
-    final String program = details?['courses']?['name'] ??
-        _currentStudentData['program'] ??
-        "General Education";
-
+  Widget _buildHeroHeader(Color textColor) {
+    // 🛡️ Safe identity resolution
+    final String fn =
+        (_currentData['fn'] ?? _currentData['first_name'] ?? '').toString();
+    final String ln =
+        (_currentData['ln'] ?? _currentData['last_name'] ?? '').toString();
+    final String program = _programController.text;
     final String initials =
         (fn.isNotEmpty ? fn[0] : 'S') + (ln.isNotEmpty ? ln[0] : 'U');
 
-    ImageProvider? profileImage;
-    if (_imageFile != null) {
-      profileImage = FileImage(_imageFile!);
-    } else if (_currentStudentData['profile_picture_url'] != null &&
-        _currentStudentData['profile_picture_url'].toString().isNotEmpty) {
-      profileImage =
-          NetworkImage(_currentStudentData['profile_picture_url'].toString());
-    }
-
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: widget.isDarkMode
@@ -324,66 +283,55 @@ class _ProfilePanelState extends State<ProfilePanel> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-              color: const Color(0xFF8B5CF6).withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10))
+              color: const Color(0xFF8B5CF6).withOpacity(0.2),
+              blurRadius: 30,
+              offset: const Offset(0, 15))
         ],
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: _isEditing ? _pickImage : null,
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 45,
-                  backgroundColor: Colors.white24,
-                  backgroundImage: profileImage,
-                  child: (profileImage == null)
-                      ? Text(
-                          initials.toUpperCase(),
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 28,
-                          ),
-                        )
-                      : null,
-                ),
-                if (_isEditing)
-                  Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                              color: Colors.white, shape: BoxShape.circle),
-                          child: const Icon(LucideIcons.camera,
-                              size: 14, color: Color(0xFF8B5CF6)))),
-              ],
-            ),
+          CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.white12,
+            child: Text(initials.toUpperCase(),
+                style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 32)),
           ),
-          const SizedBox(width: 24),
+          const SizedBox(width: 32),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(fullName.toUpperCase(),
+                Text(
+                    "${fn.isEmpty ? 'Identifying User...' : '$fn $ln'}"
+                        .toUpperCase(),
                     style: GoogleFonts.inter(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
-                        fontSize: 22)),
-                const SizedBox(height: 4),
+                        fontSize: 26)),
                 Text(program,
                     style: const TextStyle(
                         color: Colors.white70,
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w500)),
-                const SizedBox(height: 12),
-                _statusBadge(details?['enrollment_status'] ?? "ENROLLED"),
+                const SizedBox(height: 16),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF69F0AE),
+                      borderRadius: BorderRadius.circular(8)),
+                  child: Text("OFFICIAL ENROLLEE",
+                      style: GoogleFonts.inter(
+                          color: const Color(0xFF1E1B4B),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900)),
+                ),
               ],
             ),
           ),
@@ -392,75 +340,59 @@ class _ProfilePanelState extends State<ProfilePanel> {
     );
   }
 
-  Widget _statusBadge(String status) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-            color: const Color(0xFF69F0AE),
-            borderRadius: BorderRadius.circular(8)),
-        child: Text(status.toUpperCase(),
-            style: GoogleFonts.inter(
-                color: const Color(0xFF1E1B4B),
-                fontSize: 9,
-                fontWeight: FontWeight.w900)),
-      );
-
-  Widget _buildLabel(String label, Color textColor) => Text(label.toUpperCase(),
+  Widget _buildSectionLabel(String t) => Text(t.toUpperCase(),
       style: GoogleFonts.inter(
           fontSize: 10,
           fontWeight: FontWeight.w800,
-          color: textColor.withOpacity(0.6),
-          letterSpacing: 0.5));
+          color: Colors.blueGrey,
+          letterSpacing: 1));
 
-  Widget _staticValueField(String value, Color textColor, Color fill) =>
-      Container(
+  Widget _staticDisplayField(String v, Color t, Color f) => Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.all(18),
         decoration:
-            BoxDecoration(color: fill, borderRadius: BorderRadius.circular(12)),
-        child: Text(value,
+            BoxDecoration(color: f, borderRadius: BorderRadius.circular(16)),
+        child: Text(v,
             style: GoogleFonts.inter(
-                color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                color: t, fontWeight: FontWeight.bold, fontSize: 14)),
       );
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required Color textColor,
-    required Color fillColor,
-    bool readOnly = false,
-    VoidCallback? onTap,
-  }) =>
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildLabel(label, textColor),
-          const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            readOnly: readOnly,
-            onTap: onTap,
-            style: GoogleFonts.inter(
-                color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
-            decoration: InputDecoration(
-              prefixIcon:
-                  Icon(icon, size: 18, color: textColor.withOpacity(0.5)),
-              filled: true,
-              fillColor: fillColor,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            ),
+  Widget _buildInputField(
+      {required TextEditingController controller,
+      required String label,
+      required IconData icon,
+      required Color textColor,
+      required Color fill,
+      bool readOnly = false,
+      VoidCallback? onTap}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel(label),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          readOnly: readOnly,
+          onTap: onTap,
+          style: GoogleFonts.inter(
+              color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, size: 18, color: Colors.blueGrey),
+            filled: true,
+            fillColor: fill,
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none),
           ),
-        ],
-      );
+        ),
+      ],
+    );
+  }
 
-  Widget _buildGenderOption(String value, Color textColor) {
-    final bool isSelected = _gender == value;
+  Widget _genderOption(String label, Color textColor) {
+    bool active = _gender == label;
     return GestureDetector(
-      onTap: _isEditing ? () => setState(() => _gender = value) : null,
+      onTap: _isEditing ? () => setState(() => _gender = label) : null,
       child: Row(
         children: [
           Container(
@@ -469,11 +401,9 @@ class _ProfilePanelState extends State<ProfilePanel> {
             decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                    color: isSelected
-                        ? const Color(0xFF8B5CF6)
-                        : textColor.withOpacity(0.3),
+                    color: active ? const Color(0xFF8B5CF6) : Colors.blueGrey,
                     width: 2)),
-            child: isSelected
+            child: active
                 ? Center(
                     child: Container(
                         width: 10,
@@ -482,13 +412,24 @@ class _ProfilePanelState extends State<ProfilePanel> {
                             color: Color(0xFF8B5CF6), shape: BoxShape.circle)))
                 : null,
           ),
-          const SizedBox(width: 8),
-          Text(value,
-              style: GoogleFonts.inter(
-                  color: textColor, fontWeight: FontWeight.w600, fontSize: 14)),
+          const SizedBox(width: 10),
+          Text(label,
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
         ],
       ),
     );
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    if (!_isEditing) return;
+    final picked = await showDatePicker(
+        context: context,
+        initialDate: DateTime(2005),
+        firstDate: DateTime(1980),
+        lastDate: DateTime.now());
+    if (picked != null)
+      setState(() =>
+          _birthdateController.text = DateFormat('yyyy-MM-dd').format(picked));
   }
 
   void _showToast(String m, Color c) =>
