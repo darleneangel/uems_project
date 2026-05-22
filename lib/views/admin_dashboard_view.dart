@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../components/admin_panel_content.dart';
 import '../services/supabase_service.dart';
+import '../services/security_service.dart';
 
 class AdminDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -88,32 +89,50 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    SecurityService().startInactivityMonitoring(onTimeout: widget.onLogout);
+  }
+
+  @override
+  void dispose() {
+    SecurityService().stopInactivityMonitoring();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final bgColor = _isDarkMode ? tDark : const Color(0xFFF8FAFC);
     final sideColor = _isDarkMode ? surfaceDark : const Color(0xFFF1F5F9);
     final textColor = _isDarkMode ? Colors.white : pViolet;
     final subTextColor = _isDarkMode ? Colors.white54 : Colors.blueGrey;
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: Row(
-        children: [
-          _buildSidebar(sideColor, textColor, subTextColor),
-          Expanded(
-            child: Column(
-              children: [
-                _buildTopBar(sideColor, textColor, subTextColor),
-                // 🛰️ DYNAMIC CONTENT VIEWPORT
-                // FIXED: Wrapped in Expanded to provide a bounded height constraint.
-                // This allows sub-panels to use Expanded and Flexible widgets internally
-                // without triggering "unbounded height" layout exceptions.
-                Expanded(
-                  child: _buildModuleRouter(textColor, subTextColor),
-                ),
-              ],
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => SecurityService().resetInactivityTimer(),
+      onPointerMove: (_) => SecurityService().resetInactivityTimer(),
+      onPointerSignal: (_) => SecurityService().resetInactivityTimer(),
+      child: Scaffold(
+        backgroundColor: bgColor,
+        body: Row(
+          children: [
+            _buildSidebar(sideColor, textColor, subTextColor),
+            Expanded(
+              child: Column(
+                children: [
+                  _buildTopBar(sideColor, textColor, subTextColor),
+                  // 🛰️ DYNAMIC CONTENT VIEWPORT
+                  // FIXED: Wrapped in Expanded to provide a bounded height constraint.
+                  // This allows sub-panels to use Expanded and Flexible widgets internally
+                  // without triggering "unbounded height" layout exceptions.
+                  Expanded(
+                    child: _buildModuleRouter(textColor, subTextColor),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -450,7 +469,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     return Padding(
       padding: const EdgeInsets.only(left: 16, bottom: 10, top: 20),
       child: Text(title,
-          style: GoogleFonts.inter( // Ensure visibility in light mode
+          style: GoogleFonts.inter(
+              // Ensure visibility in light mode
               fontSize: 9,
               fontWeight: FontWeight.w900,
               color: _isDarkMode

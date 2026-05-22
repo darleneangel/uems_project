@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../services/security_service.dart';
 
 class DashboardPanelTemplate extends StatefulWidget {
   final String panelTitle;
@@ -41,6 +42,19 @@ class DashboardPanelTemplate extends StatefulWidget {
 }
 
 class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
+  @override
+  void initState() {
+    super.initState();
+    // Start the global inactivity guard for whichever dashboard is using this template
+    SecurityService().startInactivityMonitoring(onTimeout: widget.onLogout);
+  }
+
+  @override
+  void dispose() {
+    SecurityService().stopInactivityMonitoring();
+    super.dispose();
+  }
+
   // Violet Theme Colors
   static const Color pViolet = Color(0xFF2E1065);
   static const Color tDark = Color(0xFF0F071D);
@@ -69,9 +83,8 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: widget.isDarkMode
-            ? const Color(0xFF1E1B4B)
-            : Colors.white,
+        backgroundColor:
+            widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white,
         title: Text(
           "Confirm Logout",
           style: GoogleFonts.inter(
@@ -129,198 +142,203 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
         : (widget.isDarkMode ? pViolet : const Color(0xFFF1F5F9));
 
     final sidebarTextColor = isSidebarDark ? Colors.white : pViolet;
-    final sidebarSubTextColor = isSidebarDark
-        ? Colors.white60
-        : Colors.blueGrey;
+    final sidebarSubTextColor =
+        isSidebarDark ? Colors.white60 : Colors.blueGrey;
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
     final subTextColor = widget.isDarkMode ? Colors.white70 : Colors.blueGrey;
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: Row(
-        children: [
-          // SIDEBAR
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            // Slightly wider for admin to match the desired layout
-            width: widget.isSidebarExpanded ? 280 : 80,
-            color: sidebarColor,
-            child: Column(
-              children: [
-                const SizedBox(height: 30),
-                // Logo Section
-                Row(
-                  children: [
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: aViolet.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        widget.logoIcon ??
-                            (widget.isAdminPanel
-                                ? LucideIcons.shield
-                                : LucideIcons.graduationCap),
-                        color: aViolet,
-                        size: 24,
-                      ),
-                    ),
-                    if (widget.isSidebarExpanded) ...[
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => SecurityService().resetInactivityTimer(),
+      onPointerMove: (_) => SecurityService().resetInactivityTimer(),
+      onPointerSignal: (_) => SecurityService().resetInactivityTimer(),
+      child: Scaffold(
+        backgroundColor: bgColor,
+        body: Row(
+          children: [
+            // SIDEBAR
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              // Slightly wider for admin to match the desired layout
+              width: widget.isSidebarExpanded ? 280 : 80,
+              color: sidebarColor,
+              child: Column(
+                children: [
+                  const SizedBox(height: 30),
+                  // Logo Section
+                  Row(
+                    children: [
                       const SizedBox(width: 12),
-                      Text(
-                        widget.logoText ??
-                            (widget.isAdminPanel
-                                ? "UEMSSP ADMIN"
-                                : "UEMSSP Portal"),
-                        style: GoogleFonts.orbitron(
-                          color: sidebarTextColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                    const Spacer(),
-                    // Provide a chevron inside the sidebar for admin so the
-                    // collapsed/expanded affordance matches the reference design.
-                    if (widget.isSidebarExpanded && widget.isAdminPanel)
-                      IconButton(
-                        icon: Icon(
-                          LucideIcons.chevronLeft,
-                          color: sidebarSubTextColor,
-                          size: 18,
-                        ),
-                        onPressed: () => widget.onSidebarToggle(false),
-                      ),
-                  ],
-                ),
-                // When collapsed, show a centered expand chevron to match the reference
-                if (!widget.isSidebarExpanded)
-                  Center(
-                    child: IconButton(
-                      icon: Icon(
-                        LucideIcons.chevronRight,
-                        color: sidebarSubTextColor,
-                      ),
-                      onPressed: () => widget.onSidebarToggle(true),
-                    ),
-                  ),
-                const SizedBox(height: 40),
-                // Menu Items
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    children: List.generate(widget.sidebarItems.length, (
-                      index,
-                    ) {
-                      final item = widget.sidebarItems[index];
-                      // Keep sidebar appearance uniform regardless of selection.
-                      bool isDestructive =
-                          item.title.toLowerCase() == 'logout' ||
-                          item.title.toLowerCase() == 'secure logout';
-                      final bool isSelected = widget.selectedIndex == index;
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? aViolet.withOpacity(0.15)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                          border: isSelected
-                              ? Border.all(color: aViolet.withOpacity(0.3))
-                              : null,
+                          color: aViolet.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: ListTile(
-                          onTap: () {
-                            if (isDestructive) {
-                              _handleLogout();
-                            } else {
-                              widget.onMenuItemSelected(index);
-                            }
-                          },
-                          minLeadingWidth: 20,
-                          leading: Icon(
-                            item.icon,
-                            color: isDestructive
-                                ? Colors.redAccent
-                                : (isSelected
+                        child: Icon(
+                          widget.logoIcon ??
+                              (widget.isAdminPanel
+                                  ? LucideIcons.shield
+                                  : LucideIcons.graduationCap),
+                          color: aViolet,
+                          size: 24,
+                        ),
+                      ),
+                      if (widget.isSidebarExpanded) ...[
+                        const SizedBox(width: 12),
+                        Text(
+                          widget.logoText ??
+                              (widget.isAdminPanel
+                                  ? "UEMSSP ADMIN"
+                                  : "UEMSSP Portal"),
+                          style: GoogleFonts.orbitron(
+                            color: sidebarTextColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      // Provide a chevron inside the sidebar for admin so the
+                      // collapsed/expanded affordance matches the reference design.
+                      if (widget.isSidebarExpanded && widget.isAdminPanel)
+                        IconButton(
+                          icon: Icon(
+                            LucideIcons.chevronLeft,
+                            color: sidebarSubTextColor,
+                            size: 18,
+                          ),
+                          onPressed: () => widget.onSidebarToggle(false),
+                        ),
+                    ],
+                  ),
+                  // When collapsed, show a centered expand chevron to match the reference
+                  if (!widget.isSidebarExpanded)
+                    Center(
+                      child: IconButton(
+                        icon: Icon(
+                          LucideIcons.chevronRight,
+                          color: sidebarSubTextColor,
+                        ),
+                        onPressed: () => widget.onSidebarToggle(true),
+                      ),
+                    ),
+                  const SizedBox(height: 40),
+                  // Menu Items
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      children: List.generate(widget.sidebarItems.length, (
+                        index,
+                      ) {
+                        final item = widget.sidebarItems[index];
+                        // Keep sidebar appearance uniform regardless of selection.
+                        bool isDestructive =
+                            item.title.toLowerCase() == 'logout' ||
+                                item.title.toLowerCase() == 'secure logout';
+                        final bool isSelected = widget.selectedIndex == index;
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? aViolet.withOpacity(0.15)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            border: isSelected
+                                ? Border.all(color: aViolet.withOpacity(0.3))
+                                : null,
+                          ),
+                          child: ListTile(
+                            onTap: () {
+                              if (isDestructive) {
+                                _handleLogout();
+                              } else {
+                                widget.onMenuItemSelected(index);
+                              }
+                            },
+                            minLeadingWidth: 20,
+                            leading: Icon(
+                              item.icon,
+                              color: isDestructive
+                                  ? Colors.redAccent
+                                  : (isSelected
                                       ? (isSidebarDark ? Colors.white : pViolet)
                                       : (isSidebarDark
-                                            ? Colors.white54
-                                            : Colors.blueGrey)),
-                            size: 20,
-                          ),
-                          title: widget.isSidebarExpanded
-                              ? Text(
-                                  item.title,
-                                  style: GoogleFonts.inter(
-                                    color: isDestructive
-                                        ? Colors.redAccent
-                                        : (isSelected
-                                              ? (isSidebarDark
-                                                    ? Colors.white
-                                                    : pViolet)
-                                              : (isSidebarDark
-                                                    ? Colors.white60
-                                                    : Colors.blueGrey)),
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.w500,
-                                    fontSize: 14,
-                                  ),
-                                )
-                              : null,
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // MAIN CONTENT AREA
-          Expanded(
-            child: Column(
-              children: [
-                // TOP BAR
-                _buildTopBar(textColor, subTextColor),
-                // PANEL CONTENT
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.panelTitle,
-                          style: GoogleFonts.inter(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            color: textColor,
-                          ),
-                        ),
-                        if (widget.subtitle.isNotEmpty)
-                          Text(
-                            widget.subtitle,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: subTextColor,
-                              fontWeight: FontWeight.w500,
+                                          ? Colors.white54
+                                          : Colors.blueGrey)),
+                              size: 20,
                             ),
+                            title: widget.isSidebarExpanded
+                                ? Text(
+                                    item.title,
+                                    style: GoogleFonts.inter(
+                                      color: isDestructive
+                                          ? Colors.redAccent
+                                          : (isSelected
+                                              ? (isSidebarDark
+                                                  ? Colors.white
+                                                  : pViolet)
+                                              : (isSidebarDark
+                                                  ? Colors.white60
+                                                  : Colors.blueGrey)),
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.w500,
+                                      fontSize: 14,
+                                    ),
+                                  )
+                                : null,
                           ),
-                        const SizedBox(height: 32),
-                        widget.panelContent,
-                      ],
+                        );
+                      }),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+
+            // MAIN CONTENT AREA
+            Expanded(
+              child: Column(
+                children: [
+                  // TOP BAR
+                  _buildTopBar(textColor, subTextColor),
+                  // PANEL CONTENT
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.panelTitle,
+                            style: GoogleFonts.inter(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w900,
+                              color: textColor,
+                            ),
+                          ),
+                          if (widget.subtitle.isNotEmpty)
+                            Text(
+                              widget.subtitle,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: subTextColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          const SizedBox(height: 32),
+                          widget.panelContent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -487,36 +505,7 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
             onPressed: () => widget.themeToggle?.call(),
           ),
 
-<<<<<<< HEAD
           const SizedBox(width: 12),
-=======
-          const SizedBox(width: 24),
-          const VerticalDivider(
-              indent: 20, endIndent: 20, color: Colors.white10),
-          const SizedBox(width: 24),
-
-          // --- IDENTITY BLOCK: USER NAME & ROLE (TOP RIGHT) ---
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                  (fn.isEmpty && ln.isEmpty ? 'Identifying User...' : '$fn $ln')
-                      .toUpperCase(),
-                  style: GoogleFonts.inter(
-                      color: textColor,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 12)),
-              Text(role == 'student' ? "ID: $idNum" : role.toUpperCase(),
-                  style: GoogleFonts.inter(
-                      color: success,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1)),
-            ],
-          ),
-          const SizedBox(width: 16),
->>>>>>> 9639ff007888ce8f3766b8d257130e7753f2c578
           CircleAvatar(
             radius: 18,
             backgroundColor: aViolet,
@@ -623,9 +612,8 @@ class _PanelSearchDialogState extends State<_PanelSearchDialog> {
           color: sideColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: widget.isDarkMode
-                ? Colors.white10
-                : aViolet.withOpacity(0.2),
+            color:
+                widget.isDarkMode ? Colors.white10 : aViolet.withOpacity(0.2),
           ),
         ),
         child: Padding(
@@ -784,8 +772,8 @@ class _SmartSearchDelegate extends SearchDelegate<String?> {
     final suggestions = query.isEmpty
         ? items.take(6).toList()
         : items
-              .where((i) => i.toLowerCase().contains(query.toLowerCase()))
-              .toList();
+            .where((i) => i.toLowerCase().contains(query.toLowerCase()))
+            .toList();
     return ListView(
       children: suggestions.map((s) {
         return ListTile(

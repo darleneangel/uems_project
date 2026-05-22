@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../services/supabase_service.dart';
 import '../components/student_panel_content.dart';
 import '../components/shared/messaging_panel.dart';
+import '../services/security_service.dart';
 
 class StudentDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -43,6 +44,15 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     super.initState();
     _loadStudentDashboardData();
     _checkInstitutionalSecurity();
+    // 1. Start the 2-minute inactivity countdown when the page loads.
+    SecurityService().startInactivityMonitoring(onTimeout: widget.onLogout);
+  }
+
+  @override
+  void dispose() {
+    // 2. Stop the timer when this widget is disposed to prevent memory leaks.
+    SecurityService().stopInactivityMonitoring();
+    super.dispose();
   }
 
   /// 🛰️ DATABASE ENGINE: Forces a fresh sync of scholastic records
@@ -178,30 +188,37 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
     final bgColor = _isDarkMode ? tDark : const Color(0xFFF8FAFC);
     final textColor = _isDarkMode ? Colors.white : primaryViolet;
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: Row(
-        children: [
-          _buildSidebar(textColor),
-          Expanded(
-            child: Column(
-              children: [
-                _buildTopBar(textColor),
-                Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1400),
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: _buildActiveViewport(),
+    // 3. Wrap root widget in a Listener to reset timer on any interaction.
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => SecurityService().resetInactivityTimer(),
+      onPointerMove: (_) => SecurityService().resetInactivityTimer(),
+      onPointerSignal: (_) => SecurityService().resetInactivityTimer(),
+      child: Scaffold(
+        backgroundColor: bgColor,
+        body: Row(
+          children: [
+            _buildSidebar(textColor),
+            Expanded(
+              child: Column(
+                children: [
+                  _buildTopBar(textColor),
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1400),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: _buildActiveViewport(),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

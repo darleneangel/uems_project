@@ -65,8 +65,8 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
     required String tempPassword,
     required String role,
   }) async {
-    const String senderEmail = 'bright.future.academyUEMSSP@gmail.com';
-    const String appPassword = 'jnea wnbk atjg gyqi';
+    const String senderEmail = 'lustredarlene45@gmail.com';
+    const String appPassword = 'xzgk bybb hiqh hrxh';
     final smtpServer = gmail(senderEmail, appPassword);
 
     final message = Message()

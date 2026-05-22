@@ -72,8 +72,8 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
   static const String _paymongoSecretKey = 'sk_test_tHDd4rEX19bAfNmdz9WSC6Tj';
   static const String _successUrl = 'https://pay.paymongo.com/success';
   static const String _cancelUrl = 'https://pay.paymongo.com/cancel';
-  static const String _senderEmail = 'bright.future.academyUEMSSP@gmail.com';
-  static const String _appPassword = 'jnea wnbk atjg gyqi';
+  static const String _senderEmail = 'lustredarlene45@gmail.com';
+  static const String _appPassword = 'xzgk bybb hiqh hrxh';
 
   String get _authHeader =>
       'Basic ${base64Encode(utf8.encode('$_paymongoSecretKey:'))}';

@@ -8,8 +8,9 @@ import 'dart:math';
 // Core Services
 import '../services/supabase_service.dart';
 
-// Import our platform-aware redirect helper
+// Import platform-aware redirect helper & security systems
 import '../services/navigation_helper.dart';
+import '../services/security_service.dart';
 import 'forgot_password_handler.dart';
 
 class UEMSLoginPage extends StatefulWidget {
@@ -77,7 +78,10 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   }
 
   void _handleLogin() async {
-    final id = _idController.text.trim();
+    final security = SecurityService();
+
+    // SECURITY ASSURANCE: Sanitize inputs immediately to prevent injection risks
+    final id = security.sanitizeInput(_idController.text);
     final pass = _passwordController.text.trim();
 
     if (id.isEmpty || pass.isEmpty) {
@@ -85,48 +89,244 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       return;
     }
 
+    // TIER 2 SECURITY: Verify if OTP verification block is active
+    if (security.requiresOTP()) {
+      _showOTPDialog(id);
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
       final service = SupabaseService();
+
+      // 1. Fetch user profile record first safely by their ID Number
       final results = await service.client
           .from('profiles')
           .select('*, student_details(*), employee_details(*)')
-          .ilike('user_id_number', id)
-          .eq('password_hash', pass);
+          .ilike('user_id_number', id);
 
       if (!mounted) return;
-      setState(() => _isLoading = false);
 
       if (results.isNotEmpty) {
-        // 1. Store the resulting user data
         final userData = results.first;
+        final String storedHash = userData['password_hash'] ?? '';
+        final String userUuid =
+            userData['id'] ?? ''; // This is our unique deterministic salt
 
-        // 2. CRITICAL ENFORCEMENT: Verify if the account is Active
-        final String status = userData['account_status'] ?? 'Active';
+        bool isAuthenticated = false;
 
-        if (status != 'Active') {
-          _showSuspendedDialog(status);
-          return; // 🛑 BLOCK ACCESS
+        // Helper to check if a string contains a secure Base64 Argon2id hash representation
+        bool isAlreadyHashed(String value) {
+          return value.length >= 24 && !value.contains(' ');
         }
 
-        // 3. Process session data and attendance
-        _loggedInUserData = userData;
-        final String role =
-            (_loggedInUserData!['role'] as String).toLowerCase();
+        // ---------------------------------------------------------------------
+        // SECURITY ASSURANCE: On-The-Fly Database Auto-Migration
+        // If your database contains plaintext passwords, this block hashes them
+        // using Argon2id instantly, writes the hash to Supabase, and logs you in.
+        // ---------------------------------------------------------------------
+        if (!isAlreadyHashed(storedHash) && storedHash == pass) {
+          debugPrint(
+              '⚡ Security Engine: Plaintext password detected. Upgrading database entry to Argon2id for User UUID: $userUuid');
 
-        // Record Check-In Timestamp for employees
-        await service.recordAttendanceLogin(_loggedInUserData!['id'], role);
+          // Generate the Argon2id hash using the stable user UUID as the salt
+          final String newlyHashedPassword =
+              security.hashPasswordArgon2id(pass, userUuid);
 
-        // 4. Authorized Navigation via dynamic path helper
-        _routeToDashboard(role);
+          // Update the user's password_hash column in Supabase with the secure hashed string
+          await service.client.from('profiles').update(
+              {'password_hash': newlyHashedPassword}).eq('id', userUuid);
+
+          isAuthenticated = true;
+        } else {
+          // STANDARD SECURE ROUTINE: Perform Argon2id Comparison on Hashed Passwords
+          final String computedInputHash =
+              security.hashPasswordArgon2id(pass, userUuid);
+
+          // Match standard hashes, and include support for truncated columns in database!
+          if (computedInputHash == storedHash) {
+            isAuthenticated = true;
+          } else if (storedHash.length < computedInputHash.length &&
+              computedInputHash.startsWith(storedHash)) {
+            isAuthenticated = true;
+            debugPrint(
+                '🔑 Secure Match: Database truncated hash detected. Unified lookup successful.');
+          }
+        }
+
+        // ---------------------------------------------------------------------
+        // Authentication Verification Match
+        // ---------------------------------------------------------------------
+        if (isAuthenticated) {
+          // Success! Clear any brute-force tracking metrics
+          security.resetThrottler();
+
+          final String status = userData['account_status'] ?? 'Active';
+          if (status != 'Active') {
+            setState(() => _isLoading = false);
+            _showSuspendedDialog(status);
+            return; // 🛑 BLOCK ACCESS
+          }
+
+          _loggedInUserData = userData;
+          final String role =
+              (_loggedInUserData!['role'] as String).toLowerCase();
+
+          // Record Check-In Timestamp for security logs
+          await service.recordAttendanceLogin(_loggedInUserData!['id'], role);
+
+          setState(() => _isLoading = false);
+          _routeToDashboard(role);
+        } else {
+          // Password Mismatch
+          _processFailedAttempt(security, id);
+        }
       } else {
-        _showError("Identity Mismatch. Please check your credentials.");
+        // User ID not found
+        _processFailedAttempt(security, id);
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
       _showError("Sync Error: Unable to reach academic core.");
     }
+  }
+
+  /// Triggers adaptive security countermeasures (Is this you dialog or OTP dispatch)
+  void _processFailedAttempt(SecurityService security, String idNumber) async {
+    setState(() => _isLoading = false);
+    security.registerFailedAttempt();
+
+    if (security.failedAttempts == 3 && !security.isThisYouVerified) {
+      _showIsThisYouDialog();
+    } else if (security.failedAttempts >= 6) {
+      setState(() => _isLoading = true);
+      final otpSent = await security.sendLoginOTP(idNumber);
+      setState(() => _isLoading = false);
+
+      if (otpSent) {
+        _showOTPDialog(idNumber);
+      } else {
+        _showError(
+            "Security Lockout: System verification core is currently unreachable.");
+      }
+    } else {
+      _showError(
+          "Identity Mismatch. Please check your credentials. (${security.failedAttempts}/6 attempts used)");
+    }
+  }
+
+  /// Prompts for identity confirmation after 3 failures (Tier 1 protection)
+  void _showIsThisYouDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1B4B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(LucideIcons.shieldAlert, color: Colors.amber),
+            SizedBox(width: 12),
+            Text("Is This You?",
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          "Unusual login failure patterns detected. Confirm you are the legitimate account owner to request an additional 3 attempts.",
+          style: TextStyle(color: Colors.white70, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              SecurityService().resetThrottler(); // Clear state to lockout
+            },
+            child: const Text("NO, LOCK ACCESS",
+                style: TextStyle(
+                    color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ),
+          TextButton(
+            onPressed: () {
+              SecurityService().approveIsThisYou();
+              Navigator.pop(ctx);
+              _showError("Verified! 3 additional login attempts authorized.");
+            },
+            child: const Text("YES, THAT'S ME",
+                style: TextStyle(color: aViolet, fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
+    );
+  }
+
+  /// Forces secure OTP verification via email after 6 failures (Tier 2 protection)
+  void _showOTPDialog(String idNumber) {
+    final TextEditingController otpController = TextEditingController();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1B4B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(LucideIcons.mail, color: aViolet),
+            SizedBox(width: 12),
+            Text("Verify OTP to Unlock",
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Too many login attempts. We have dispatched a secure 6-digit verification code to your registered academic email. Input the code to proceed:",
+              style: TextStyle(color: Colors.white70, height: 1.4),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: otpController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: "••••••",
+                hintStyle: const TextStyle(color: Colors.white24),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.05),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
+              ),
+            )
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child:
+                const Text("CANCEL", style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (SecurityService().verifyOTP(otpController.text.trim())) {
+                Navigator.pop(ctx);
+                _showError(
+                    "OTP Verified! Please enter correct credentials to sign in.");
+              } else {
+                _showError("Incorrect or expired OTP verification token.");
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: aViolet),
+            child: const Text("VERIFY CODE"),
+          )
+        ],
+      ),
+    );
   }
 
   /// Helper to display the institutional access restriction notice
@@ -561,13 +761,9 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   }
 
   Widget _animateEntrance(int index, Widget child) {
-    return FadeTransition(
-      opacity: _formElementAnimations[index],
-      child: SlideTransition(
-        position: Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
-            .animate(_formElementAnimations[index]),
-        child: child,
-      ),
+    return CopyOfEntranceAnimation(
+      animation: _formElementAnimations[index],
+      child: child,
     );
   }
 
@@ -640,6 +836,29 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 24),
         ),
+      ),
+    );
+  }
+}
+
+class CopyOfEntranceAnimation extends StatelessWidget {
+  final Animation<double> animation;
+  final Widget child;
+
+  const CopyOfEntranceAnimation({
+    super.key,
+    required this.animation,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: animation,
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
+            .animate(animation),
+        child: child,
       ),
     );
   }

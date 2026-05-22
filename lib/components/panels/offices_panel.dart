@@ -66,8 +66,8 @@ class _OfficesPanelState extends State<OfficesPanel>
   /// 📧 SMTP ENGINE (Background Task)
   Future<void> _sendBatchTicketEmail(
       String recipientEmail, String hash, List<String> docs) async {
-    const String senderEmail = 'bright.future.academyUEMSSP@gmail.com';
-    const String appPassword = 'jnea wnbk atjg gyqi';
+    const String senderEmail = 'lustredarlene45@gmail.com';
+    const String appPassword = 'xzgk bybb hiqh hrxh';
 
     final smtpServer = gmail(senderEmail, appPassword);
     final String qrUrl =
