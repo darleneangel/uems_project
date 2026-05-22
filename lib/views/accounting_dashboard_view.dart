@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../components/accounting_panels/fee_management_panel.dart';
+import '../components/accounting_panels/payroll_panel.dart';
 import '../components/accounting_panels/financial_reports_panel.dart';
 import '../components/accounting_panels/accounting_overview_panel.dart';
 import '../components/accounting_panels/registration_payment_panel.dart';
@@ -9,6 +10,7 @@ import '../components/shared/messaging_panel.dart';
 import '../components/accounting_panels/tuition_assessment_panel.dart';
 import '../components/shared/staff_profile_portal.dart';
 import '../components/accounting_panels/accounting_payroll_manager_panel.dart';
+import '../services/supabase_service.dart';
 import '../components/accounting_panels/clearance_assessment_terminal_panel.dart';
 import '../components/accounting_panels/student_payment_portal_panel.dart';
 import '../components/accounting_panels/promissory_note_panel.dart';
@@ -228,9 +230,11 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
           padding: const EdgeInsets.only(left: 16, bottom: 10, top: 20),
           child: Text(title,
               style: GoogleFonts.inter(
-                  fontSize: 9,
+                  fontSize: 9, // Keep font size and weight
                   fontWeight: FontWeight.w900,
-                  color: Colors.blueGrey.withOpacity(0.5),
+                  color: _isDarkMode
+                      ? Colors.blueGrey.withOpacity(0.5)
+                      : Colors.black.withOpacity(0.5), // Ensure visibility in light mode
                   letterSpacing: 1.5)))
       : const SizedBox(height: 20);
   Widget _buildLogo(Color textColor) =>

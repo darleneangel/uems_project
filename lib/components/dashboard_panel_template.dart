@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:intl/intl.dart';
-import '../services/supabase_service.dart';
 
 class DashboardPanelTemplate extends StatefulWidget {
   final String panelTitle;
@@ -19,8 +17,6 @@ class DashboardPanelTemplate extends StatefulWidget {
   final VoidCallback? themeToggle;
   final String? logoText;
   final IconData? logoIcon;
-  final Map<String, dynamic>? userData;
-  final List<Map<String, dynamic>> notifications;
 
   const DashboardPanelTemplate({
     super.key,
@@ -38,8 +34,6 @@ class DashboardPanelTemplate extends StatefulWidget {
     this.themeToggle,
     this.logoText,
     this.logoIcon,
-    this.userData,
-    this.notifications = const [],
   });
 
   @override
@@ -47,74 +41,97 @@ class DashboardPanelTemplate extends StatefulWidget {
 }
 
 class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
-  // Institutional Palette
+  // Violet Theme Colors
   static const Color pViolet = Color(0xFF2E1065);
   static const Color tDark = Color(0xFF0F071D);
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color surfaceDark = Color(0xFF1E1033);
-  static const Color success = Color(0xFF69F0AE);
 
-  /// 🛰️ DATABASE: Secure Logout with Attendance Sync
-  /// Connects to Supabase to record check-out for faculty/staff before terminating session.
-  Future<void> _handleLogout() async {
-    final bool? confirm = await showDialog<bool>(
+  // Temporary hardcoded notifications (can be replaced with live data)
+  final List<Map<String, String>> _notifications = [
+    {
+      'title': 'Grades Available',
+      'subtitle': 'Grades for 2nd Semester are now available.',
+      'time': '2h ago',
+    },
+    {
+      'title': 'Advising Schedule',
+      'subtitle': 'Advising is scheduled next week. Check your calendar.',
+      'time': '1d ago',
+    },
+  ];
+
+  // Build searchable labels from the sidebar items so search stays in sync.
+  List<String> get _searchLabels =>
+      widget.sidebarItems.map((e) => e.title).toList();
+
+  void _handleLogout() {
+    showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor:
-            widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text("Secure Logout",
-            style: GoogleFonts.inter(
-                color: widget.isDarkMode ? Colors.white : pViolet,
-                fontWeight: FontWeight.bold)),
-        content: const Text(
-            "Are you sure you want to terminate your active administrative session?"),
+        backgroundColor: widget.isDarkMode
+            ? const Color(0xFF1E1B4B)
+            : Colors.white,
+        title: Text(
+          "Confirm Logout",
+          style: GoogleFonts.inter(
+            color: widget.isDarkMode ? Colors.white : const Color(0xFF2E1065),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          "Are you sure you want to log out?",
+          style: GoogleFonts.inter(
+            color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+          ),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("CANCEL",
-                  style: TextStyle(color: Colors.blueGrey))),
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              "No",
+              style: GoogleFonts.inter(
+                color: widget.isDarkMode ? Colors.white54 : Colors.grey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onLogout();
+            },
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white),
-            child: const Text("LOGOUT"),
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              "Yes",
+              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
     );
-
-    if (confirm == true) {
-      // 1. Attendance Sync (Non-students)
-      final String role =
-          (widget.userData?['role'] ?? '').toString().toLowerCase();
-      final String? userId = widget.userData?['id']?.toString();
-
-      if (role != 'student' && userId != null) {
-        try {
-          await SupabaseService().recordAttendanceLogout(userId);
-        } catch (e) {
-          debugPrint("Logout Attendance Sync Failed: $e");
-        }
-      }
-
-      // 2. Trigger parent logout
-      widget.onLogout();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final bgColor = widget.isDarkMode ? tDark : const Color(0xFFF8FAFC);
+
+    // Sidebar is dark if it's an admin panel OR if dark mode is enabled.
     final bool isSidebarDark = widget.isAdminPanel || widget.isDarkMode;
     final sidebarColor = widget.isAdminPanel
         ? pViolet
         : (widget.isDarkMode ? pViolet : const Color(0xFFF1F5F9));
 
     final sidebarTextColor = isSidebarDark ? Colors.white : pViolet;
-    final sidebarSubTextColor =
-        isSidebarDark ? Colors.white60 : Colors.blueGrey;
+    final sidebarSubTextColor = isSidebarDark
+        ? Colors.white60
+        : Colors.blueGrey;
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
     final subTextColor = widget.isDarkMode ? Colors.white70 : Colors.blueGrey;
 
@@ -122,22 +139,25 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
       backgroundColor: bgColor,
       body: Row(
         children: [
-          // --- SIDEBAR NAVIGATION ---
+          // SIDEBAR
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
+            // Slightly wider for admin to match the desired layout
             width: widget.isSidebarExpanded ? 280 : 80,
             color: sidebarColor,
             child: Column(
               children: [
                 const SizedBox(height: 30),
+                // Logo Section
                 Row(
                   children: [
                     const SizedBox(width: 12),
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                          color: aViolet.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(10)),
+                        color: aViolet.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       child: Icon(
                         widget.logoIcon ??
                             (widget.isAdminPanel
@@ -149,39 +169,57 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                     ),
                     if (widget.isSidebarExpanded) ...[
                       const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                            widget.logoText ??
-                                (widget.isAdminPanel
-                                    ? "ADMIN CORE"
-                                    : "UEMSSP PORTAL"),
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.orbitron(
-                                color: sidebarTextColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16)),
+                      Text(
+                        widget.logoText ??
+                            (widget.isAdminPanel
+                                ? "UEMSSP ADMIN"
+                                : "UEMSSP Portal"),
+                        style: GoogleFonts.orbitron(
+                          color: sidebarTextColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ],
+                    const Spacer(),
+                    // Provide a chevron inside the sidebar for admin so the
+                    // collapsed/expanded affordance matches the reference design.
+                    if (widget.isSidebarExpanded && widget.isAdminPanel)
+                      IconButton(
+                        icon: Icon(
+                          LucideIcons.chevronLeft,
+                          color: sidebarSubTextColor,
+                          size: 18,
+                        ),
+                        onPressed: () => widget.onSidebarToggle(false),
+                      ),
                   ],
                 ),
+                // When collapsed, show a centered expand chevron to match the reference
                 if (!widget.isSidebarExpanded)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 20),
+                  Center(
                     child: IconButton(
-                        icon: Icon(LucideIcons.chevronRight,
-                            color: sidebarSubTextColor, size: 20),
-                        onPressed: () => widget.onSidebarToggle(true)),
+                      icon: Icon(
+                        LucideIcons.chevronRight,
+                        color: sidebarSubTextColor,
+                      ),
+                      onPressed: () => widget.onSidebarToggle(true),
+                    ),
                   ),
                 const SizedBox(height: 40),
+                // Menu Items
                 Expanded(
-                  child: ListView.builder(
+                  child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: widget.sidebarItems.length,
-                    itemBuilder: (context, index) {
+                    children: List.generate(widget.sidebarItems.length, (
+                      index,
+                    ) {
                       final item = widget.sidebarItems[index];
+                      // Keep sidebar appearance uniform regardless of selection.
+                      bool isDestructive =
+                          item.title.toLowerCase() == 'logout' ||
+                          item.title.toLowerCase() == 'secure logout';
                       final bool isSelected = widget.selectedIndex == index;
-                      final bool isDestructive =
-                          item.title.toLowerCase().contains('logout');
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
@@ -190,66 +228,89 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
                               ? aViolet.withOpacity(0.15)
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
+                          border: isSelected
+                              ? Border.all(color: aViolet.withOpacity(0.3))
+                              : null,
                         ),
                         child: ListTile(
-                          onTap: () => isDestructive
-                              ? _handleLogout()
-                              : widget.onMenuItemSelected(index),
+                          onTap: () {
+                            if (isDestructive) {
+                              _handleLogout();
+                            } else {
+                              widget.onMenuItemSelected(index);
+                            }
+                          },
                           minLeadingWidth: 20,
-                          leading: Icon(item.icon,
-                              color: isDestructive
-                                  ? Colors.redAccent
-                                  : (isSelected
+                          leading: Icon(
+                            item.icon,
+                            color: isDestructive
+                                ? Colors.redAccent
+                                : (isSelected
                                       ? (isSidebarDark ? Colors.white : pViolet)
-                                      : sidebarSubTextColor),
-                              size: 20),
+                                      : (isSidebarDark
+                                            ? Colors.white54
+                                            : Colors.blueGrey)),
+                            size: 20,
+                          ),
                           title: widget.isSidebarExpanded
-                              ? Text(item.title,
+                              ? Text(
+                                  item.title,
                                   style: GoogleFonts.inter(
-                                      color: isDestructive
-                                          ? Colors.redAccent
-                                          : (isSelected
+                                    color: isDestructive
+                                        ? Colors.redAccent
+                                        : (isSelected
                                               ? (isSidebarDark
-                                                  ? Colors.white
-                                                  : pViolet)
-                                              : sidebarSubTextColor),
-                                      fontWeight: isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.w500,
-                                      fontSize: 14))
+                                                    ? Colors.white
+                                                    : pViolet)
+                                              : (isSidebarDark
+                                                    ? Colors.white60
+                                                    : Colors.blueGrey)),
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                    fontSize: 14,
+                                  ),
+                                )
                               : null,
                         ),
                       );
-                    },
+                    }),
                   ),
                 ),
               ],
             ),
           ),
 
-          // --- MAIN SYSTEM VIEWPORT ---
+          // MAIN CONTENT AREA
           Expanded(
             child: Column(
               children: [
+                // TOP BAR
                 _buildTopBar(textColor, subTextColor),
+                // PANEL CONTENT
                 Expanded(
                   child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.all(32),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(widget.panelTitle,
-                            style: GoogleFonts.inter(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w900,
-                                color: textColor)),
+                        Text(
+                          widget.panelTitle,
+                          style: GoogleFonts.inter(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            color: textColor,
+                          ),
+                        ),
                         if (widget.subtitle.isNotEmpty)
-                          Text(widget.subtitle,
-                              style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: subTextColor,
-                                  fontWeight: FontWeight.w500)),
+                          Text(
+                            widget.subtitle,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: subTextColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         const SizedBox(height: 32),
                         widget.panelContent,
                       ],
@@ -265,237 +326,181 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
   }
 
   Widget _buildTopBar(Color textColor, Color subTextColor) {
-    // 🛰️ DYNAMIC IDENTITY RESOLUTION: Robust extraction logic matching Supabase profiles
-    final String fn =
-        (widget.userData?['fn'] ?? widget.userData?['first_name'] ?? '')
-            .toString();
-    final String ln =
-        (widget.userData?['ln'] ?? widget.userData?['last_name'] ?? '')
-            .toString();
-    final String role =
-        (widget.userData?['role'] ?? 'Identity Pending').toString();
-    final String idNum =
-        (widget.userData?['user_id_number'] ?? 'N/A').toString();
-
-    // Automatic initials calculation for the avatar
-    String initials = "U";
-    if (fn.isNotEmpty && ln.isNotEmpty) {
-      initials = "${fn[0]}${ln[0]}".toUpperCase();
-    } else if (fn.isNotEmpty) {
-      initials = fn[0].toUpperCase();
-    }
-
     return Container(
-      height: 75,
+      height: 70,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       decoration: BoxDecoration(
         color: widget.isDarkMode ? tDark : Colors.white,
         border: Border(
-            bottom: BorderSide(
-                color: widget.isDarkMode ? Colors.white10 : Colors.black12)),
+          bottom: BorderSide(
+            color: widget.isDarkMode ? Colors.white10 : Colors.black12,
+          ),
+        ),
       ),
       child: Row(
         children: [
           IconButton(
             icon: Icon(
-                widget.isSidebarExpanded
-                    ? LucideIcons.menu
-                    : LucideIcons.chevronRight,
-                color: textColor,
-                size: 20),
+              widget.isSidebarExpanded
+                  ? LucideIcons.menu
+                  : LucideIcons.chevronRight,
+              color: textColor,
+            ),
             onPressed: () => widget.onSidebarToggle(!widget.isSidebarExpanded),
           ),
           const SizedBox(width: 12),
-          Text(
-              widget.isAdminPanel
-                  ? "Command Intelligence Hub"
-                  : "Student Identity Terminal",
+          Expanded(
+            child: Text(
+              widget.panelTitle,
               style: GoogleFonts.inter(
-                  color: subTextColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600)),
+                color: subTextColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
           const Spacer(),
 
-          // --- NOTIFICATIONS (FETCHED FROM ANNOUNCEMENTS LEDGER) ---
-          _buildNotificationButton(subTextColor),
-
-          const SizedBox(width: 12),
+          // Search button (smart search using sidebar labels)
           IconButton(
-            icon: Icon(widget.isDarkMode ? LucideIcons.sun : LucideIcons.moon,
-                color: subTextColor, size: 18),
+            icon: Icon(LucideIcons.search, color: subTextColor),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => _PanelSearchDialog(
+                  items: widget.sidebarItems,
+                  isDarkMode: widget.isDarkMode,
+                  onItemSelected: (index) {
+                    Navigator.pop(context);
+                    widget.onMenuItemSelected(index);
+                  },
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(width: 8),
+
+          // Notifications (opens a bottom sheet with actions)
+          IconButton(
+            icon: Icon(LucideIcons.bell, color: subTextColor, size: 20),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: widget.isDarkMode ? tDark : Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                ),
+                builder: (ctx) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Notifications',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: widget.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(LucideIcons.x),
+                                onPressed: () => Navigator.of(ctx).pop(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(),
+                        ..._notifications.map((n) {
+                          return ListTile(
+                            leading: const Icon(
+                              LucideIcons.megaphone,
+                              size: 20,
+                              color: Colors.deepPurpleAccent,
+                            ),
+                            title: Text(
+                              n['title']!,
+                              style: GoogleFonts.inter(
+                                color: widget.isDarkMode
+                                    ? Colors.white
+                                    : Colors.black,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              n['subtitle']!,
+                              style: GoogleFonts.inter(
+                                color: widget.isDarkMode
+                                    ? Colors.white70
+                                    : Colors.black54,
+                              ),
+                            ),
+                            trailing: Text(
+                              n['time']!,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: widget.isDarkMode
+                                    ? Colors.white54
+                                    : Colors.black45,
+                              ),
+                            ),
+                            onTap: () {
+                              Navigator.of(ctx).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '${n['title']}: ${n['subtitle']}',
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+
+          // Theme toggle button
+          IconButton(
+            icon: Icon(
+              widget.isDarkMode ? LucideIcons.sun : LucideIcons.moon,
+              color: subTextColor,
+              size: 20,
+            ),
             onPressed: () => widget.themeToggle?.call(),
           ),
 
-          const SizedBox(width: 24),
-          const VerticalDivider(
-              indent: 20, endIndent: 20, color: Colors.white10),
-          const SizedBox(width: 24),
-
-          // --- IDENTITY BLOCK: USER NAME & ROLE (TOP RIGHT) ---
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                  "${fn.isEmpty && ln.isEmpty ? 'Identifying User...' : '$fn $ln'}"
-                      .toUpperCase(),
-                  style: GoogleFonts.inter(
-                      color: textColor,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 12)),
-              Text(role == 'student' ? "ID: $idNum" : role.toUpperCase(),
-                  style: GoogleFonts.inter(
-                      color: success,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1)),
-            ],
-          ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           CircleAvatar(
             radius: 18,
             backgroundColor: aViolet,
-            child: Text(initials,
-                style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12)),
+            child: Text(
+              "DA",
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildNotificationButton(Color color) {
-    return Stack(
-      children: [
-        IconButton(
-          icon: Icon(LucideIcons.bell, color: color, size: 20),
-          onPressed: () => _showNotificationSheet(),
-        ),
-        if (widget.notifications.isNotEmpty)
-          Positioned(
-            right: 10,
-            top: 10,
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                  color: Colors.redAccent,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: widget.isDarkMode ? tDark : Colors.white,
-                      width: 1.5)),
-            ),
-          ),
-      ],
-    );
-  }
-
-  void _showNotificationSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: widget.isDarkMode ? tDark : Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Institutional Notices',
-                      style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: widget.isDarkMode ? Colors.white : pViolet)),
-                  IconButton(
-                      icon: const Icon(LucideIcons.x, size: 20),
-                      onPressed: () => Navigator.pop(ctx)),
-                ],
-              ),
-            ),
-            const Divider(height: 32, color: Colors.white10),
-            if (widget.notifications.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(60),
-                child: Column(
-                  children: [
-                    Icon(LucideIcons.megaphone,
-                        color: Colors.blueGrey.withOpacity(0.2), size: 48),
-                    const SizedBox(height: 16),
-                    const Text("No active institutional notices found.",
-                        style: TextStyle(
-                            color: Colors.blueGrey,
-                            fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              )
-            else
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: widget.notifications.length,
-                  separatorBuilder: (_, __) => const Divider(
-                      color: Colors.white10, indent: 24, endIndent: 24),
-                  itemBuilder: (context, i) {
-                    final n = widget.notifications[i];
-                    String dateStr = "Recent";
-                    if (n['created_at'] != null) {
-                      try {
-                        DateTime parsed =
-                            DateTime.parse(n['created_at'].toString());
-                        dateStr = DateFormat('MMM dd, hh:mm a')
-                            .format(parsed.toLocal());
-                      } catch (e) {
-                        dateStr = "Today";
-                      }
-                    }
-
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 8),
-                      leading: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                              color: aViolet.withOpacity(0.1),
-                              shape: BoxShape.circle),
-                          child: const Icon(LucideIcons.megaphone,
-                              color: aViolet, size: 18)),
-                      title: Text(n['title'] ?? 'System Notice',
-                          style: TextStyle(
-                              color: widget.isDarkMode ? Colors.white : pViolet,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14)),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          Text(n['content'] ?? '',
-                              style: const TextStyle(
-                                  color: Colors.blueGrey,
-                                  fontSize: 12,
-                                  height: 1.4),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 8),
-                          Text(dateStr,
-                              style: TextStyle(
-                                  color: aViolet.withOpacity(0.6),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }
@@ -504,5 +509,269 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
 class PanelMenuItem {
   final String title;
   final IconData icon;
-  const PanelMenuItem({required this.title, required this.icon});
+
+  PanelMenuItem({required this.title, required this.icon});
+}
+
+/// Panel Search Dialog - matches the admin dashboard search dialog style
+class _PanelSearchDialog extends StatefulWidget {
+  final List<PanelMenuItem> items;
+  final bool isDarkMode;
+  final Function(int) onItemSelected;
+
+  const _PanelSearchDialog({
+    required this.items,
+    required this.isDarkMode,
+    required this.onItemSelected,
+  });
+
+  @override
+  State<_PanelSearchDialog> createState() => _PanelSearchDialogState();
+}
+
+class _PanelSearchDialogState extends State<_PanelSearchDialog> {
+  late TextEditingController _searchController;
+  late List<MapEntry<int, PanelMenuItem>> _filteredItems;
+
+  final List<MapEntry<int, PanelMenuItem>> _allItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+
+    // Build all items excluding logout items
+    for (int i = 0; i < widget.items.length; i++) {
+      final item = widget.items[i];
+      if (item.title.isNotEmpty &&
+          item.title.toLowerCase() != 'logout' &&
+          item.title.toLowerCase() != 'secure logout') {
+        _allItems.add(MapEntry(i, item));
+      }
+    }
+
+    _filteredItems = _allItems;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterItems(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredItems = _allItems;
+      } else {
+        _filteredItems = _allItems
+            .where(
+              (item) =>
+                  item.value.title.toLowerCase().contains(query.toLowerCase()),
+            )
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const Color aViolet = Color(0xFF8B5CF6);
+    const Color surfaceDark = Color(0xFF1E1033);
+    const Color tDark = Color(0xFF0F071D);
+    const Color lBg = Color(0xFFF8FAFC);
+    const Color pViolet = Color(0xFF2E1065);
+
+    final bgColor = widget.isDarkMode ? tDark : lBg;
+    final sideColor = widget.isDarkMode ? surfaceDark : const Color(0xFFEDE9FE);
+    final textColor = widget.isDarkMode ? Colors.white : pViolet;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: 500,
+        decoration: BoxDecoration(
+          color: sideColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: widget.isDarkMode
+                ? Colors.white10
+                : aViolet.withOpacity(0.2),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Search Menu Items',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _searchController,
+                onChanged: _filterItems,
+                decoration: InputDecoration(
+                  hintText: 'Type to search...',
+                  prefixIcon: const Icon(LucideIcons.search, color: aViolet),
+                  filled: true,
+                  fillColor: widget.isDarkMode
+                      ? Colors.white.withOpacity(0.05)
+                      : pViolet.withOpacity(0.08),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: widget.isDarkMode
+                          ? Colors.white10
+                          : aViolet.withOpacity(0.3),
+                    ),
+                  ),
+                  hintStyle: GoogleFonts.inter(
+                    color: widget.isDarkMode ? Colors.blueGrey : aViolet,
+                  ),
+                ),
+                style: GoogleFonts.inter(color: textColor),
+              ),
+              const SizedBox(height: 20),
+              Flexible(
+                child: _filteredItems.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No items found',
+                          style: GoogleFonts.inter(color: Colors.blueGrey),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _filteredItems.length,
+                        itemBuilder: (context, index) {
+                          final item = _filteredItems[index];
+                          return ListTile(
+                            title: Text(
+                              item.value.title,
+                              style: GoogleFonts.inter(
+                                color: textColor,
+                                fontSize: 14,
+                              ),
+                            ),
+                            onTap: () {
+                              widget.onItemSelected(item.key);
+                            },
+                            hoverColor: widget.isDarkMode
+                                ? Colors.white10
+                                : aViolet.withOpacity(0.1),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Simple SearchDelegate that returns the selected suggestion string.
+class _SmartSearchDelegate extends SearchDelegate<String?> {
+  final List<String> items;
+  _SmartSearchDelegate(this.items);
+
+  static const Color pViolet = Color(0xFF2E1065);
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color tDark = Color(0xFF0F071D);
+  static const Color lBg = Color(0xFFF8FAFC);
+
+  @override
+  String get searchFieldLabel => 'Search across portal';
+
+  @override
+  TextStyle? get searchFieldStyle => const TextStyle();
+
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    return Theme.of(context).copyWith(
+      appBarTheme: const AppBarTheme(backgroundColor: pViolet, elevation: 0),
+      inputDecorationTheme: InputDecorationTheme(
+        border: InputBorder.none,
+        hintStyle: GoogleFonts.inter(color: Colors.white70),
+      ),
+      scaffoldBackgroundColor: lBg,
+      textTheme: TextTheme(bodyMedium: GoogleFonts.inter(color: pViolet)),
+    );
+  }
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      if (query.isNotEmpty)
+        IconButton(
+          icon: const Icon(LucideIcons.x, color: Colors.white),
+          onPressed: () => query = '',
+        ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(LucideIcons.chevronLeft, color: Colors.white),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    final results = items
+        .where((i) => i.toLowerCase().contains(query.toLowerCase()))
+        .toList();
+    return ListView(
+      children: results.map((r) {
+        return ListTile(
+          title: Text(
+            r,
+            style: GoogleFonts.inter(
+              color: pViolet,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          onTap: () => close(context, r),
+          hoverColor: aViolet.withOpacity(0.1),
+        );
+      }).toList(),
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    final suggestions = query.isEmpty
+        ? items.take(6).toList()
+        : items
+              .where((i) => i.toLowerCase().contains(query.toLowerCase()))
+              .toList();
+    return ListView(
+      children: suggestions.map((s) {
+        return ListTile(
+          leading: const Icon(LucideIcons.search, color: aViolet, size: 18),
+          title: Text(
+            s,
+            style: GoogleFonts.inter(
+              color: pViolet,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          onTap: () => close(context, s),
+          hoverColor: aViolet.withOpacity(0.1),
+        );
+      }).toList(),
+    );
+  }
 }

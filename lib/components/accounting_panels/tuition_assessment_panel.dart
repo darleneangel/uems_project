@@ -257,7 +257,7 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
         // LEFT: ASSESSMENT QUEUE
         Container(
           width: 340,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
               border: Border(right: BorderSide(color: Colors.white10))),
           child: _buildQueue(textColor, cardColor),
         ),
@@ -303,14 +303,12 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
                       value: isBatchSelected,
                       onChanged: (val) {
                         setState(() {
-                          if (val!) {
+                          if (val!)
                             _selectedQueueIds.add(s['profile_id']);
-                          } else {
+                          else
                             _selectedQueueIds.remove(s['profile_id']);
-                          }
-                          if (_selectedQueueIds.isNotEmpty) {
+                          if (_selectedQueueIds.isNotEmpty)
                             _activeStudent = null;
-                          }
                         });
                       },
                       selected: isSelected,
@@ -426,9 +424,9 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
   Widget _templateMenu(Color text) {
     return PopupMenuButton<String>(
       onSelected: (val) {
-        if (val == 'save') {
+        if (val == 'save')
           _saveCurrentAsTemplate();
-        } else {
+        else {
           final t = _savedTemplates.firstWhere((e) => e['name'] == val);
           _applyTemplate(t);
         }
@@ -564,8 +562,8 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
       keyboardType: TextInputType.number,
       onChanged: (v) => setState(() {}),
       style: TextStyle(
-          color: Colors.white,
-          fontSize: isSmall ? 11 : 14,
+          fontSize: isSmall ? 11 : 14, // Keep font size
+          color: widget.isDarkMode ? Colors.white : Colors.black,
           fontWeight: FontWeight.bold),
       decoration: InputDecoration(
         labelText: label,
@@ -641,7 +639,9 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(LucideIcons.receipt, size: 80, color: text.withOpacity(0.05)),
+            Icon(LucideIcons.receipt, // Ensure visibility in light mode
+                size: 80,
+                color: widget.isDarkMode ? text.withOpacity(0.05) : Colors.black.withOpacity(0.05)),
             const SizedBox(height: 16),
             const Text("Select students from the queue to generate billing.",
                 style: TextStyle(color: Colors.blueGrey)),

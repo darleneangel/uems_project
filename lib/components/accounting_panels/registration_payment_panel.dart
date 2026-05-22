@@ -562,6 +562,7 @@ class _RegistrationPaymentPanelState extends State<RegistrationPaymentPanel> {
                                   label: const Text("ONLINE"),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF8B5CF6),
+                                    foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 16, vertical: 18),
                                     shape: RoundedRectangleBorder(
@@ -584,7 +585,12 @@ class _RegistrationPaymentPanelState extends State<RegistrationPaymentPanel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(LucideIcons.inbox, size: 48, color: t.withOpacity(0.1)),
+            Icon(LucideIcons.inbox,
+                size: 48,
+                color: widget.isDarkMode
+                    ? t.withOpacity(0.1)
+                    : Colors.black
+                        .withOpacity(0.1)), // Ensure visibility in light mode
             const SizedBox(height: 16),
             const Text("All registration fees processed.",
                 style: TextStyle(color: Colors.blueGrey)),

@@ -33,7 +33,7 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
   List<Map<String, dynamic>> _recentTransactions = [];
 
   static const Color aViolet = Color(0xFF8B5CF6);
-  static const Color success = Color(0xFF69F0AE);
+  static const Color success = Color.fromARGB(255, 9, 70, 41);
   static const Color surfaceDark = Color(0xFF0F071D);
 
   @override
@@ -163,6 +163,7 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
           label: const Text("SYNC DATA"),
           style: ElevatedButton.styleFrom(
               backgroundColor: aViolet,
+              foregroundColor: Colors.white,
               padding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 15)),
         )
@@ -352,7 +353,9 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
                           Text(
                               "${tx['profiles']['fn']} ${tx['profiles']['ln']}",
                               style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13)),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: Colors.white)),
                           Text(
                               DateFormat('MMMM dd')
                                   .format(DateTime.parse(tx['created_at'])),
@@ -363,7 +366,9 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
                     ),
                     Text("₱${tx['amount']}",
                         style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w900, fontSize: 13)),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13,
+                            color: Colors.white)),
                   ],
                 );
               },
@@ -414,7 +419,8 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
             child: ElevatedButton(
               onPressed: widget.onNavigateToFeeManagement,
               style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white12, foregroundColor: textColor),
+                  backgroundColor: const Color.fromARGB(31, 91, 22, 105),
+                  foregroundColor: Colors.white),
               child: const Text("OPEN CLEARANCE MODULE"),
             ),
           )

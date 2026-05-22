@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_file/open_file.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:intl/intl.dart';
@@ -143,7 +143,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
         int whole = amount.toInt();
         int cents = ((amount - whole) * 100).toInt();
         _amountWordsController.text =
-            "${whole.toString()} Pesos and $cents/100 Only";
+            "${whole.toString()} Pesos and $cents Only";
       } catch (e) {
         _amountWordsController.text = '';
       }
@@ -419,6 +419,7 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
               onPressed: _fetchStudentForNote,
               style: ElevatedButton.styleFrom(
                   backgroundColor: aViolet,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12))),
               child: const Text("FETCH IDENTITY")),
@@ -568,7 +569,8 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
           readOnly: readOnly,
           maxLines: maxLines,
           onChanged: onChanged,
-          style: TextStyle( // Ensure text is visible in both modes
+          style: TextStyle(
+              // Ensure text is visible in both modes
               color: widget.isDarkMode ? Colors.white : Colors.black,
               fontSize: 14),
           decoration: InputDecoration(
@@ -620,7 +622,10 @@ class _PromissoryNotePanelState extends State<PromissoryNotePanel> {
                       ? "Select Date"
                       : DateFormat('MM/dd/yyyy').format(value),
                   style: TextStyle(
-                      color: widget.isDarkMode ? Colors.white : Colors.black)) // Ensure text is visible in both modes
+                      color: widget.isDarkMode
+                          ? Colors.white
+                          : Colors
+                              .black)) // Ensure text is visible in both modes
             ]),
           ),
         ],

@@ -173,7 +173,8 @@ class _AccountingPayrollManagerState extends State<AccountingPayrollManager> {
                   double.tryParse(lateController.text) ?? 0,
                 );
               },
-              style: ElevatedButton.styleFrom(backgroundColor: aViolet),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: aViolet, foregroundColor: Colors.white),
               child: const Text("GENERATE RECEIPT"),
             )
           ],
@@ -495,7 +496,7 @@ class _AccountingPayrollManagerState extends State<AccountingPayrollManager> {
                   Expanded(
                       child: Text(
                           "₱${NumberFormat('#,###').format(d?['base_salary'] ?? 0)}",
-                          style: GoogleFonts.orbitron(
+                          style: GoogleFonts.inter(
                               fontSize: 12,
                               color: success,
                               fontWeight: FontWeight.bold))),

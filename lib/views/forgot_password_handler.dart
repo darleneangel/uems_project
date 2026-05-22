@@ -220,7 +220,8 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
             child: const Text("CANCEL")),
         ElevatedButton(
           onPressed: _isLoading ? null : _handleStepAction,
-          style: ElevatedButton.styleFrom(backgroundColor: aViolet),
+          style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromARGB(255, 21, 14, 37)),
           child: Text(_currentStep == 2 ? "RESET PASSWORD" : "CONTINUE"),
         ),
       ],

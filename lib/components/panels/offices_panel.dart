@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -74,7 +75,7 @@ class _OfficesPanelState extends State<OfficesPanel>
     final String docListHtml = docs.map((d) => "<li>$d</li>").join("");
 
     final message = Message()
-      ..from = const Address(senderEmail, 'SSCR Registrar Office')
+      ..from = const Address(senderEmail, 'Bright Future Academy')
       ..recipients.add(recipientEmail)
       ..subject = 'UEMS Claim Ticket: ${docs.length} Documents'
       ..html = """
@@ -254,10 +255,7 @@ class _OfficesPanelState extends State<OfficesPanel>
         // FIX: Replaced Expanded with ConstrainedBox.
         // Dashboard SingleChildScrollView + Expanded = Unbounded height crash.
         ConstrainedBox(
-          constraints: BoxConstraints(
-            minHeight: 400,
-            maxHeight: MediaQuery.of(context).size.height * 0.7, // Responsive max height
-          ),
+          constraints: const BoxConstraints(minHeight: 500, maxHeight: 800),
           child: TabBarView(
             controller: _tabController,
             children: [
@@ -278,26 +276,18 @@ class _OfficesPanelState extends State<OfficesPanel>
         ),
         child: TabBar(
           controller: _tabController,
-
-          // ✅ makes indicator fill entire tab
           indicatorSize: TabBarIndicatorSize.tab,
-
-          // ✅ remove spacing so it fills properly
           indicatorPadding: EdgeInsets.zero,
-
           indicator: BoxDecoration(
             color: aViolet,
             borderRadius: BorderRadius.circular(10),
           ),
-
           labelColor: Colors.white,
           unselectedLabelColor: t.withOpacity(0.4),
-
           labelStyle: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
             fontSize: 12,
           ),
-
           tabs: const [
             Tab(text: "SELECT DOCUMENTS"),
             Tab(text: "TICKET TRACKING"),
@@ -312,43 +302,40 @@ class _OfficesPanelState extends State<OfficesPanel>
           color: bg,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: Colors.white10)),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _label("Institutional Document Catalog"),
-            const SizedBox(height: 16),
-            Container(
-              height: 200,
-              child: ListView.builder(
-                itemCount: _catalog.length,
-                itemBuilder: (context, i) {
-                  final item = _catalog[i];
-                  bool isSelected = _selectedDocs.contains(item['name']);
-                  return CheckboxListTile(
-                    title: Text(item['name'],
-                        style: TextStyle(
-                            color: text,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14)),
-                    subtitle: Text("₱${item['price']}",
-                        style: const TextStyle(color: aViolet, fontSize: 12)),
-                    value: isSelected,
-                    activeColor: aViolet,
-                    onChanged: (val) {
-                      setState(() {
-                        if (val!) {
-                          _selectedDocs.add(item['name']);
-                        } else {
-                          _selectedDocs.remove(item['name']);
-                        }
-                      });
-                    },
-                  );
-                },
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _label("Institutional Document Catalog"),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _catalog.length,
+              itemBuilder: (context, i) {
+                final item = _catalog[i];
+                bool isSelected = _selectedDocs.contains(item['name']);
+                return CheckboxListTile(
+                  title: Text(item['name'],
+                      style: TextStyle(
+                          color: text,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14)),
+                  subtitle: Text("₱${item['price']}",
+                      style: const TextStyle(color: aViolet, fontSize: 12)),
+                  value: isSelected,
+                  activeColor: aViolet,
+                  onChanged: (val) {
+                    setState(() {
+                      if (val!) {
+                        _selectedDocs.add(item['name']);
+                      } else {
+                        _selectedDocs.remove(item['name']);
+                      }
+                    });
+                  },
+                );
+              },
             ),
+          ),
           const Divider(height: 32, color: Colors.white10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -401,16 +388,13 @@ class _OfficesPanelState extends State<OfficesPanel>
           ),
         ],
       ),
-    ),  // SingleChildScrollView
-  );  // Container
+    );
   }
 
   Widget _buildHistoryQueue(Color bg, Color text) {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: SupabaseService().client
-          .from('office_requests')
-          .stream(primaryKey: ['id'])
-          .eq('student_id', widget.studentData['id']),
+      stream: SupabaseService().client.from('office_requests').stream(
+          primaryKey: ['id']).eq('student_id', widget.studentData['id']),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: aViolet));

@@ -10,7 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_file/open_file.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 import '../../services/supabase_service.dart';
@@ -64,7 +64,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
   List<Map<String, dynamic>> _ledgerEntries = [];
 
   static const Color aViolet = Color(0xFF8B5CF6);
-  static const Color success = Color(0xFF69F0AE);
+  static const Color success = Color.fromARGB(255, 10, 85, 7);
   static const Color surfaceDark = Color(0xFF0F071D);
   // ==========================================
   // 🔑 API & SMTP CONFIGURATION
@@ -321,7 +321,8 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                             ? pw.FontWeight.bold
                             : pw.FontWeight.normal)),
                 pw.Text(
-                    NumberFormat('#,###.00').format(double.tryParse(val.toString()) ?? 0.0),
+                    NumberFormat('#,###.00')
+                        .format(double.tryParse(val.toString()) ?? 0.0),
                     style: pw.TextStyle(
                         fontSize: 10,
                         fontWeight: isBold
@@ -1019,7 +1020,8 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                     border: InputBorder.none))),
         ElevatedButton(
             onPressed: _fetchStudentLedger,
-            style: ElevatedButton.styleFrom(backgroundColor: aViolet),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: aViolet, foregroundColor: Colors.white),
             child: const Text("PULL ACCOUNT")),
       ]));
 
@@ -1110,7 +1112,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                             style: const TextStyle(fontSize: 11)),
                         trailing: Text(
                             "₱${NumberFormat('#,###.00').format(amt)}",
-                            style: GoogleFonts.orbitron(
+                            style: GoogleFonts.inter(
                                 color: success,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold)));
@@ -1170,7 +1172,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                 controller: _cashReceivedController,
                 keyboardType: TextInputType.number,
                 style: const TextStyle(
-                    color: success, fontWeight: FontWeight.bold, fontSize: 20),
+                    color: success, fontWeight: FontWeight.bold, fontSize: 15),
                 decoration: _fieldStyle("Enter Amount Received", prefix: "₱ "))
           ],
         ] else ...[
@@ -1297,7 +1299,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
             Text(l,
                 style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
             Text(customLabel ?? "₱${NumberFormat('#,###.00').format(v)}",
-                style: GoogleFonts.orbitron(
+                style: GoogleFonts.inter(
                     color: c,
                     fontSize: isTotal ? 16 : 12,
                     fontWeight: FontWeight.bold))
@@ -1308,7 +1310,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
       decoration: BoxDecoration(
           color: b > 0
               ? Colors.redAccent.withOpacity(0.1)
-              : success.withOpacity(0.1),
+              : const Color.fromARGB(255, 26, 54, 41).withOpacity(0.1),
           borderRadius: BorderRadius.circular(12)),
       child: Text("₱${NumberFormat('#,###.00').format(b)}",
           style: GoogleFonts.orbitron(

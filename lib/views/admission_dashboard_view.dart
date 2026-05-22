@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../services/supabase_service.dart';
 import '../components/admission_panel_content.dart';
 
 class AdmissionDashboardView extends StatefulWidget {
@@ -48,9 +49,7 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text("CANCEL",
-                  style: TextStyle(
-                      color: _isDarkMode ? Colors.white : Colors.black87))),
+              child: const Text("CANCEL")),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
@@ -242,9 +241,12 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
       padding: const EdgeInsets.only(left: 16, bottom: 10, top: 20),
       child: Text(title,
           style: GoogleFonts.inter(
-              fontSize: 9,
+              fontSize: 9, // Keep font size and weight
               fontWeight: FontWeight.w900,
-              color: Colors.blueGrey.withOpacity(0.5),
+              color: _isDarkMode
+                  ? Colors.blueGrey.withOpacity(0.5)
+                  : Colors.black
+                      .withOpacity(0.5), // Ensure visibility in light mode
               letterSpacing: 1.5)),
     );
   }
@@ -255,11 +257,11 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
           const Icon(LucideIcons.school, color: aViolet, size: 24),
           if (_isSidebarExpanded) ...[
             const SizedBox(width: 12),
-            Text("UEMS Intake",
+            Text("UEMSSP Admission",
                 style: GoogleFonts.orbitron(
                     color: textColor,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14)),
+                    fontSize: 18)),
           ]
         ],
       );

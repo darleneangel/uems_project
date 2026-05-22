@@ -142,7 +142,7 @@ class _AdmissionOverviewPanelState extends State<AdmissionOverviewPanel> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Admission Intelligence",
+            Text("Admission Overview",
                 style: GoogleFonts.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
@@ -333,13 +333,15 @@ class _AdmissionOverviewPanelState extends State<AdmissionOverviewPanel> {
                         children: [
                           Text(e.key,
                               style: TextStyle(
-                                  fontSize: 11, 
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   color: textColor)),
                           Text("${(percent * 100).toInt()}%",
                               style: TextStyle(
-                                  fontSize: 10, 
-                                  color: widget.isDarkMode ? Colors.white70 : Colors.blueGrey)),
+                                  fontSize: 10,
+                                  color: widget.isDarkMode
+                                      ? Colors.white70
+                                      : Colors.blueGrey)),
                         ],
                       ),
                       const SizedBox(height: 8),

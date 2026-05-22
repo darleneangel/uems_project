@@ -71,13 +71,19 @@ class _FeeManagementPanelState extends State<FeeManagementPanel> {
   }
 
   /// 🛰️ STEP 2: CLOUD LOOKUP
+  /// FIXED: Explicitly naming the relationship to profiles using !office_requests_student_id_fkey
   Future<void> _handleScannedTicket(String hash) async {
     try {
-      final result = await _service.client
-          .from('office_requests')
-          .select('*, profiles(*, student_details(*, courses(name)))')
-          .eq('qr_hash', hash)
-          .maybeSingle();
+      final result = await _service.client.from('office_requests').select('''
+            *, 
+            profiles!office_requests_student_id_fkey(
+              *, 
+              student_details(
+                *, 
+                courses(name)
+              )
+            )
+          ''').eq('qr_hash', hash).maybeSingle();
 
       if (!mounted) return;
       setState(() => _isProcessing = false);
@@ -95,6 +101,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel> {
 
       _showPaymentPortal(result);
     } catch (e) {
+      debugPrint("Fee Management Sync Error: $e");
       if (mounted) {
         setState(() => _isProcessing = false);
         _showToast("Database Sync Error. Please retry.", Colors.redAccent);
@@ -105,7 +112,8 @@ class _FeeManagementPanelState extends State<FeeManagementPanel> {
   /// 💳 STEP 3: OMNICHANNEL PAYMENT PORTAL
   void _showPaymentPortal(Map<String, dynamic> req) {
     final profile = req['profiles'] as Map<String, dynamic>?;
-    final double amount = double.tryParse(req['amount_due'].toString()) ?? 0.0;
+    final double amount =
+        double.tryParse(req['amount_due']?.toString() ?? "0.0") ?? 0.0;
 
     showDialog(
       context: context,
@@ -182,7 +190,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel> {
   void _processCashPayment(Map<String, dynamic> request) {
     final TextEditingController cashController = TextEditingController();
     final double amountDue =
-        double.tryParse(request['amount_due'].toString()) ?? 0.0;
+        double.tryParse(request['amount_due']?.toString() ?? "0.0") ?? 0.0;
     final String studentName =
         "${request['profiles']?['fn'] ?? 'Student'} ${request['profiles']?['ln'] ?? ''}";
 
@@ -275,7 +283,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel> {
     final String studentName =
         "${request['profiles']?['fn'] ?? 'Student'} ${request['profiles']?['ln'] ?? ''}";
     final double amountDue =
-        double.tryParse(request['amount_due'].toString()) ?? 0.0;
+        double.tryParse(request['amount_due']?.toString() ?? "0.0") ?? 0.0;
 
     _showProcessingOverlay();
 
@@ -318,9 +326,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel> {
         // Mark status in DB to Processing
         await _service.client
             .from('office_requests')
-            .update({'status': 'Processing Payment'})
-            .eq('id', request['id'])
-            .select();
+            .update({'status': 'Processing Payment'}).eq('id', request['id']);
 
         if (mounted) Navigator.pop(context); // Close processing overlay
 
@@ -330,7 +336,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel> {
           _startHybridMonitoring(request);
         }
       } else {
-        throw Exception(result['errors'][0]['detail']);
+        throw Exception(result['errors']?[0]['detail'] ?? "Payment Failure");
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
@@ -383,10 +389,8 @@ class _FeeManagementPanelState extends State<FeeManagementPanel> {
     _pollingTimer?.cancel();
     _activeCheckoutSessionId = null;
 
-    // Safety check to prevent popping the main view and causing a black screen
     if (mounted) {
-      Navigator.of(context, rootNavigator: true)
-          .pop(); // Close the "Awaiting Payment" dialog specifically
+      Navigator.of(context, rootNavigator: true).pop();
       _finalizeTransaction(request, method: 'Online');
     }
   }
@@ -394,26 +398,18 @@ class _FeeManagementPanelState extends State<FeeManagementPanel> {
   /// 🛰️ FINALIZATION: SHARED DATABASE UPDATE
   Future<void> _finalizeTransaction(Map<String, dynamic> request,
       {required String method}) async {
-    // DO NOT POP HERE. Pop the source dialogs before calling this if possible.
-
     setState(() => _isProcessing = true);
     try {
-      // 1. Database Update
-      await _service.client
-          .from('office_requests')
-          .update({
-            'payment_status': 'Paid',
-            'status': 'Processing Request',
-            'paid_at': DateTime.now().toIso8601String(),
-            'remarks':
-                "${request['remarks'] ?? ''} | Paid via $method | Verified by ${widget.userData['ln']}",
-          })
-          .eq('id', request['id'])
-          .select();
+      await _service.client.from('office_requests').update({
+        'payment_status': 'Paid',
+        'status': 'Processing Request',
+        'paid_at': DateTime.now().toIso8601String(),
+        'remarks':
+            "${request['remarks'] ?? ''} | Paid via $method | Verified by ${widget.userData['ln']}",
+      }).eq('id', request['id']);
 
       if (mounted) {
         setState(() => _isProcessing = false);
-        // 2. Success Feedback UI (The Fix for the Black Screen)
         _showSuccessDialog(request, method);
       }
     } catch (e) {
@@ -424,7 +420,7 @@ class _FeeManagementPanelState extends State<FeeManagementPanel> {
     }
   }
 
-  // --- UI COMPLETION DIALOG ---
+  // --- UI COMPONENTS ---
 
   void _showSuccessDialog(Map<String, dynamic> request, String method) {
     showDialog(
@@ -472,9 +468,13 @@ class _FeeManagementPanelState extends State<FeeManagementPanel> {
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  Navigator.pop(context);
+                  if (mounted) Navigator.pop(context); // Return to terminal
+                },
                 style: ElevatedButton.styleFrom(
                     backgroundColor: aViolet,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16))),
                 child: const Text("CLOSE TERMINAL",

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_file/open_file.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:intl/intl.dart';
@@ -358,6 +358,7 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
                   icon: const Icon(LucideIcons.fileDown),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: aViolet,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 15)),
                   label: const Text("DOWNLOAD LOAD")),
@@ -408,7 +409,13 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
                       ElevatedButton(
                           onPressed: () => _showRosterDialog(load),
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: aViolet),
+                            backgroundColor: aViolet,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                          ),
                           child: const Text("VIEW ROSTER")),
                     ],
                   ),

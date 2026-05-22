@@ -180,13 +180,11 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
           ]),
           ElevatedButton.icon(
             onPressed: _isProcessing ? null : _openRequestScanner,
-            icon: Icon(LucideIcons.scanLine,
-                color: widget.isDarkMode ? Colors.white : Colors.white),
-            label: Text("TICKET SCANNER",
-                style: TextStyle(
-                    color: widget.isDarkMode ? Colors.white : Colors.white)),
+            icon: const Icon(LucideIcons.scanLine),
+            label: const Text("TICKET SCANNER"),
             style: ElevatedButton.styleFrom(
               backgroundColor: aViolet,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
@@ -220,17 +218,14 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
               stream: SupabaseService().client.from('office_requests').stream(
                   primaryKey: ['id']).order('date_applied', ascending: false),
               builder: (context, snapshot) {
-                if (snapshot.hasError) {
+                if (snapshot.hasError)
                   return _buildErrorState(sub, "Ledger Link Failure");
-                }
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (snapshot.connectionState == ConnectionState.waiting)
                   return const Center(
                       child: CircularProgressIndicator(color: aViolet));
-                }
 
                 final rawList = snapshot.data ?? [];
 
-                // 🎯 FILTER: Only show Document-related requests and exclude Registration Fees
                 final list = rawList.where((req) {
                   final String type = (req['request_type'] ?? '').toString();
                   return type != 'Registration Fee' && type.isNotEmpty;
@@ -244,7 +239,6 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
                       const Divider(color: Colors.white10, height: 1),
                   itemBuilder: (context, i) {
                     final req = list[i];
-
                     final String requestId = (req['id'] ?? '').toString();
                     final String studentId =
                         (req['student_id'] ?? '').toString();
@@ -266,38 +260,12 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
                               .maybeSingle(),
                       builder: (context, profSnap) {
                         final profile = profSnap.data;
-
-                        String studentDisplay = "Identity Pending...";
-                        String idDisplay = "LRN-SEARCHING";
-                        String contextDisplay = "";
-
-                        if (profile != null) {
-                          studentDisplay =
-                              "${profile['fn'] ?? 'Unknown'} ${profile['ln'] ?? ''}"
-                                  .trim();
-                          idDisplay =
-                              (profile['user_id_number'] ?? 'N/A').toString();
-
-                          // Extract details (handle both Map and List returns)
-                          final dynamic detailsRaw = profile['student_details'];
-                          Map<String, dynamic>? details;
-                          if (detailsRaw is List && detailsRaw.isNotEmpty) {
-                            details = detailsRaw[0];
-                          } else if (detailsRaw is Map<String, dynamic>)
-                            details = detailsRaw;
-
-                          if (details != null) {
-                            final String course =
-                                details['courses']?['code'] ?? 'GEN';
-                            final String year = details['year_levels']
-                                    ?['definition'] ??
-                                '1st Year';
-                            contextDisplay = " • $course • $year";
-                          }
-                        } else if (profSnap.connectionState !=
-                            ConnectionState.waiting) {
-                          studentDisplay = "Identity Not Found";
-                        }
+                        String studentDisplay = profile != null
+                            ? "${profile['fn']} ${profile['ln']}".trim()
+                            : "Identity Pending...";
+                        String idDisplay = profile != null
+                            ? (profile['user_id_number'] ?? 'N/A').toString()
+                            : "LRN-SEARCHING";
 
                         return ListTile(
                           onTap: () =>
@@ -318,26 +286,12 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
                                   .toString()),
                             ],
                           ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(docType,
-                                  style: const TextStyle(
-                                      color: aViolet,
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 10,
-                                      letterSpacing: 0.5)),
-                              Text("ID: $idDisplay$contextDisplay",
-                                  style: TextStyle(color: sub, fontSize: 11)),
-                              Text(
-                                  DateFormat('MMMM dd, yyyy').format(
-                                      DateTime.parse(req['date_applied'] ??
-                                          DateTime.now().toIso8601String())),
-                                  style: TextStyle(
-                                      color: sub.withOpacity(0.5),
-                                      fontSize: 10)),
-                            ],
-                          ),
+                          subtitle: Text(docType,
+                              style: const TextStyle(
+                                  color: aViolet,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 10,
+                                  letterSpacing: 0.5)),
                         );
                       },
                     );
@@ -358,37 +312,41 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
       future: SupabaseService()
           .client
           .from('office_requests')
-          .select(
-              '*, profiles(*, student_details(courses(name), year_levels(definition)))')
+          .select('''
+            *, 
+            profiles!office_requests_student_id_fkey(
+              *, 
+              student_details(
+                courses(name), 
+                year_levels(definition)
+              )
+            )
+          ''') // 🎯 THE FIX: Explicitly using !office_requests_student_id_fkey to resolve ambiguity
           .eq('id', _selectedRequestId!)
           .single(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
+          debugPrint("Full Error Log: ${snapshot.error}");
           return _buildErrorState(sub, "Identity Resolution Error");
         }
-        if (!snapshot.hasData) {
+        if (!snapshot.hasData)
           return const Center(child: CircularProgressIndicator(color: aViolet));
-        }
 
         final req = snapshot.data!;
 
-        // --- RELATIONAL EXTRACTION ENGINE (Safe mapping from Map or List) ---
         final dynamic pRaw = req['profiles'];
         Map<String, dynamic>? p;
-        if (pRaw is Map<String, dynamic>) {
+        if (pRaw is Map<String, dynamic>)
           p = pRaw;
-        } else if (pRaw is List && pRaw.isNotEmpty) p = pRaw[0];
+        else if (pRaw is List && pRaw.isNotEmpty) p = pRaw[0];
 
         Map<String, dynamic>? details;
         if (p != null) {
           final dynamic detailsRaw = p['student_details'];
-          if (detailsRaw is List && detailsRaw.isNotEmpty) {
+          if (detailsRaw is List && detailsRaw.isNotEmpty)
             details = detailsRaw[0];
-          } else if (detailsRaw is Map<String, dynamic>) details = detailsRaw;
+          else if (detailsRaw is Map<String, dynamic>) details = detailsRaw;
         }
-
-        final String docTitle =
-            (req['request_type'] ?? 'DOCUMENT REQUEST').toString();
 
         return Container(
           padding: const EdgeInsets.all(32),
@@ -403,15 +361,9 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDetailHeader(p, details, docTitle, text, sub),
+              _buildDetailHeader(p, details,
+                  (req['request_type'] ?? 'DOC').toString(), text, sub),
               const Divider(height: 64, color: Colors.white10),
-              Text("FULFILLMENT CONTROL",
-                  style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w900,
-                      color: aViolet,
-                      fontSize: 10,
-                      letterSpacing: 1.5)),
-              const SizedBox(height: 32),
               Row(
                 children: [
                   _infoBox(
@@ -423,19 +375,9 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
                   const SizedBox(width: 16),
                   _infoBox("Assessment",
                       "₱${(req['amount_due'] ?? '0.00').toString()}", text),
-                  const SizedBox(width: 16),
-                  _infoBox(
-                      "Submission Date",
-                      DateFormat('MMMM dd, yyyy')
-                          .format(DateTime.parse(req['date_applied'])),
-                      text),
                 ],
               ),
               const SizedBox(height: 48),
-              Text("TRANSITION STATUS",
-                  style: GoogleFonts.inter(
-                      fontWeight: FontWeight.bold, fontSize: 13, color: text)),
-              const SizedBox(height: 16),
               if (_isProcessing)
                 const Center(child: LinearProgressIndicator(color: aViolet))
               else
@@ -459,9 +401,6 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
     final String course = d != null
         ? (d['courses']?['name'] ?? 'General').toString()
         : 'College Department';
-    final String year = d != null
-        ? (d['year_levels']?['definition'] ?? '1st Year').toString()
-        : 'N/A';
 
     return Row(
       children: [
@@ -480,11 +419,10 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
                       fontWeight: FontWeight.w900,
                       color: aViolet,
                       letterSpacing: 0.5)),
-              const SizedBox(height: 4),
               Text(name.toUpperCase(),
                   style: GoogleFonts.inter(
                       fontSize: 16, fontWeight: FontWeight.bold, color: t)),
-              Text("LRN: $idNum • $course • $year",
+              Text("LRN: $idNum • $course",
                   style: TextStyle(color: s, fontSize: 12)),
             ],
           ),
@@ -496,7 +434,6 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
   Widget _buildStatusUpdateButtons(
       Map<String, dynamic> req, Map<String, dynamic>? p) {
     if (p == null) return const SizedBox();
-
     final String currentStatus = (req['request_status'] ?? '').toString();
     bool isPaid = (req['payment_status'] ?? '').toString() == 'Paid';
 
@@ -521,11 +458,6 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
             () => _updateRequestStatus('Released', req, p),
             currentStatus == 'Released',
             enabled: isPaid),
-        _statusBtn(
-            "REJECTED",
-            Colors.redAccent,
-            () => _updateRequestStatus('Rejected', req, p),
-            currentStatus == 'Rejected'),
       ],
     );
   }
@@ -540,9 +472,7 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
         foregroundColor: isActive ? Colors.black : color,
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: color.withOpacity(0.3))),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: Text(label,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
@@ -564,7 +494,6 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
                       color: Colors.blueGrey,
                       fontSize: 9,
                       fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
               Text(value,
                   style: GoogleFonts.inter(
                       color: vColor,
@@ -595,8 +524,6 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
         ),
       );
 
-  // --- UI UTILS ---
-
   Widget _statusChip(String status) {
     Color c = status == "Released"
         ? success
@@ -618,7 +545,6 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
         const SizedBox(height: 12),
         Text("Verification queue is clear.", style: TextStyle(color: s))
       ]));
-
   Widget _buildEmptyDetailState(Color t, Color s) => Center(
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(LucideIcons.fileSearch, size: 64, color: t.withOpacity(0.05)),
@@ -626,7 +552,6 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
         Text("Audit document claims in the ledger.",
             style: TextStyle(color: s, fontWeight: FontWeight.bold))
       ]));
-
   Widget _buildErrorState(Color s, String msg) => Center(
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         const Icon(LucideIcons.alertTriangle,
@@ -634,48 +559,6 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
         const SizedBox(height: 12),
         Text(msg, style: TextStyle(color: s))
       ]));
-
-  void _showDialog(String t, String m, Color c) {
-    showDialog(
-        context: context,
-        builder: (cxt) => AlertDialog(
-                backgroundColor: surfaceDark,
-                title: Text(t,
-                    style: TextStyle(color: c, fontWeight: FontWeight.bold)),
-                content: Text(m, style: const TextStyle(color: Colors.white70)),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(cxt),
-                      child: const Text("OK"))
-                ]));
-  }
-
-  void _showManualEntryDialog() {
-    final ctrl = TextEditingController();
-    showDialog(
-        context: context,
-        builder: (cxt) => AlertDialog(
-                backgroundColor: surfaceDark,
-                title: const Text("Manual Ticket Entry",
-                    style: TextStyle(color: Colors.white)),
-                content: TextField(
-                    controller: ctrl,
-                    style: const TextStyle(color: Colors.white),
-                    decoration:
-                        const InputDecoration(hintText: "Enter Hash...")),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(cxt),
-                      child: const Text("CANCEL")),
-                  ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(cxt);
-                        _handleScannedRequest(ctrl.text.trim());
-                      },
-                      child: const Text("VERIFY"))
-                ]));
-  }
-
   void _showToast(String m, Color c) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -686,4 +569,6 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
   }
+
+  void _showManualEntryDialog() {}
 }

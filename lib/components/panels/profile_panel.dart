@@ -80,10 +80,9 @@ class _ProfilePanelState extends State<ProfilePanel> {
       _lrdController.text = (_currentData['user_id_number'] ?? "").toString();
 
       // 🎓 PROGRAM CITATION: Mapping 'BS Computer Science' or similar from course join
-      _programController.text = (details?['courses']?['name'] ??
-              _currentData['program_name'] ??
-              "BFA Degree Program")
-          .toString();
+      _programController.text =
+          (details?['courses']?['name'] ?? _currentData['program_name'] ?? "")
+              .toString();
 
       _gender = _currentData['gender'] ?? 'Female';
       _isSyncing = false;
@@ -207,10 +206,6 @@ class _ProfilePanelState extends State<ProfilePanel> {
                 const SizedBox(height: 32),
 
                 // --- CITATION: ACADEMIC PROGRAM ---
-                _buildSectionLabel("Academic Program of Study"),
-                const SizedBox(height: 8),
-                _staticDisplayField(_programController.text.toUpperCase(),
-                    const Color(0xFF8B5CF6), inputFill),
 
                 const SizedBox(height: 24),
                 _buildSectionLabel("Gender Representation *"),

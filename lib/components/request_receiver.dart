@@ -107,6 +107,8 @@ class _RequestReceiverState extends State<RequestReceiver> {
 
               // 📐 FILTER ENGINE: Logic verified for cross-office audit
               final filtered = rawData.where((req) {
+                if (req == null) return false;
+
                 final status =
                     (req['request_status'] ?? req['status'] ?? '').toString();
 
@@ -114,9 +116,7 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 if (status == 'Approved' ||
                     status == 'Rejected' ||
                     status == 'Released' ||
-                    status == 'Archived') {
-                  return false;
-                }
+                    status == 'Archived') return false;
 
                 if (_selectedOfficeFilter == 'all') return true;
 
@@ -353,11 +353,13 @@ class _RequestReceiverState extends State<RequestReceiver> {
             children: [
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.03),
+                decoration: BoxDecoration( // Ensure visibility in light mode
+                    color: widget.isDarkMode
+                        ? Colors.white.withOpacity(0.03)
+                        : Colors.grey.shade100,
                     shape: BoxShape.circle),
                 child: Icon(LucideIcons.clipboardCheck,
-                    size: 48, color: sub.withOpacity(0.2)),
+                    size: 48, color: widget.isDarkMode ? sub.withOpacity(0.2) : Colors.black.withOpacity(0.2)),
               ),
               const SizedBox(height: 24),
               Text("Institutional Queue Clear",

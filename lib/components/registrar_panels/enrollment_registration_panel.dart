@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -240,7 +241,7 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           DropdownButtonFormField<String>(
-                            initialValue: selectedYearLevelId,
+                            value: selectedYearLevelId,
                             dropdownColor: surfaceDark,
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
@@ -368,12 +369,10 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
                                         color: Colors.blueGrey, fontSize: 11)),
                                 trailing: ElevatedButton.icon(
                                     onPressed: () => _showRegistrationForm(app),
-                                    icon: Icon(LucideIcons.userCheck,
-                                        color: widget.isDarkMode ? Colors.white : Colors.white,
+                                    icon: const Icon(LucideIcons.userCheck,
                                         size: 14),
-                                    label: Text("VERIFY & ENROLL",
+                                    label: const Text("VERIFY & ENROLL",
                                         style: TextStyle(
-                                            color: widget.isDarkMode ? Colors.white : Colors.white,
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold)),
                                     style: ElevatedButton.styleFrom(
@@ -410,8 +409,11 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
 
   Widget _buildEmptyState() => Center(
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(LucideIcons.clipboardCheck,
-            size: 48, color: Colors.blueGrey.withOpacity(0.2)),
+        Icon(LucideIcons.clipboardCheck, // Ensure visibility in light mode
+            size: 48,
+            color: widget.isDarkMode
+                ? Colors.blueGrey.withOpacity(0.2)
+                : Colors.black.withOpacity(0.2)),
         const SizedBox(height: 16),
         const Text("Verification queue is currently clear.",
             style:

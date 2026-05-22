@@ -240,10 +240,9 @@ class _ReportPanelState extends State<ReportPanel> {
               stream: _service.client.from('system_reports').stream(
                   primaryKey: ['id']).order('created_at', ascending: false),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) {
+                if (!snapshot.hasData)
                   return const Center(
                       child: CircularProgressIndicator(color: aViolet));
-                }
                 final list = snapshot.data!;
 
                 if (list.isEmpty) return _emptyState();
@@ -335,7 +334,9 @@ class _ReportPanelState extends State<ReportPanel> {
           child: GestureDetector(
             onTap: () => setState(() => _selectedPriority = p),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
+              duration: const Duration(
+                  milliseconds:
+                      200), // Keep animation duration for smooth transition
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
@@ -347,7 +348,9 @@ class _ReportPanelState extends State<ReportPanel> {
               child: Center(
                 child: Text(p,
                     style: TextStyle(
-                        color: isSelected ? Colors.black : Colors.blueGrey,
+                        color: isSelected
+                            ? Colors.black
+                            : widget.isDarkMode ? Colors.blueGrey : Colors.black54, // Ensure visibility in light mode
                         fontWeight: FontWeight.bold,
                         fontSize: 11)),
               ),

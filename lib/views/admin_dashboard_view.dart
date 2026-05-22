@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../components/admin_panel_content.dart';
 import '../services/supabase_service.dart';
 
@@ -346,15 +348,13 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 .from('office_requests')
                 .stream(primaryKey: ['id']).limit(5),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (snapshot.connectionState == ConnectionState.waiting)
                 return const LinearProgressIndicator();
-              }
               final logs = snapshot.data ?? [];
 
-              if (logs.isEmpty) {
+              if (logs.isEmpty)
                 return const Text("No recent activity.",
                     style: TextStyle(color: Colors.blueGrey, fontSize: 12));
-              }
 
               return Column(
                 children: logs.map((log) {
@@ -409,10 +409,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     return Padding(
       padding: const EdgeInsets.only(left: 16, bottom: 10, top: 20),
       child: Text(title,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.inter( // Ensure visibility in light mode
               fontSize: 9,
               fontWeight: FontWeight.w900,
-              color: Colors.blueGrey.withOpacity(0.5),
+              color: _isDarkMode
+                  ? Colors.blueGrey.withOpacity(0.5)
+                  : Colors.black.withOpacity(0.5),
               letterSpacing: 1.5)),
     );
   }

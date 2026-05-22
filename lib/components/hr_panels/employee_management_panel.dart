@@ -314,6 +314,7 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
               },
               style: ElevatedButton.styleFrom(
                   backgroundColor: aViolet,
+                  foregroundColor: Colors.white,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 32, vertical: 20)),
               child: Text(
@@ -358,7 +359,7 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
                           fontSize: 10,
                           fontWeight: FontWeight.bold)),
                   Text(id,
-                      style: GoogleFonts.orbitron(
+                      style: GoogleFonts.inter(
                           color: aViolet,
                           fontSize: 32,
                           fontWeight: FontWeight.w900,
@@ -375,7 +376,8 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
               height: 55,
               child: ElevatedButton(
                   onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(backgroundColor: aViolet),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: aViolet, foregroundColor: Colors.white),
                   child: const Text("DONE")),
             ),
           ],
@@ -429,6 +431,7 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
                   label: const Text("ONBOARD STAFF"),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: aViolet,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.all(22)),
                 ),
               ],

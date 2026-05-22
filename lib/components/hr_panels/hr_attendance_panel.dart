@@ -240,14 +240,14 @@ class _HRAttendancePanelState extends State<HRAttendancePanel> {
                                         color: Colors.blueGrey, fontSize: 12))),
                             Expanded(
                                 child: Text(_formatTime(log['check_in']),
-                                    style: GoogleFonts.orbitron(
+                                    style: GoogleFonts.inter(
                                         color: textColor,
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold))),
                             Expanded(
                               child: log['check_out'] != null
                                   ? Text(_formatTime(log['check_out']),
-                                      style: GoogleFonts.orbitron(
+                                      style: GoogleFonts.inter(
                                           color: textColor,
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold))

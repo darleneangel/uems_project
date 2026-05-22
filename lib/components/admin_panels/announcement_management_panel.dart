@@ -213,10 +213,9 @@ class _AnnouncementManagementPanelState
               stream: _service.client.from('announcements').stream(
                   primaryKey: ['id']).order('created_at', ascending: false),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) {
+                if (!snapshot.hasData)
                   return const Center(
                       child: CircularProgressIndicator(color: aViolet));
-                }
                 final list = snapshot.data!;
 
                 if (list.isEmpty) {
@@ -302,7 +301,9 @@ class _AnnouncementManagementPanelState
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-            color: isSelected ? aViolet : Colors.white.withOpacity(0.05),
+            color: isSelected
+                ? aViolet
+                : widget.isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.shade200, // Ensure visibility in light mode
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
                 color: isSelected ? Colors.transparent : Colors.white10)),

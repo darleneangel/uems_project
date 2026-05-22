@@ -410,8 +410,9 @@ class _FacultyLoadPanelState extends State<FacultyLoadPanel> {
                     const SizedBox(width: 24),
                     ElevatedButton(
                         onPressed: () => _showManageLoadDialog(f),
-                        style:
-                            ElevatedButton.styleFrom(backgroundColor: aViolet),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: aViolet,
+                            foregroundColor: Colors.white),
                         child: const Text("SCHEDULE")),
                   ],
                 ),

@@ -153,7 +153,8 @@ class _EnrollmentVerificationPanelState
                 if (mounted) Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B5CF6)),
+                  backgroundColor: const Color(0xFF8B5CF6),
+                  foregroundColor: Colors.white),
               child: const Text("SUBMIT & RELEASE"),
             )
           ],
@@ -294,7 +295,8 @@ class _EnrollmentVerificationPanelState
                                 style: ElevatedButton.styleFrom(
                                     backgroundColor: isVerified
                                         ? const Color(0xFF8B5CF6)
-                                        : Colors.blueGrey),
+                                        : Colors.blueGrey,
+                                    foregroundColor: Colors.white),
                               ),
                             );
                           },

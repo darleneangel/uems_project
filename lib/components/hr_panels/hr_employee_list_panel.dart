@@ -7,7 +7,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_file/open_file.dart';
 import '../../services/supabase_service.dart';
 
 /// CUSTOM CONVERTER CLASS
@@ -382,8 +382,7 @@ class _HrEmployeeListPanelState extends State<HrEmployeeListPanel> {
                           child: Text("₱${d?['base_salary'] ?? 0}",
                               style: const TextStyle(
                                   fontSize: 16,
-                                  color: Color.fromARGB(
-                                      255, 255, 255, 255)))),
+                                  color: Color.fromARGB(255, 255, 255, 255)))),
                       Expanded(
                           child: Text(d?['contract_type'] ?? 'N/A',
                               style: TextStyle(

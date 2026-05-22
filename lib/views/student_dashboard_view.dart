@@ -146,7 +146,8 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
                 fontWeight: FontWeight.bold,
                 color: _isDarkMode ? Colors.white : primaryViolet)),
         content: const Text(
-            "Are you sure you want to log out of the institutional portal?"),
+          "Are you sure you want to log out of the institutional portal?",
+        ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),

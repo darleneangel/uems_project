@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_file/open_file.dart';
 import '../../services/supabase_service.dart';
 
 class ClearanceAssessmentTerminal extends StatefulWidget {
@@ -312,6 +312,7 @@ class _ClearanceAssessmentTerminalState
               label: const Text("AUDIT ACCOUNT"),
               style: ElevatedButton.styleFrom(
                   backgroundColor: aViolet,
+                  foregroundColor: Colors.white,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 18)),
             ),
@@ -466,8 +467,6 @@ class _ClearanceAssessmentTerminalState
                   _generateSOA),
               _actionTile("Email Billing Reminder", LucideIcons.mail,
                   () => _showToast("Reminder Sent.", success)),
-              _actionTile("Verify Promissory Note", LucideIcons.fileSignature,
-                  () => {}),
             ],
           ),
         )

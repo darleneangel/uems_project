@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'views/login_view.dart';
 import 'services/supabase_service.dart'; // Import the service from the Canvas
+import 'services/navigation_helper.dart';
 
 // 1. Change main to async to allow for database initialization
 void main() async {
@@ -29,6 +30,7 @@ class MyApp extends StatelessWidget {
     final notoSans = GoogleFonts.notoSans();
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'UEMS - Unified Education Management System',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

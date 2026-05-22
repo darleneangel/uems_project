@@ -5,17 +5,11 @@ import 'dart:async';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'dart:math';
 
-// Dashboard Imports
-import 'student_dashboard_view.dart';
-import 'admin_dashboard_view.dart';
-import 'accounting_dashboard_view.dart';
-import 'admission_dashboard_view.dart';
-import 'registrar_dashboard_view.dart';
-import 'hr_dashboard_view.dart';
-import '../components/program_chair_dashboard_view.dart'; // Verified Path
-import '../components/teacher_dashboard_view.dart';
+// Core Services
 import '../services/supabase_service.dart';
 
+// Import our platform-aware redirect helper
+import '../services/navigation_helper.dart';
 import 'forgot_password_handler.dart';
 
 class UEMSLoginPage extends StatefulWidget {
@@ -28,10 +22,8 @@ class UEMSLoginPage extends StatefulWidget {
 class _UEMSLoginPageState extends State<UEMSLoginPage>
     with TickerProviderStateMixin {
   String _currentView = 'login';
-  String _targetView = '';
   bool _isDarkMode = true;
   bool _isLoading = false;
-  final bool _rememberMe = false;
   bool _isPasswordVisible = false;
   Map<String, dynamic>? _loggedInUserData;
 
@@ -111,12 +103,11 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         final userData = results.first;
 
         // 2. CRITICAL ENFORCEMENT: Verify if the account is Active
-        // This logic connects the 'Access & Security' panel settings to the login gate.
         final String status = userData['account_status'] ?? 'Active';
 
         if (status != 'Active') {
           _showSuspendedDialog(status);
-          return; // 🛑 BLOCK ACCESS: Prevents reaching the dashboard
+          return; // 🛑 BLOCK ACCESS
         }
 
         // 3. Process session data and attendance
@@ -127,7 +118,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         // Record Check-In Timestamp for employees
         await service.recordAttendanceLogin(_loggedInUserData!['id'], role);
 
-        // 4. Authorized Navigation
+        // 4. Authorized Navigation via dynamic path helper
         _routeToDashboard(role);
       } else {
         _showError("Identity Mismatch. Please check your credentials.");
@@ -172,63 +163,20 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     );
   }
 
-  void _resetToLogin() async {
-    // --- ADDED: Record Logout Timestamp before clearing data ---
-    if (_loggedInUserData != null) {
-      await SupabaseService().recordAttendanceLogout(_loggedInUserData!['id']);
-    }
-
-    setState(() {
-      _currentView = 'login';
-      _loggedInUserData = null; // Clear session data
-      _idController.clear();
-      _passwordController.clear();
-      _formController.forward(from: 0.0);
-    });
-  }
-
   void _routeToDashboard(String role) {
-    String destination = '';
-    switch (role) {
-      case 'student':
-        destination = 'student_portal';
-        break;
-      case 'admin':
-        destination = 'admin_dashboard';
-        break;
-      case 'registrar':
-        destination = 'registrar_dashboard';
-        break;
-      case 'admission':
-        destination = 'admission_dashboard';
-        break;
-      case 'accounting':
-        destination = 'accounting_dashboard';
-        break;
-      case 'professor':
-        destination = 'teacher_dashboard';
-        break;
-      case 'hr':
-        destination = 'hr_dashboard';
-        break;
-      case 'pchair':
-        destination = 'program_chair_dashboard';
-        break;
-      default:
-        _showError("Role '$role' not provisioned.");
-        return;
-    }
-
+    // Show the custom animated loading state first
     setState(() {
-      _targetView = destination;
       _currentView = 'welcome_uemssp';
     });
 
     _welcomeController.repeat(reverse: true);
+
+    // Animate for 3 seconds, then navigate securely using the Canvas Helper rules
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
         _welcomeController.stop();
-        setState(() => _currentView = _targetView);
+        // Handover navigation to our platform-aware security redirect helper!
+        handleLoginRedirect(context, _loggedInUserData!);
       }
     });
   }
@@ -254,36 +202,8 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
   Widget _buildCurrentView() {
     switch (_currentView) {
-      case 'student_portal':
-        return StudentDashboardView(
-            userData: _loggedInUserData!, onLogout: _resetToLogin);
-      case 'admin_dashboard':
-        return AdminDashboardView(
-            userData: _loggedInUserData!, onLogout: _resetToLogin);
-      case 'admission_dashboard':
-        return AdmissionDashboardView(
-            userData: _loggedInUserData!, onLogout: _resetToLogin);
       case 'login':
         return _buildSplitLogin();
-      case 'registrar_dashboard':
-        return RegistrarDashboardView(
-            userData: _loggedInUserData!, onLogout: _resetToLogin);
-      case 'hr_panel_content':
-      // This case should ideally not be hit if routing is correct.
-      // The HRPanelContent is a sub-component, not a top-level dashboard.
-      case 'accounting_dashboard':
-        return AccountingDashboardView(
-            userData: _loggedInUserData!, onLogout: _resetToLogin);
-      case 'teacher_dashboard':
-        return TeacherDashboardView(
-            userData: _loggedInUserData!, onLogout: _resetToLogin);
-      case 'program_chair_dashboard':
-        // THE FIX: Relay the 6001 data to the Dashboard constructor
-        return ProgramChairDashboardView(
-            userData: _loggedInUserData!, onLogout: _resetToLogin);
-      case 'hr_dashboard': // Corrected routing for HR
-        return HRDashboardView(
-            userData: _loggedInUserData!, onLogout: _resetToLogin);
       case 'welcome_uemssp':
         return _buildWelcomeLoading();
       default:
@@ -300,13 +220,10 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       backgroundColor: bgColor,
       body: Center(
         child: SingleChildScrollView(
-          // Prevents parent overflow on small viewports
           padding: const EdgeInsets.all(24),
           child: Container(
             width: 1200,
-            constraints: const BoxConstraints(
-                minHeight: 600,
-                maxHeight: 850), // Flex height instead of fixed 800
+            constraints: const BoxConstraints(minHeight: 600, maxHeight: 850),
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: cardColor,
@@ -333,9 +250,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                       ),
                     ),
                     child: Stack(
-                      // Use Stack to layer the moving background and content
                       children: [
-                        // Moving 3D-like background
                         _MovingBackground(isDarkMode: _isDarkMode),
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -388,11 +303,8 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                   flex: 7,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 60,
-                        vertical:
-                            40), // Reduced from 100 to prevent internal overflow
+                        horizontal: 60, vertical: 40),
                     child: SingleChildScrollView(
-                      // Allow the form to scroll internally if height is small
                       physics: const BouncingScrollPhysics(),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -414,17 +326,14 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                               Text("WELCOME",
                                   style: GoogleFonts.inter(
                                       fontSize: 34,
-                                      fontWeight:
-                                          FontWeight.w900, // Keep font weight
-                                      color:
-                                          textColor, // Use theme-aware text color
+                                      fontWeight: FontWeight.w900,
+                                      color: textColor,
                                       letterSpacing: -2))),
                           _animateEntrance(
                               1,
                               Text(
                                   "Initialize your secure institutional session.",
                                   style: TextStyle(
-                                      // Keep font size and weight
                                       color: Colors.blueGrey.withOpacity(0.7),
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500))),
@@ -458,20 +367,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                               4,
                               Row(
                                 children: [
-                                  // Removed "Trust this device" checkbox as per request
-                                  // Checkbox(
-                                  //   value: _rememberMe,
-                                  //   activeColor: aViolet,
-                                  //   shape: RoundedRectangleBorder(
-                                  //       borderRadius: BorderRadius.circular(6)),
-                                  //   onChanged: (v) =>
-                                  //       setState(() => _rememberMe = v!),
-                                  // ),
-                                  // Text("Trust this device",
-                                  //     style: TextStyle(
-                                  //         color: textColor.withOpacity(0.5),
-                                  //         fontSize: 14,
-                                  //         fontWeight: FontWeight.w600)),
                                   const Spacer(),
                                   TextButton(
                                       onPressed: () => ForgotPasswordHandler
@@ -486,7 +381,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                               )),
                           const SizedBox(height: 40),
                           _animateEntrance(
-                              3, // Adjusted index due to removal of checkbox
+                              3,
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -496,17 +391,14 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                                           fontWeight: FontWeight.w900,
                                           color: _isDarkMode
                                               ? Colors.white.withOpacity(0.6)
-                                              : Colors
-                                                  .black, // Full opacity for black in light mode
+                                              : Colors.black,
                                           letterSpacing: 1.5)),
                                   Text(
                                       "Bright Future Academy envisions becoming a center of excellence in education that nurtures knowledgeable, skilled, and values-driven individuals who contribute positively to society.",
                                       style: TextStyle(
-                                          // Keep font size and height
                                           color: _isDarkMode
                                               ? Colors.white.withOpacity(0.5)
-                                              : Colors
-                                                  .black, // Full opacity for black in light mode
+                                              : Colors.black,
                                           fontSize: 11,
                                           height: 1.4)),
                                   const SizedBox(height: 16),
@@ -516,16 +408,14 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                                           fontWeight: FontWeight.w900,
                                           color: _isDarkMode
                                               ? Colors.white.withOpacity(0.6)
-                                              : Colors
-                                                  .black, // Full opacity for black in light mode
+                                              : Colors.black,
                                           letterSpacing: 1.5)),
                                   Text(
                                       "Bright Future Academy is committed to: Providing quality and accessible education to all learners. Developing students’ academic competence, creativity, and critical thinking skills. Promoting discipline, respect, and integrity within the school community. Preparing students for higher education, employment, and responsible citizenship. Creating a safe and supportive learning environment.",
                                       style: TextStyle(
                                           color: _isDarkMode
                                               ? Colors.white.withOpacity(0.5)
-                                              : Colors
-                                                  .black, // Full opacity for black in light mode
+                                              : Colors.black,
                                           fontSize: 11,
                                           height: 1.4)),
                                 ],
@@ -591,7 +481,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // The Academic Core Pulse
               ScaleTransition(
                 scale: _pulseAnimation,
                 child: Container(
@@ -634,7 +523,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
               Text(
                   "VERIFIED: Access granted to ${_loggedInUserData?['fn'] ?? 'Academic Node'}",
                   style: const TextStyle(
-                      // Keep font size, weight, and letter spacing
                       color: success,
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
@@ -658,7 +546,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                     Text("Synchronizing encrypted academic pipeline...",
                         style: TextStyle(
                             color: _isDarkMode
-                                ? Colors.blueGrey // Keep blueGrey for dark mode
+                                ? Colors.blueGrey
                                 : pViolet.withOpacity(0.6),
                             fontSize: 13,
                             letterSpacing: 1)),
@@ -671,8 +559,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       ),
     );
   }
-
-  // --- UI ATOMS (UPGRADED) ---
 
   Widget _animateEntrance(int index, Widget child) {
     return FadeTransition(
@@ -706,7 +592,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   Widget _buildLabel(String t) {
     final labelColor = _isDarkMode ? Colors.blueGrey : pViolet.withOpacity(0.7);
     return Padding(
-      // Keep padding
       padding: const EdgeInsets.only(bottom: 12, left: 6),
       child: Text(t.toUpperCase(),
           style: TextStyle(
@@ -736,7 +621,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         cursorColor: aViolet,
         style: TextStyle(
             color: _isDarkMode ? Colors.white : pViolet,
-            fontWeight: FontWeight.w600, // Keep font weight
+            fontWeight: FontWeight.w600,
             fontSize: 16),
         decoration: InputDecoration(
           hintText: h,
@@ -760,7 +645,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   }
 }
 
-// New widget for the moving background
 class _MovingBackground extends StatefulWidget {
   final bool isDarkMode;
   const _MovingBackground({required this.isDarkMode});
@@ -775,17 +659,11 @@ class _MovingBackgroundState extends State<_MovingBackground>
   List<_MovingShape> _shapes = [];
   final Random _random = Random();
 
-  // Institutional Palette (copied from _UEMSLoginPageState for self-containment)
-  static const Color pViolet = Color(0xFF1E1033);
-  static const Color sViolet = Color(0xFF2E1065);
-  static const Color aViolet = Color(0xFF8B5CF6);
-
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration:
-          const Duration(seconds: 30), // Longer duration for subtle movement
+      duration: const Duration(seconds: 30),
       vsync: this,
     )..addListener(() {
         setState(() {
@@ -805,15 +683,14 @@ class _MovingBackgroundState extends State<_MovingBackground>
 
   void _generateShapes() {
     _shapes = List.generate(
-      10, // Number of moving shapes
+      10,
       (index) => _MovingShape(
         color: _randomColor(),
-        size: _random.nextDouble() * 100 + 50, // Size between 50 and 150
-        x: _random.nextDouble() * 1.5, // Initial x position (can be off-screen)
-        y: _random.nextDouble() * 1.5, // Initial y position
-        speed: _random.nextDouble() * 0.005 +
-            0.001, // Speed between 0.001 and 0.006
-        direction: _random.nextBool() ? 1 : -1, // Random direction
+        size: _random.nextDouble() * 100 + 50,
+        x: _random.nextDouble() * 1.5,
+        y: _random.nextDouble() * 1.5,
+        speed: _random.nextDouble() * 0.005 + 0.001,
+        direction: _random.nextBool() ? 1 : -1,
       ),
     );
   }
@@ -824,7 +701,7 @@ class _MovingBackgroundState extends State<_MovingBackground>
             _random.nextInt(50) + 50,
             _random.nextInt(50) + 50,
             _random.nextInt(50) + 50,
-            _random.nextDouble() * 0.2 + 0.1, // Opacity between 0.1 and 0.3
+            _random.nextDouble() * 0.2 + 0.1,
           )
         : Color.fromRGBO(
             _random.nextInt(50) + 200,
@@ -837,10 +714,8 @@ class _MovingBackgroundState extends State<_MovingBackground>
   void _updateShapes() {
     for (var shape in _shapes) {
       shape.x += shape.speed * shape.direction;
-      shape.y +=
-          shape.speed * shape.direction * 0.5; // Slower vertical movement
+      shape.y += shape.speed * shape.direction * 0.5;
 
-      // Reset position if it goes off-screen
       if (shape.x > 1.5 || shape.x < -0.5 || shape.y > 1.5 || shape.y < -0.5) {
         shape.x = _random.nextDouble() * 1.5;
         shape.y = _random.nextDouble() * 1.5;
@@ -858,10 +733,9 @@ class _MovingBackgroundState extends State<_MovingBackground>
       children: _shapes.map((shape) {
         return Positioned.fill(
           child: Align(
-            alignment: Alignment(
-                shape.x * 2 - 1, shape.y * 2 - 1), // Convert 0-1 to -1 to 1
+            alignment: Alignment(shape.x * 2 - 1, shape.y * 2 - 1),
             child: Transform.scale(
-              scale: shape.size / 150, // Scale based on size
+              scale: shape.size / 150,
               child: Opacity(
                 opacity: shape.color.opacity,
                 child: Container(
@@ -869,8 +743,7 @@ class _MovingBackgroundState extends State<_MovingBackground>
                   height: shape.size,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: shape.color.withOpacity(
-                        1.0), // Use full opacity for the shape itself
+                    color: shape.color.withOpacity(1.0),
                     boxShadow: [
                       BoxShadow(
                         color: shape.color.withOpacity(0.5),
@@ -892,10 +765,10 @@ class _MovingBackgroundState extends State<_MovingBackground>
 class _MovingShape {
   Color color;
   double size;
-  double x; // 0 to 1, relative to screen width
-  double y; // 0 to 1, relative to screen height
+  double x;
+  double y;
   double speed;
-  int direction; // 1 for right, -1 for left
+  int direction;
 
   _MovingShape({
     required this.color,
