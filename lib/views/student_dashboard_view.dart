@@ -137,7 +137,8 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
 
   Future<void> _handleLogout() async {
     final Color dialogBodyColor = _isDarkMode ? Colors.white70 : Colors.black87;
-    final Color dialogCancelColor = _isDarkMode ? Colors.white70 : primaryViolet;
+    final Color dialogCancelColor =
+        _isDarkMode ? Colors.white70 : primaryViolet;
 
     final bool? confirm = await showDialog<bool>(
       context: context,
@@ -148,28 +149,22 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
             style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold,
                 color: _isDarkMode ? Colors.white : primaryViolet)),
-<<<<<<< HEAD
-        content: const Text(
-          "Are you sure you want to log out of the institutional portal?",
-        ),
-=======
         content: Text(
-          "Are you sure you want to log out of the institutional portal?",
-          style: GoogleFonts.inter(color: dialogBodyColor)),
->>>>>>> 9639ff007888ce8f3766b8d257130e7753f2c578
+            "Are you sure you want to log out of the institutional portal?",
+            style: GoogleFonts.inter(color: dialogBodyColor)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-            child: Text("CANCEL",
-              style: GoogleFonts.inter(
-                color: dialogCancelColor, fontWeight: FontWeight.w600))),
+              child: Text("CANCEL",
+                  style: GoogleFonts.inter(
+                      color: dialogCancelColor, fontWeight: FontWeight.w600))),
           ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style:
                   ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: Text("LOGOUT",
-              style: GoogleFonts.inter(
-                color: Colors.white, fontWeight: FontWeight.w700))),
+              child: Text("LOGOUT",
+                  style: GoogleFonts.inter(
+                      color: Colors.white, fontWeight: FontWeight.w700))),
         ],
       ),
     );
@@ -793,9 +788,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
             leading: const Icon(LucideIcons.logOut,
                 color: Colors.redAccent, size: 20),
             title: _isSidebarExpanded
-            ? Text("Logout System",
+                ? Text("Logout System",
                     style: TextStyle(
-                color: logoutTextColor,
+                        color: logoutTextColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 13))
                 : null),

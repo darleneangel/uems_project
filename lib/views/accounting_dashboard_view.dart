@@ -180,7 +180,7 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
               icon: Icon(_isDarkMode ? LucideIcons.sun : LucideIcons.moon,
                   color: aViolet)),
           const SizedBox(width: 24),
-            VerticalDivider(color: dividerColor, indent: 20, endIndent: 20),
+          VerticalDivider(color: dividerColor, indent: 20, endIndent: 20),
           const SizedBox(width: 24),
           Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -259,13 +259,13 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
             onTap: onTap ?? () => setState(() => _selectedIndex = index),
             visualDensity: VisualDensity.compact,
             leading: Icon(icon,
-              color: isSelected ? activeColor : idleColor, size: 20),
+                color: isSelected ? activeColor : idleColor, size: 20),
             title: _isSidebarExpanded
                 ? Text(title,
                     style: GoogleFonts.inter(
-                  color: isDestructive
-                    ? Colors.redAccent
-                    : (isSelected ? selectedTextColor : idleColor),
+                        color: isDestructive
+                            ? Colors.redAccent
+                            : (isSelected ? selectedTextColor : idleColor),
                         fontWeight:
                             isSelected ? FontWeight.w800 : FontWeight.w500,
                         fontSize: 13))
@@ -279,15 +279,9 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
               style: GoogleFonts.inter(
                   fontSize: 9, // Keep font size and weight
                   fontWeight: FontWeight.w900,
-<<<<<<< HEAD
                   color: _isDarkMode
-                      ? Colors.blueGrey.withOpacity(0.5)
-                      : Colors.black.withOpacity(0.5), // Ensure visibility in light mode
-=======
-            color: _isDarkMode
-              ? Colors.white38
-              : Colors.blueGrey.withOpacity(0.7),
->>>>>>> 9639ff007888ce8f3766b8d257130e7753f2c578
+                      ? Colors.white38
+                      : Colors.blueGrey.withOpacity(0.7),
                   letterSpacing: 1.5)))
       : const SizedBox(height: 20);
   Widget _buildLogo(Color textColor) =>

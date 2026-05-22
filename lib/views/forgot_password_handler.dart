@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 import '../services/supabase_service.dart';
+import '../services/security_service.dart'; // Import cryptographic service
 
 class ForgotPasswordHandler {
   static const String senderEmail = 'bright.future.academyUEMSSP@gmail.com';
@@ -47,7 +48,8 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
 
   /// 🛰️ DATABASE: Step 1 - Lookup ID and Send OTP
   Future<void> _initiateRecovery() async {
-    final idNum = _inputController.text.trim();
+    // SECURITY ASSURANCE: Sanitize inputs immediately before processing DB lookups
+    final idNum = SecurityService().sanitizeInput(_inputController.text);
     if (idNum.isEmpty) return;
 
     setState(() => _isLoading = true);
@@ -65,7 +67,7 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
         return;
       }
 
-      _targetProfileId = response['id'];
+      _targetProfileId = response['id']; // This is our unique user UUID
       _targetEmail = response['email'];
 
       // 2. Generate and Send OTP
@@ -141,20 +143,27 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
     setState(() => _isLoading = true);
 
     try {
-      await _service.client
-          .from('profiles')
-          .update({'password_hash': pass}).eq('id', _targetProfileId!);
+      // SECURITY ASSURANCE: Cryptographically secure the new password client-side using Argon2id with their stable user UUID
+      final String secureArgon2Hash =
+          SecurityService().hashPasswordArgon2id(pass, _targetProfileId!);
 
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Password updated successfully. Please log in."),
-            backgroundColor: Colors.green),
-      );
+      await _service.client.from('profiles').update(
+          {'password_hash': secureArgon2Hash}).eq('id', _targetProfileId!);
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Password updated successfully. Please log in."),
+              backgroundColor: Colors.green),
+        );
+      }
     } catch (e) {
       _showLocalError("Sync Error: $e");
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -237,10 +246,11 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
   void _handleStepAction() {
     if (_currentStep == 0) {
       _initiateRecovery();
-    } else if (_currentStep == 1)
+    } else if (_currentStep == 1) {
       _verifyOtp();
-    else
+    } else {
       _finalizeReset();
+    }
   }
 
   Widget _buildField(TextEditingController c, String h, IconData i,
