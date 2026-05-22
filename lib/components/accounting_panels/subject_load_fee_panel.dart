@@ -98,9 +98,8 @@ class _SubjectLoadFeePanelState extends State<SubjectLoadFeePanel> {
     final String templateName = "${student['course']} Template";
 
     setState(() {
-      _savedTemplates[templateName] = _feeControllers
-          .map((c) => double.tryParse(c.text) ?? 0.0)
-          .toList();
+      _savedTemplates[templateName] =
+          _feeControllers.map((c) => double.tryParse(c.text) ?? 0.0).toList();
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -177,15 +176,12 @@ class _SubjectLoadFeePanelState extends State<SubjectLoadFeePanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color textColor = widget.isDarkMode
-        ? Colors.white
-        : const Color(0xFF2E1065);
-    final Color cardColor = widget.isDarkMode
-        ? const Color(0xFF1E1B4B)
-        : Colors.white;
-    final Color subTextColor = widget.isDarkMode
-        ? Colors.white54
-        : Colors.blueGrey;
+    final Color textColor =
+        widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
+    final Color cardColor =
+        widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
+    final Color subTextColor =
+        widget.isDarkMode ? Colors.white54 : Colors.blueGrey;
 
     return Padding(
       padding: const EdgeInsets.all(40),
@@ -217,9 +213,8 @@ class _SubjectLoadFeePanelState extends State<SubjectLoadFeePanel> {
                     color: cardColor,
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: widget.isDarkMode
-                          ? Colors.white10
-                          : Colors.black12,
+                      color:
+                          widget.isDarkMode ? Colors.white10 : Colors.black12,
                     ),
                   ),
                   child: Column(
@@ -377,11 +372,13 @@ class _SubjectLoadFeePanelState extends State<SubjectLoadFeePanel> {
                               Expanded(
                                 child: ListView.builder(
                                   itemCount:
-                                      _pendingLoads[_selectedStudentIndex!]['subjects']
+                                      _pendingLoads[_selectedStudentIndex!]
+                                              ['subjects']
                                           .length,
                                   itemBuilder: (context, idx) {
                                     final sub =
-                                        _pendingLoads[_selectedStudentIndex!]['subjects'][idx];
+                                        _pendingLoads[_selectedStudentIndex!]
+                                            ['subjects'][idx];
                                     return Container(
                                       margin: const EdgeInsets.only(bottom: 12),
                                       padding: const EdgeInsets.all(16),
@@ -432,9 +429,9 @@ class _SubjectLoadFeePanelState extends State<SubjectLoadFeePanel> {
                                                 ),
                                                 contentPadding:
                                                     const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 8,
-                                                    ),
+                                                  horizontal: 12,
+                                                  vertical: 8,
+                                                ),
                                               ),
                                               style: TextStyle(
                                                 color: textColor,
