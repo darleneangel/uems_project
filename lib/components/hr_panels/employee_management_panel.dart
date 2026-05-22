@@ -313,12 +313,8 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
                 }
               },
               style: ElevatedButton.styleFrom(
-<<<<<<< HEAD
-                  backgroundColor: aViolet,
-=======
                   backgroundColor:
                       widget.isDarkMode ? aViolet : const Color(0xFF6D28D9),
->>>>>>> 9639ff007888ce8f3766b8d257130e7753f2c578
                   foregroundColor: Colors.white,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 32, vertical: 20)),
@@ -399,7 +395,7 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
         widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
     final actionButtonColor =
-      widget.isDarkMode ? aViolet : const Color(0xFF6D28D9);
+        widget.isDarkMode ? aViolet : const Color(0xFF6D28D9);
 
     return Column(
       children: [
@@ -443,16 +439,10 @@ class _EmployeeManagementPanelState extends State<EmployeeManagementPanel> {
                         color: Colors.white, fontWeight: FontWeight.w700),
                   ),
                   style: ElevatedButton.styleFrom(
-<<<<<<< HEAD
-                      backgroundColor: aViolet,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(22)),
-=======
                       backgroundColor: actionButtonColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 18)),
->>>>>>> 9639ff007888ce8f3766b8d257130e7753f2c578
                 ),
               ],
             )
