@@ -302,6 +302,7 @@ class _OfficesPanelState extends State<OfficesPanel>
           color: bg,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: Colors.white10)),
+<<<<<<< HEAD
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -334,6 +335,44 @@ class _OfficesPanelState extends State<OfficesPanel>
                   },
                 );
               },
+=======
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _label("Institutional Document Catalog"),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 200,
+              child: ListView.builder(
+                itemCount: _catalog.length,
+                itemBuilder: (context, i) {
+                  final item = _catalog[i];
+                  bool isSelected = _selectedDocs.contains(item['name']);
+                  return CheckboxListTile(
+                    title: Text(item['name'],
+                        style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14)),
+                    subtitle: Text("₱${item['price']}",
+                        style: const TextStyle(color: aViolet, fontSize: 12)),
+                    value: isSelected,
+                    activeColor: aViolet,
+                    onChanged: (val) {
+                      setState(() {
+                        if (val!) {
+                          _selectedDocs.add(item['name']);
+                        } else {
+                          _selectedDocs.remove(item['name']);
+                        }
+                      });
+                    },
+                  );
+                },
+              ),
+>>>>>>> 9639ff007888ce8f3766b8d257130e7753f2c578
             ),
           ),
           const Divider(height: 32, color: Colors.white10),

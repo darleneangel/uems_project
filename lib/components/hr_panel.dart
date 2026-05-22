@@ -38,6 +38,7 @@ class _HRPanelState extends State<HRPanel> {
     'accounting',
     'hr',
     'admission',
+    'admin',
     'pchair'
   ];
 
@@ -366,6 +367,17 @@ class _HRPanelState extends State<HRPanel> {
 
   Widget _dropdown(
       String l, String v, List<String> items, Function(String?) onChanged) {
+    final List<String> uniqueItems = [];
+    for (final item in items) {
+      if (!uniqueItems.contains(item)) {
+        uniqueItems.add(item);
+      }
+    }
+
+    final String? safeInitialValue = uniqueItems.contains(v)
+        ? v
+        : (uniqueItems.isNotEmpty ? uniqueItems.first : null);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -377,20 +389,20 @@ class _HRPanelState extends State<HRPanel> {
                 letterSpacing: 1)),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          initialValue: v,
+          initialValue: safeInitialValue,
           dropdownColor: const Color(0xFF0F071D),
           style: const TextStyle(color: Colors.white, fontSize: 13),
           decoration: InputDecoration(
               // Ensure text is visible in light mode
               hintStyle: TextStyle(
                   color: widget.isDarkMode ? Colors.white54 : Colors.black54),
-              labelStyle: TextStyle(color: Colors.blueGrey),
+              labelStyle: const TextStyle(color: Colors.blueGrey),
               filled: true,
               fillColor: Colors.white.withOpacity(0.05),
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none)),
-          items: items
+            items: uniqueItems
               .map((i) =>
                   DropdownMenuItem(value: i, child: Text(i.toUpperCase())))
               .toList(),

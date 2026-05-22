@@ -487,7 +487,36 @@ class _DashboardPanelTemplateState extends State<DashboardPanelTemplate> {
             onPressed: () => widget.themeToggle?.call(),
           ),
 
+<<<<<<< HEAD
           const SizedBox(width: 12),
+=======
+          const SizedBox(width: 24),
+          const VerticalDivider(
+              indent: 20, endIndent: 20, color: Colors.white10),
+          const SizedBox(width: 24),
+
+          // --- IDENTITY BLOCK: USER NAME & ROLE (TOP RIGHT) ---
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                  (fn.isEmpty && ln.isEmpty ? 'Identifying User...' : '$fn $ln')
+                      .toUpperCase(),
+                  style: GoogleFonts.inter(
+                      color: textColor,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12)),
+              Text(role == 'student' ? "ID: $idNum" : role.toUpperCase(),
+                  style: GoogleFonts.inter(
+                      color: success,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1)),
+            ],
+          ),
+          const SizedBox(width: 16),
+>>>>>>> 9639ff007888ce8f3766b8d257130e7753f2c578
           CircleAvatar(
             radius: 18,
             backgroundColor: aViolet,

@@ -37,6 +37,47 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
   static const Color surfaceDark = Color(0xFF1E1B4B);
   static const Color success = Color(0xFF69F0AE);
 
+  Future<void> _confirmLogout() async {
+    final bool? shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _isDarkMode ? surfaceDark : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          "Confirm Logout",
+          style: GoogleFonts.inter(
+            color: _isDarkMode ? Colors.white : pViolet,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        content: Text(
+          "Are you sure you want to logout from the accounting system?",
+          style: GoogleFonts.inter(
+            color: _isDarkMode ? Colors.white70 : Colors.blueGrey,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text("Logout"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      widget.onLogout();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bgColor = _isDarkMode ? tDark : const Color(0xFFF8FAFC);
@@ -108,6 +149,8 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
   }
 
   Widget _buildTopBar(Color textColor) {
+    final dividerColor = _isDarkMode ? Colors.white10 : Colors.black12;
+
     return Container(
       height: 75,
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -137,8 +180,7 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
               icon: Icon(_isDarkMode ? LucideIcons.sun : LucideIcons.moon,
                   color: aViolet)),
           const SizedBox(width: 24),
-          const VerticalDivider(
-              color: Colors.white10, indent: 20, endIndent: 20),
+            VerticalDivider(color: dividerColor, indent: 20, endIndent: 20),
           const SizedBox(width: 24),
           Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -194,7 +236,7 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
               ])),
           const Divider(color: Colors.white10),
           _menuItem(LucideIcons.logOut, "Logout System", 8,
-              isDestructive: true, onTap: widget.onLogout),
+              isDestructive: true, onTap: _confirmLogout),
           const SizedBox(height: 20),
         ],
       ),
@@ -205,6 +247,9 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
       {bool isDestructive = false, VoidCallback? onTap}) {
     bool isSelected = _selectedIndex == index;
     final activeColor = isDestructive ? Colors.redAccent : aViolet;
+    final idleColor = _isDarkMode ? Colors.white70 : Colors.blueGrey;
+    final selectedTextColor = _isDarkMode ? Colors.white : pViolet;
+
     return Container(
         margin: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
@@ -214,11 +259,13 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
             onTap: onTap ?? () => setState(() => _selectedIndex = index),
             visualDensity: VisualDensity.compact,
             leading: Icon(icon,
-                color: isSelected ? activeColor : Colors.blueGrey, size: 20),
+              color: isSelected ? activeColor : idleColor, size: 20),
             title: _isSidebarExpanded
                 ? Text(title,
                     style: GoogleFonts.inter(
-                        color: isSelected ? Colors.white : Colors.blueGrey,
+                  color: isDestructive
+                    ? Colors.redAccent
+                    : (isSelected ? selectedTextColor : idleColor),
                         fontWeight:
                             isSelected ? FontWeight.w800 : FontWeight.w500,
                         fontSize: 13))
@@ -232,9 +279,15 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
               style: GoogleFonts.inter(
                   fontSize: 9, // Keep font size and weight
                   fontWeight: FontWeight.w900,
+<<<<<<< HEAD
                   color: _isDarkMode
                       ? Colors.blueGrey.withOpacity(0.5)
                       : Colors.black.withOpacity(0.5), // Ensure visibility in light mode
+=======
+            color: _isDarkMode
+              ? Colors.white38
+              : Colors.blueGrey.withOpacity(0.7),
+>>>>>>> 9639ff007888ce8f3766b8d257130e7753f2c578
                   letterSpacing: 1.5)))
       : const SizedBox(height: 20);
   Widget _buildLogo(Color textColor) =>

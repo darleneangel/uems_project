@@ -106,6 +106,11 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
   Widget build(BuildContext context) {
     final textColor =
         widget.isDarkMode ? Colors.white : const Color(0xFF1E1B4B);
+    final secondaryTextColor =
+      widget.isDarkMode ? Colors.white70 : Colors.blueGrey.shade700;
+    final mutedTextColor =
+      widget.isDarkMode ? Colors.white60 : Colors.blueGrey;
+    final dividerColor = widget.isDarkMode ? Colors.white10 : Colors.black12;
     final cardColor =
         widget.isDarkMode ? const Color(0xFF1E1B4B) : Colors.white;
 
@@ -118,7 +123,7 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(textColor),
+          _buildHeader(textColor, secondaryTextColor),
           const SizedBox(height: 32),
           _buildStatGrid(textColor),
           const SizedBox(height: 32),
@@ -126,20 +131,24 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                  flex: 3, child: _buildFinancialGraph(cardColor, textColor)),
+                  flex: 3,
+                  child: _buildFinancialGraph(
+                      cardColor, textColor, mutedTextColor)),
               const SizedBox(width: 24),
               Expanded(
-                  flex: 2, child: _buildRecentActivity(cardColor, textColor)),
+                  flex: 2,
+                  child: _buildRecentActivity(
+                      cardColor, textColor, mutedTextColor, dividerColor)),
             ],
           ),
           const SizedBox(height: 32),
-          _buildClearanceSection(cardColor, textColor),
+          _buildClearanceSection(cardColor, textColor, secondaryTextColor),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(Color textColor) {
+  Widget _buildHeader(Color textColor, Color secondaryTextColor) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -152,9 +161,9 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
                     fontWeight: FontWeight.w900,
                     color: textColor,
                     letterSpacing: -0.5)),
-            const Text(
+            Text(
                 "Institutional financial health and real-time ledger analytics.",
-                style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
+                style: TextStyle(color: secondaryTextColor, fontSize: 14)),
           ],
         ),
         ElevatedButton.icon(
@@ -233,7 +242,8 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
     );
   }
 
-  Widget _buildFinancialGraph(Color cardColor, Color textColor) {
+  Widget _buildFinancialGraph(
+      Color cardColor, Color textColor, Color mutedTextColor) {
     return Container(
       height: 350,
       padding: const EdgeInsets.all(24),
@@ -260,9 +270,9 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
           const SizedBox(height: 40),
           Expanded(
             child: _monthlyTrends.isEmpty
-                ? const Center(
-                    child: Text("Insufficient data for trends.",
-                        style: TextStyle(color: Colors.blueGrey)))
+              ? Center(
+                child: Text("Insufficient data for trends.",
+                  style: TextStyle(color: mutedTextColor)))
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -289,10 +299,10 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
                           ),
                           const SizedBox(height: 12),
                           Text(data['month'],
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.blueGrey)),
+                                  color: mutedTextColor)),
                         ],
                       );
                     }).toList(),
@@ -303,7 +313,8 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
     );
   }
 
-  Widget _buildRecentActivity(Color cardColor, Color textColor) {
+  Widget _buildRecentActivity(
+      Color cardColor, Color textColor, Color mutedTextColor, Color dividerColor) {
     return Container(
       height: 350,
       padding: const EdgeInsets.all(24),
@@ -326,7 +337,7 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
             child: ListView.separated(
               itemCount: _recentTransactions.length,
               separatorBuilder: (_, __) =>
-                  const Divider(color: Colors.white10, height: 24),
+                  Divider(color: dividerColor, height: 24),
               itemBuilder: (context, i) {
                 final tx = _recentTransactions[i];
                 return Row(
@@ -352,23 +363,35 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
                         children: [
                           Text(
                               "${tx['profiles']['fn']} ${tx['profiles']['ln']}",
+<<<<<<< HEAD
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
                                   color: Colors.white)),
+=======
+                              style: TextStyle(
+                                  color: textColor,
+                                  fontWeight: FontWeight.bold, fontSize: 13)),
+>>>>>>> 9639ff007888ce8f3766b8d257130e7753f2c578
                           Text(
                               DateFormat('MMMM dd')
                                   .format(DateTime.parse(tx['created_at'])),
-                              style: const TextStyle(
-                                  color: Colors.blueGrey, fontSize: 11)),
+                              style: TextStyle(
+                                  color: mutedTextColor, fontSize: 11)),
                         ],
                       ),
                     ),
                     Text("₱${tx['amount']}",
                         style: GoogleFonts.inter(
+<<<<<<< HEAD
                             fontWeight: FontWeight.w900,
                             fontSize: 13,
                             color: Colors.white)),
+=======
+                            color: textColor,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13)),
+>>>>>>> 9639ff007888ce8f3766b8d257130e7753f2c578
                   ],
                 );
               },
@@ -379,7 +402,8 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
     );
   }
 
-  Widget _buildClearanceSection(Color cardColor, Color textColor) {
+  Widget _buildClearanceSection(
+      Color cardColor, Color textColor, Color secondaryTextColor) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(32),
@@ -410,9 +434,9 @@ class _AccountingOverviewPanelState extends State<AccountingOverviewPanel> {
             ],
           ),
           const SizedBox(height: 24),
-          const Text(
+            Text(
               "Verify student eligibility based on real-time academic standing and account balances.",
-              style: TextStyle(color: Colors.blueGrey, fontSize: 13)),
+              style: TextStyle(color: secondaryTextColor, fontSize: 13)),
           const SizedBox(height: 24),
           SizedBox(
             width: 250,

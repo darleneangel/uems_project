@@ -116,9 +116,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
         Map<String, dynamic>.from(widget.userData);
     final detailsRaw = data['student_details'];
     if (detailsRaw != null) {
-      if (detailsRaw is List && detailsRaw.isNotEmpty)
+      if (detailsRaw is List && detailsRaw.isNotEmpty) {
         data.addAll(Map<String, dynamic>.from(detailsRaw.first));
-      else if (detailsRaw is Map)
+      } else if (detailsRaw is Map)
         data.addAll(Map<String, dynamic>.from(detailsRaw));
     }
     return data;
@@ -136,6 +136,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   }
 
   Future<void> _handleLogout() async {
+    final Color dialogBodyColor = _isDarkMode ? Colors.white70 : Colors.black87;
+    final Color dialogCancelColor = _isDarkMode ? Colors.white70 : primaryViolet;
+
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -145,18 +148,28 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
             style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold,
                 color: _isDarkMode ? Colors.white : primaryViolet)),
+<<<<<<< HEAD
         content: const Text(
           "Are you sure you want to log out of the institutional portal?",
         ),
+=======
+        content: Text(
+          "Are you sure you want to log out of the institutional portal?",
+          style: GoogleFonts.inter(color: dialogBodyColor)),
+>>>>>>> 9639ff007888ce8f3766b8d257130e7753f2c578
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text("CANCEL")),
+            child: Text("CANCEL",
+              style: GoogleFonts.inter(
+                color: dialogCancelColor, fontWeight: FontWeight.w600))),
           ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style:
                   ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-              child: const Text("LOGOUT")),
+            child: Text("LOGOUT",
+              style: GoogleFonts.inter(
+                color: Colors.white, fontWeight: FontWeight.w700))),
         ],
       ),
     );
@@ -200,11 +213,12 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
 
   Widget _buildActiveViewport() {
     if (_selectedIndex == 0) return _buildHomeDashboard();
-    if (_selectedIndex == 6)
+    if (_selectedIndex == 6) {
       return MessagingPanel(
           key: const ValueKey(6),
           isDarkMode: _isDarkMode,
           userData: widget.userData);
+    }
 
     final List<String> panelTypes = [
       'dashboard',
@@ -650,9 +664,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
         (widget.userData['user_id_number'] ?? 'N/A').toString();
     final dynamic detailsRaw = widget.userData['student_details'];
     Map<String, dynamic>? details;
-    if (detailsRaw is List && detailsRaw.isNotEmpty)
+    if (detailsRaw is List && detailsRaw.isNotEmpty) {
       details = detailsRaw.first;
-    else if (detailsRaw is Map<String, dynamic>) details = detailsRaw;
+    } else if (detailsRaw is Map<String, dynamic>) details = detailsRaw;
     final String programName =
         details?['courses']?['name'] ?? 'College Department';
 
@@ -724,6 +738,7 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
   Widget _buildSidebar(Color textColor) {
     final sidebarColor = _isDarkMode ? primaryViolet : const Color(0xFFF1F5F9);
     final subText = _isDarkMode ? Colors.white60 : Colors.blueGrey;
+    final logoutTextColor = _isDarkMode ? Colors.white : Colors.redAccent;
     final items = [
       {'title': 'Dashboard', 'icon': LucideIcons.home},
       {'title': 'Subject Load', 'icon': LucideIcons.bookOpen},
@@ -778,9 +793,9 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
             leading: const Icon(LucideIcons.logOut,
                 color: Colors.redAccent, size: 20),
             title: _isSidebarExpanded
-                ? const Text("Logout System",
+            ? Text("Logout System",
                     style: TextStyle(
-                        color: Colors.redAccent,
+                color: logoutTextColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 13))
                 : null),
@@ -866,10 +881,11 @@ class _StudentDashboardViewState extends State<StudentDashboardView> {
                         itemBuilder: (context, i) {
                           final n = _announcements[i];
                           String dateStr = "Recent";
-                          if (n['created_at'] != null)
+                          if (n['created_at'] != null) {
                             dateStr = DateFormat('MMM dd, hh:mm a').format(
                                 DateTime.parse(n['created_at'].toString())
                                     .toLocal());
+                          }
                           return ListTile(
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 24, vertical: 8),

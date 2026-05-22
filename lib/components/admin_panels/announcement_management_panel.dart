@@ -86,7 +86,7 @@ class _AnnouncementManagementPanelState
         widget.isDarkMode ? Colors.white : const Color(0xFF2E1065);
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,7 +95,7 @@ class _AnnouncementManagementPanelState
           const SizedBox(height: 32),
           _buildComposer(cardColor, textColor),
           const SizedBox(height: 32),
-          Expanded(child: _buildLiveFeed(cardColor, textColor)),
+          _buildLiveFeed(cardColor, textColor),
         ],
       ),
     );
@@ -187,7 +187,11 @@ class _AnnouncementManagementPanelState
   }
 
   Widget _buildLiveFeed(Color bg, Color text) {
+    final double feedHeight =
+        (MediaQuery.of(context).size.height * 0.34).clamp(220.0, 420.0);
+
     return Container(
+      height: feedHeight,
       decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(28),

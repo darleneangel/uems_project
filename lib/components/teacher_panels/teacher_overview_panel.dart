@@ -85,22 +85,14 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
           uniqueStudentHeadcount.add(studentId);
           uniqueSubjectCatalog.add(subjectId);
 
-          // 🛡️ SAFE EXTRACTION ENGINE
-          // FIX: Resolves "Map is not a subtype of List" by checking data type before processing
-          final dynamic gradeData = row['grades'];
-          Map<String, dynamic>? gradeMap;
-
-          if (gradeData is List && gradeData.isNotEmpty) {
-            gradeMap = gradeData.first;
-          } else if (gradeData is Map<String, dynamic>) {
-            gradeMap = gradeData;
-          }
-
-          if (gradeMap == null) {
+          // Check joined grades record
+          final gradeRecord = row['grades'] as List?;
+          if (gradeRecord == null || gradeRecord.isEmpty) {
             pending++;
           } else {
             final double g = double.tryParse(
-                    gradeMap['final_numeric_grade']?.toString() ?? "0.0") ??
+                    gradeRecord.first['final_numeric_grade']?.toString() ??
+                        "0.0") ??
                 0.0;
 
             if (g == 0) {
