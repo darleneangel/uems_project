@@ -1,20 +1,27 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart'; // Standard cross-platform PDF layout/share engine
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 
 class GradeEncodingPanel extends StatefulWidget {
   final bool isDarkMode;
   final Map<String, dynamic> userData; // Context for the logged-in Teacher
+  final String?
+      initialSubjectId; // Pre-selected Subject UUID from dashboard cards
+  final String?
+      initialSubjectName; // Pre-selected Subject Name/Code from dashboard cards
 
-  const GradeEncodingPanel(
-      {super.key, required this.isDarkMode, required this.userData});
+  const GradeEncodingPanel({
+    super.key,
+    required this.isDarkMode,
+    required this.userData,
+    this.initialSubjectId,
+    this.initialSubjectName,
+  });
 
   @override
   State<GradeEncodingPanel> createState() => _GradeEncodingPanelState();
@@ -86,7 +93,17 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
       if (mounted) {
         setState(() {
           _mySubjects = unique.values.toList();
-          if (_mySubjects.isNotEmpty) {
+
+          // 🛡️ DYNAMIC LINKING CHECK:
+          // If a pre-selected class card was clicked on the dashboard, we override the default
+          if (widget.initialSubjectId != null &&
+              unique.containsKey(widget.initialSubjectId)) {
+            _selectedSubjectId = widget.initialSubjectId;
+            _selectedSubjectName = widget.initialSubjectName ??
+                "${unique[widget.initialSubjectId]!['code']} - ${unique[widget.initialSubjectId]!['name']}";
+            _loadRoster();
+          } else if (_mySubjects.isNotEmpty) {
+            // Default to first subject if no card parameter is present
             _selectedSubjectId = _mySubjects.first['id'].toString();
             _selectedSubjectName =
                 "${_mySubjects.first['code']} - ${_mySubjects.first['name']}";
@@ -213,9 +230,9 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
       final double m = double.tryParse(mRaw) ?? 0.0;
       final double f = double.tryParse(fRaw) ?? 0.0;
 
-      if (m > 95.0 || f > 95.0 || m < 75.0 || f < 75.0) {
+      if (m > 95.0 || m < 0.0 || f > 95.0 || f < 0.0) {
         _showToast(
-            "COMMIT BLOCKED: Roster contains grades outside 75.0 - 95.0 range.",
+            "COMMIT BLOCKED: Roster contains grades outside 0.0 - 95.0 range.",
             danger);
         return;
       }
@@ -261,10 +278,10 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
   }
 
   /// 📐 LOGIC: Weighted Raw Average (40% Midterm, 60% Final)
-  /// This provides the "Raw Performance Score" before scale conversion.
   double _calculateWeightedRaw(dynamic rawMidterm, dynamic rawFinal) {
-    if (rawMidterm.toString().isEmpty || rawFinal.toString().isEmpty)
+    if (rawMidterm.toString().isEmpty || rawFinal.toString().isEmpty) {
       return 0.0;
+    }
 
     double m = double.tryParse(rawMidterm.toString()) ?? 0.0;
     double f = double.tryParse(rawFinal.toString()) ?? 0.0;
@@ -273,15 +290,10 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
     return (m * 0.4) + (f * 0.6);
   }
 
-  /// 📐 LOGIC: Transmutation to 1.00-5.00 Scale (Institutional Standard)
-  /// Basis:
-  /// 95-100% = 1.00 (Outstanding)
-  /// 91-94%  = 1.25 (Very Good)
-  /// 87-90%  = 1.50 (Very Good)
-  /// 83-86%  = 1.75 (Good)
-  /// 79-82%  = 2.00 (Good)
-  /// 75-78%  = 3.00 (Passing)
-  /// < 75%   = 5.00 (Failing)
+  /// 📐 LOGIC: Transmutation to 1.00-6.00 Scale (New Institutional Standard)
+  /// Ceiling is 95.0.
+  /// 75.0 - 65.0 is Failed (5.00).
+  /// 64.0 & Below is Dropped (6.00).
   double _transmuteToScale(double average) {
     if (average == 0) return 0.0;
     if (average >= 95) return 1.00;
@@ -289,16 +301,17 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
     if (average >= 87) return 1.50;
     if (average >= 83) return 1.75;
     if (average >= 79) return 2.00;
-    if (average >= 75) return 3.00;
-    return 5.00;
+    if (average >= 76) return 3.00; // Passing scale bottom floor
+    if (average >= 65) return 5.00; // 75.0 to 65.0 is FAILED (5.00)
+    return 6.00; // 64.0 and below is DROPPED (GWA value 6.00 / DRP)
   }
 
-  /// 📐 LOGIC: Validation Check for Error Trapping
+  /// 📐 LOGIC: Validation Check for Error Trapping (0.0 to 95.0 range allowed)
   bool _isInvalid(String value) {
     if (value.isEmpty) return true; // Missing input is invalid
     double? val = double.tryParse(value);
     if (val == null) return true;
-    return val > 95.0 || val < 75.0; // Out of range is invalid
+    return val > 95.0 || val < 0.0; // Over ceiling (95.0) is invalid
   }
 
   @override
@@ -340,23 +353,28 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
                 fontWeight: FontWeight.w900,
                 color: text,
                 letterSpacing: -1)),
+        const SizedBox(height: 4),
         const Text(
-            "Instructions: Enter scores between 75.0 and 95.0. Results are computed via a 40/60 weighted split.",
-            style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
+            "Instructions: Enter grades up to 95.0 (Ceiling). Grades 75.0 to 65.0 are considered Failed (5.00). Grades 64.0 and below are Dropped (DRP).",
+            style: TextStyle(
+                color: Colors.blueGrey,
+                fontSize: 13,
+                fontWeight: FontWeight.bold)),
       ],
     );
   }
 
   Widget _buildFilterBar(Color bg, Color text) {
     // Audit current roster validity for Button State
-    bool isRosterValid = _roster.every((row) {
-      String mStr = row['active_grade']['midterm_grade'].toString();
-      String fStr = row['active_grade']['final_grade'].toString();
-      if (mStr.isEmpty || fStr.isEmpty) return false;
-      double m = double.tryParse(mStr) ?? 0;
-      double f = double.tryParse(fStr) ?? 0;
-      return m >= 75 && m <= 95 && f >= 75 && f <= 95;
-    });
+    bool isRosterValid = _roster.isNotEmpty &&
+        _roster.every((row) {
+          String mStr = row['active_grade']['midterm_grade'].toString();
+          String fStr = row['active_grade']['final_grade'].toString();
+          if (mStr.isEmpty || fStr.isEmpty) return false;
+          double m = double.tryParse(mStr) ?? -1;
+          double f = double.tryParse(fStr) ?? -1;
+          return m >= 0 && m <= 95 && f >= 0 && f <= 95;
+        });
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -380,7 +398,7 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
             _loadRoster();
           }),
           const Spacer(),
-          _exportBtn(LucideIcons.fileText, "DOWNLOAD ROSTER", _generateGradePDF,
+          _exportBtn(LucideIcons.download, "DOWNLOAD ROSTER", _generateGradePDF,
               aViolet),
           const SizedBox(width: 12),
           ElevatedButton.icon(
@@ -479,6 +497,7 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
           _tableHead("FINAL (60%)", 2),
           _tableHead("WEIGHTED RAW", 2),
           _tableHead("NUMERIC GWA", 2),
+          _tableHead("REMARKS", 2), // Added REMARKS header column
         ],
       ),
     );
@@ -516,6 +535,10 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
                           fontWeight: FontWeight.bold,
                           fontSize: 13)))),
           Expanded(flex: 2, child: Center(child: _gwaBadge(transmuted))),
+          Expanded(
+              flex: 2,
+              child: Center(
+                  child: _remarksBadge(transmuted))), // Added Remarks Badge
         ],
       ),
     );
@@ -542,7 +565,7 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
                   fontSize: 13,
                   fontWeight: FontWeight.bold),
               decoration: InputDecoration(
-                hintText: "75.0",
+                hintText: "0.0-95.0",
                 hintStyle: const TextStyle(color: Colors.white10),
                 filled: true,
                 fillColor: aViolet.withOpacity(0.05),
@@ -576,17 +599,61 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
   }
 
   Widget _gwaBadge(double gwa) {
-    if (gwa == 0)
+    if (gwa == 0) {
       return const Text("-", style: TextStyle(color: Colors.blueGrey));
-    final color = gwa <= 3.0 ? success : danger;
+    }
+
+    Color color;
+    String label;
+    if (gwa == 6.00) {
+      color = Colors.orangeAccent;
+      label = "DROP";
+    } else if (gwa == 5.00) {
+      color = danger;
+      label = "5.00";
+    } else {
+      color = success;
+      label = gwa.toStringAsFixed(2);
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
           color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8)),
-      child: Text(gwa.toStringAsFixed(2),
+      child: Text(label,
           style: TextStyle(
               color: color, fontWeight: FontWeight.w900, fontSize: 12)),
+    );
+  }
+
+  /// 📐 LOGIC: Remarks Badge (Passed, Failed, Dropped status indicator)
+  Widget _remarksBadge(double gwa) {
+    if (gwa == 0) {
+      return const Text("-", style: TextStyle(color: Colors.blueGrey));
+    }
+
+    Color color;
+    String label;
+    if (gwa == 6.00) {
+      color = Colors.orangeAccent;
+      label = "DROPPED";
+    } else if (gwa == 5.00) {
+      color = danger;
+      label = "FAILED";
+    } else {
+      color = success;
+      label = "PASSED";
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8)),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.w900, fontSize: 11)),
     );
   }
 
@@ -618,22 +685,23 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
               color: Colors.white.withOpacity(0.05),
               borderRadius: BorderRadius.circular(12)),
           child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-            value: value,
-            isExpanded: true,
-            dropdownColor: surfaceDark,
-            style: TextStyle(
-                color: widget.isDarkMode ? Colors.white : pViolet,
-                fontSize: 13,
-                fontWeight: FontWeight.bold),
-            items: items
-                .map((i) => DropdownMenuItem(
-                    value: i['id'].toString(),
-                    child: Text("${i['code']} - ${i['name']}",
-                        overflow: TextOverflow.ellipsis)))
-                .toList(),
-            onChanged: onChanged,
-          )),
+            child: DropdownButton<String>(
+              value: value,
+              isExpanded: true,
+              dropdownColor: surfaceDark,
+              style: TextStyle(
+                  color: widget.isDarkMode ? Colors.white : pViolet,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold),
+              items: items
+                  .map((i) => DropdownMenuItem(
+                      value: i['id'].toString(),
+                      child: Text("${i['code']} - ${i['name']}",
+                          overflow: TextOverflow.ellipsis)))
+                  .toList(),
+              onChanged: onChanged,
+            ),
+          ),
         ),
       ],
     );
@@ -674,9 +742,27 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
         behavior: SnackBarBehavior.floating));
   }
 
+  /// Helper to map transmuted numeric GWA back to string descriptors for PDF export compatibility
+  String _getGwaLabel(double gwa) {
+    if (gwa == 0.0) return "-";
+    if (gwa == 6.00) return "DRP (Dropped)";
+    if (gwa == 5.00) return "5.00 (Failed)";
+    return gwa.toStringAsFixed(2);
+  }
+
+  /// Helper to map transmuted numeric GWA back to string remarks for PDF export compatibility
+  String _getRemarksLabel(double gwa) {
+    if (gwa == 0.0) return "-";
+    if (gwa == 6.00) return "DROPPED";
+    if (gwa == 5.00) return "FAILED";
+    return "PASSED";
+  }
+
+  /// 📥 PDF GENERATION: Unified, web-safe, cross-platform export and save action
   Future<void> _generateGradePDF() async {
     if (_roster.isEmpty) return;
     final pdf = pw.Document();
+
     pdf.addPage(pw.Page(
       pageFormat: PdfPageFormat.a4,
       build: (c) => pw.Padding(
@@ -687,35 +773,49 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
                 pw.Text("OFFICIAL CLASS GRADE ROSTER",
                     style: pw.TextStyle(
                         fontWeight: pw.FontWeight.bold, fontSize: 18)),
+                pw.SizedBox(height: 8),
                 pw.Text("Subject: $_selectedSubjectName"),
+                pw.Text(
+                    "Professor: ${widget.userData['fn']} ${widget.userData['ln']}"),
                 pw.SizedBox(height: 20),
                 pw.Table.fromTextArray(
                   headers: [
-                    "ID",
+                    "ID Number",
                     "Student Name",
                     "Midterm",
                     "Final",
-                    "Weighted",
-                    "GWA"
+                    "Weighted Raw Avg",
+                    "Numeric GWA / Standing",
+                    "Remarks"
                   ],
                   data: _roster
                       .map((s) => [
                             s['profiles']['user_id_number'],
                             "${s['profiles']['ln']}, ${s['profiles']['fn']}"
                                 .toUpperCase(),
-                            s['active_grade']['midterm_grade'],
-                            s['active_grade']['final_grade'],
+                            s['active_grade']['midterm_grade'] ?? '-',
+                            s['active_grade']['final_grade'] ?? '-',
                             s['weighted_raw_avg'].toStringAsFixed(1),
-                            _transmuteToScale(s['weighted_raw_avg'])
-                                .toStringAsFixed(2)
+                            _getGwaLabel(
+                                _transmuteToScale(s['weighted_raw_avg'])),
+                            _getRemarksLabel(
+                                _transmuteToScale(s['weighted_raw_avg'])),
                           ])
                       .toList(),
                 ),
               ])),
     ));
-    final dir = await getTemporaryDirectory();
-    final file = File("${dir.path}/GradeRoster_${_selectedSubjectId}.pdf");
-    await file.writeAsBytes(await pdf.save());
-    await OpenFile.open(file.path);
+
+    try {
+      final bytes = await pdf.save();
+      // Directly share and save/download the PDF instead of loading print layout selector
+      await Printing.sharePdf(
+        bytes: bytes,
+        filename: 'GradeRoster_${_selectedSubjectId}.pdf',
+      );
+      _showToast("PDF Grade Roster successfully saved!", success);
+    } catch (e) {
+      _showToast("Could not save PDF file.", danger);
+    }
   }
 }

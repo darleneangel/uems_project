@@ -54,6 +54,9 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
   Timer? _otpCountdownTimer;
   int _secondsRemaining = 60; // Strict 1-Minute expiration requirement
 
+  // OTP Brute-force Limit Tracking
+  int _failedOtpAttempts = 0; // State tracking for wrong OTP guesses
+
   // Password Requirement Validator States
   bool _hasMinLength = false;
   bool _hasUppercase = false;
@@ -154,12 +157,20 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
       // 1. Fetch profile to get email
       final response = await _service.client
           .from('profiles')
-          .select('id, email, fn')
+          .select('id, email, fn, account_status')
           .ilike('user_id_number', idNum)
           .maybeSingle();
 
       if (response == null || response['email'] == null) {
         _showLocalError("Identifier not found or no email associated.");
+        return;
+      }
+
+      // Check if user is already suspended before initiating recovery
+      final String status = response['account_status'] ?? 'Active';
+      if (status == 'Suspended') {
+        _showLocalError(
+            "Recovery Blocked: This account is currently suspended. Please contact school IT.");
         return;
       }
 
@@ -172,6 +183,7 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
 
       // 2. Generate cryptographic random OTP
       _generatedOtp = (Random().nextInt(900000) + 100000).toString();
+      _failedOtpAttempts = 0; // Reset OTP failure counter on new request
 
       try {
         if (kIsWeb) {
@@ -240,7 +252,7 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
     await send(message, smtpServer);
   }
 
-  /// 🛠️ LOGIC: Step 2 - Verify OTP
+  /// 🛠️ LOGIC: Step 2 - Verify OTP (Now with 3-attempt Lockdown Security)
   void _verifyOtp() {
     if (_secondsRemaining <= 0) {
       _showLocalError(
@@ -256,8 +268,80 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
             false; // Hide on-screen code block when verified
       });
     } else {
-      _showLocalError("Invalid OTP code. Please try again.");
+      setState(() {
+        _failedOtpAttempts++;
+      });
+
+      if (_failedOtpAttempts >= 3) {
+        _otpCountdownTimer?.cancel();
+        _suspendAccountDueToOtpBruteforce();
+      } else {
+        _showLocalError(
+            "Invalid OTP. Warning: $_failedOtpAttempts/3 failed attempts. 3 failures will suspend your account.");
+      }
     }
+  }
+
+  /// 🚨 SECURITY LOCKOUT: Locks down the account in Supabase when 3 OTP tries fail
+  Future<void> _suspendAccountDueToOtpBruteforce() async {
+    setState(() => _isLoading = true);
+    try {
+      await _service.client
+          .from('profiles')
+          .update({'account_status': 'Suspended'}).eq('id', _targetProfileId!);
+
+      if (mounted) {
+        Navigator.pop(context); // Pop active recovery dialog safely
+        _showLockdownLockoutDialog(); // Display system lockdown warnings
+      }
+    } catch (e) {
+      _showLocalError("Failed to lock account status: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  /// 🚨 LOCKDOWN DISPLAY: Informs the attacker/user that the account has been suspended
+  void _showLockdownLockoutDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: surfaceDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(LucideIcons.shieldAlert, color: Colors.redAccent, size: 28),
+            SizedBox(width: 12),
+            Text("Security Lockout",
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          "This account has been suspended due to 3 consecutive failed OTP verification entries.\n\n"
+          "To restore access, please contact school IT Administration or the respective Program Chair.",
+          style: TextStyle(color: Colors.white70, height: 1.5, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              // Securely clean up active memory boundaries and push a fresh login page view
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const UEMSLoginPage()),
+                (route) => false,
+              );
+            },
+            child: const Text("UNDERSTOOD",
+                style: TextStyle(color: aViolet, fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
+    );
   }
 
   /// 🛰️ DATABASE: Step 3 - Update Password
@@ -399,6 +483,16 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
                       if (_secondsRemaining > 0) ...[
                         _buildField(_otpController, "Verification Code",
                             LucideIcons.key),
+                        const SizedBox(height: 8),
+                        Center(
+                          child: Text(
+                            "Wrong attempts: $_failedOtpAttempts/3 (at 3 failures your account locks)",
+                            style: const TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ] else ...[
                         Center(
                           child: OutlinedButton.icon(

@@ -4,6 +4,7 @@ import 'admin_panels/academic_lifecycle_panel.dart';
 import 'admin_panels/scholastic_control_panel.dart';
 import 'admin_panels/access_security_panel.dart';
 import 'admin_panels/announcement_management_panel.dart';
+import 'admin_panels/account_control_panel.dart';
 import 'request_receiver.dart';
 import 'hr_panel.dart';
 import 'shared/messaging_panel.dart';
@@ -64,6 +65,10 @@ class _AdminPanelContentState extends State<AdminPanelContent> {
 
       case 8:
         return ReportPanel(
+            isDarkMode: widget.isDarkMode, userData: widget.userData);
+
+      case 9:
+        return AccountControlPanel(
             isDarkMode: widget.isDarkMode, userData: widget.userData);
 
       case 10: // Advanced Management - Study Loads

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'teacher_panel_content.dart';
+import '../services/supabase_service.dart';
 
 class TeacherDashboardView extends StatefulWidget {
   final VoidCallback onLogout;
@@ -18,10 +19,84 @@ class _TeacherDashboardViewState extends State<TeacherDashboardView> {
   bool _isSidebarExpanded = true;
   int _selectedIndex = 0;
 
+  // Grade Recording Hub Context
+  String? _selectedSubjectId;
+  String? _selectedSubjectName;
+
+  // Dashboard Statistics State
+  int _studentCount = 0;
+  int _classesToday = 0;
+  bool _isLoading = true;
+
   static const Color pViolet = Color(0xFF2E1065);
   static const Color tDark = Color(0xFF0F071D);
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color success = Color(0xFF69F0AE);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTeacherData();
+  }
+
+  /// 🛰️ DATABASE: Load stats to ensure the hub is functional
+  Future<void> _loadTeacherData() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    final String profId = widget.userData['id'];
+
+    try {
+      final response = await SupabaseService()
+          .client
+          .from('study_loads')
+          .select('*, subjects(*)')
+          .eq('professor_id', profId);
+
+      final List<Map<String, dynamic>> data =
+          List<Map<String, dynamic>>.from(response);
+
+      // Compute Aggregates
+      final Set<String> uniqueStudents =
+          data.map((e) => e['student_id']?.toString() ?? "").toSet();
+      uniqueStudents.remove(""); // Remove shell/master schedules
+
+      final String today = _getTodayDayCode();
+      final int countToday = data
+          .where((e) => (e['day_schedule'] ?? '').toString().contains(today))
+          .length;
+
+      if (mounted) {
+        setState(() {
+          _studentCount = uniqueStudents.length;
+          _classesToday = countToday;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Professor Shell Data Error: $e");
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _getTodayDayCode() {
+    final now = DateTime.now();
+    switch (now.weekday) {
+      case 1:
+        return "M";
+      case 2:
+        return "TUE";
+      case 3:
+        return "WED";
+      case 4:
+        return "THU";
+      case 5:
+        return "FRI";
+      case 6:
+        return "SAT";
+      default:
+        return "SUN";
+    }
+  }
 
   void _toggleSidebar() =>
       setState(() => _isSidebarExpanded = !_isSidebarExpanded);
@@ -88,12 +163,16 @@ class _TeacherDashboardViewState extends State<TeacherDashboardView> {
                       constraints: const BoxConstraints(maxWidth: 1400),
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
-                        child: TeacherPanelContent(
-                          key: ValueKey(_selectedIndex),
-                          selectedIndex: _selectedIndex,
-                          isDarkMode: _isDarkMode,
-                          userData: widget.userData,
-                        ),
+                        child: _isLoading
+                            ? const Center(
+                                child:
+                                    CircularProgressIndicator(color: aViolet))
+                            : TeacherPanelContent(
+                                key: ValueKey(_selectedIndex),
+                                selectedIndex: _selectedIndex,
+                                isDarkMode: _isDarkMode,
+                                userData: widget.userData,
+                              ),
                       ),
                     ),
                   ),

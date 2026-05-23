@@ -7,7 +7,7 @@ import 'supabase_service.dart';
 // Import views safely
 import '../views/login_view.dart';
 import '../views/student_dashboard_view.dart';
-import '../views/teacher_dashboard_view.dart';
+import '../components/teacher_dashboard_view.dart';
 import '../views/admin_dashboard_view.dart';
 import '../views/accounting_dashboard_view.dart';
 import '../views/registrar_dashboard_view.dart';

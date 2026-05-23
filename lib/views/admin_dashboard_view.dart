@@ -36,6 +36,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     'hr', // 6
     'messaging', // 7
     'reports', // 8
+    'audit', // 9
   ];
 
   // Palette
@@ -148,9 +149,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       );
     }
 
-    // Indices 1-8: Specialized Admin Modules
+    // Indices 1-11: Specialized Admin Modules
     // We pass the bounded height context to the router.
-    if (_activeModuleIndex <= 8) {
+    if (_activeModuleIndex >= 1 && _activeModuleIndex <= 11) {
       return Padding(
         padding: const EdgeInsets.all(32),
         child: AdminPanelContent(
@@ -271,6 +272,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 _sidebarItem(LucideIcons.fileEdit, "Scholastic Control", 4),
                 _sidebarItem(LucideIcons.shieldAlert, "Access & Security", 5),
                 _sidebarHeader("MANAGEMENT"),
+                _sidebarItem(
+                    LucideIcons.alertTriangle, "Audit And Account Control", 9),
                 _sidebarItem(LucideIcons.users, "HR / Workforce", 6),
                 _sidebarItem(LucideIcons.messageSquare, "Messaging", 7),
                 _sidebarItem(LucideIcons.alertTriangle, "System Reports", 8),
@@ -278,7 +281,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             ),
           ),
           const Divider(color: Colors.white10, indent: 20, endIndent: 20),
-          _sidebarItem(LucideIcons.logOut, "Logout System", 9,
+          _sidebarItem(LucideIcons.logOut, "Logout System", -1,
               isDestructive: true, onTap: _confirmLogout),
           const SizedBox(height: 20),
         ],

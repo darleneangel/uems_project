@@ -304,50 +304,38 @@ class SupabaseService {
 
   // --- ATTENDANCE TRACKING ENGINE ---
 
-  /// Records the system entry time for employees/faculty (SAFE VERSION)
+  // --- SYSTEM AUDIT LOGGING ENGINE ---
+
+  /// Records secure system login transactions for all user roles (Students & Administrative staff)
   Future<void> recordAttendanceLogin(String userId, String role) async {
-    if (role == 'student') return;
-
     try {
-      final today = DateTime.now().toIso8601String().split('T')[0];
-
-      // Use limit(1) to avoid errors if multiple logs exist for the same day
-      final existingLog = await _client
-          .from('attendance_logs')
-          .select()
-          .eq('employee_id', userId)
-          .gte('check_in', '${today}T00:00:00')
-          .lte('check_in', '${today}T23:59:59')
-          .limit(1)
-          .maybeSingle();
-
-      if (existingLog == null) {
-        await _client.from('attendance_logs').insert({
-          'employee_id': userId,
-          'check_in': DateTime.now().toIso8601String(),
-          'status': 'Present',
-        });
-      }
+      // Create a unified audit log trace in our security table
+      await _client.from('attendance_logs').insert({
+        'user_id': userId,
+        'check_in_time': DateTime.now().toUtc().toIso8601String(),
+        'status': 'Present',
+      });
+      debugPrint(
+          "🛰️ UEMSSP Audit: Recorded check-in for User ID: $userId ($role)");
     } catch (e) {
-      // Log error to console but don't crash the login process
-      print("Safe Attendance Error (Login): $e");
+      // Log error to console but protect transaction bounds from crashing
+      debugPrint("Safe Attendance Error (Login Record): $e");
     }
   }
 
-  /// Records the system exit time (Logout) (SAFE VERSION)
+  /// Records secure system logout transactions for all user roles (closes open sessions)
   Future<void> recordAttendanceLogout(String userId) async {
     try {
-      final today = DateTime.now().toIso8601String().split('T')[0];
-
+      // Updates the user's active login session where check_out_time is still empty
       await _client
           .from('attendance_logs')
-          .update({'check_out': DateTime.now().toIso8601String()})
-          .eq('employee_id', userId)
-          .gte('check_in', '${today}T00:00:00')
-          .filter('check_out', 'is', null);
+          .update({'check_out_time': DateTime.now().toUtc().toIso8601String()})
+          .eq('user_id', userId)
+          .filter('check_out_time', 'is', null);
+      debugPrint("🛰️ UEMSSP Audit: Recorded checkout for User ID: $userId");
     } catch (e) {
-      // Log error to console but don't crash the logout process
-      print("Safe Attendance Error (Logout): $e");
+      // Log error to console but protect transaction bounds from crashing
+      debugPrint("Safe Attendance Error (Logout Record): $e");
     }
   }
 }
