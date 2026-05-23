@@ -217,9 +217,10 @@ class _AnnouncementManagementPanelState
               stream: _service.client.from('announcements').stream(
                   primaryKey: ['id']).order('created_at', ascending: false),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(
                       child: CircularProgressIndicator(color: aViolet));
+                }
                 final list = snapshot.data!;
 
                 if (list.isEmpty) {

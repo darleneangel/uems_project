@@ -257,7 +257,7 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
         // LEFT: ASSESSMENT QUEUE
         Container(
           width: 340,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
               border: Border(right: BorderSide(color: Colors.white10))),
           child: _buildQueue(textColor, cardColor),
         ),
@@ -303,12 +303,14 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
                       value: isBatchSelected,
                       onChanged: (val) {
                         setState(() {
-                          if (val!)
+                          if (val!) {
                             _selectedQueueIds.add(s['profile_id']);
-                          else
+                          } else {
                             _selectedQueueIds.remove(s['profile_id']);
-                          if (_selectedQueueIds.isNotEmpty)
+                          }
+                          if (_selectedQueueIds.isNotEmpty) {
                             _activeStudent = null;
+                          }
                         });
                       },
                       selected: isSelected,
@@ -424,9 +426,9 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
   Widget _templateMenu(Color text) {
     return PopupMenuButton<String>(
       onSelected: (val) {
-        if (val == 'save')
+        if (val == 'save') {
           _saveCurrentAsTemplate();
-        else {
+        } else {
           final t = _savedTemplates.firstWhere((e) => e['name'] == val);
           _applyTemplate(t);
         }

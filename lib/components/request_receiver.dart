@@ -107,8 +107,6 @@ class _RequestReceiverState extends State<RequestReceiver> {
 
               // 📐 FILTER ENGINE: Logic verified for cross-office audit
               final filtered = rawData.where((req) {
-                if (req == null) return false;
-
                 final status =
                     (req['request_status'] ?? req['status'] ?? '').toString();
 
@@ -116,7 +114,9 @@ class _RequestReceiverState extends State<RequestReceiver> {
                 if (status == 'Approved' ||
                     status == 'Rejected' ||
                     status == 'Released' ||
-                    status == 'Archived') return false;
+                    status == 'Archived') {
+                  return false;
+                }
 
                 if (_selectedOfficeFilter == 'all') return true;
 
