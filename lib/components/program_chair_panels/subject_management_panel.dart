@@ -195,7 +195,7 @@ class _SubjectManagementPanelState extends State<SubjectManagementPanel> {
                         "Classify as specialized departmental major.",
                         style: TextStyle(color: Colors.blueGrey, fontSize: 11)),
                     value: isProfessional,
-                    activeColor: aViolet,
+                    activeThumbColor: aViolet,
                     onChanged: (v) => setModalState(() => isProfessional = v),
                   ),
                 ],
@@ -240,8 +240,9 @@ class _SubjectManagementPanelState extends State<SubjectManagementPanel> {
     final textColor = widget.isDarkMode ? Colors.white : pViolet;
     final cardColor = widget.isDarkMode ? surfaceDark : Colors.white;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: aViolet));
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(40),

@@ -105,7 +105,7 @@ class SecurityService {
     return input
         .trim()
         .replaceAll(
-            RegExp(r"['" + r'";#\-]'), '') // Strips malicious SQL syntax
+            RegExp(r"['" r'";#\-]'), '') // Strips malicious SQL syntax
         .replaceAll('<', '&lt;') // Sanitizes HTML tags against XSS
         .replaceAll('>', '&gt;');
   }

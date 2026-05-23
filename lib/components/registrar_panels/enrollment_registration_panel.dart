@@ -241,7 +241,7 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           DropdownButtonFormField<String>(
-                            value: selectedYearLevelId,
+                            initialValue: selectedYearLevelId,
                             dropdownColor: surfaceDark,
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(

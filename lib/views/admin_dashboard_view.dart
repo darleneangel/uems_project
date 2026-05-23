@@ -408,13 +408,15 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 .from('office_requests')
                 .stream(primaryKey: ['id']).limit(5),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting)
+              if (snapshot.connectionState == ConnectionState.waiting) {
                 return const LinearProgressIndicator();
+              }
               final logs = snapshot.data ?? [];
 
-              if (logs.isEmpty)
+              if (logs.isEmpty) {
                 return const Text("No recent activity.",
                     style: TextStyle(color: Colors.blueGrey, fontSize: 12));
+              }
 
               return Column(
                 children: logs.map((log) {

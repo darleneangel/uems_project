@@ -218,11 +218,13 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
               stream: SupabaseService().client.from('office_requests').stream(
                   primaryKey: ['id']).order('date_applied', ascending: false),
               builder: (context, snapshot) {
-                if (snapshot.hasError)
+                if (snapshot.hasError) {
                   return _buildErrorState(sub, "Ledger Link Failure");
-                if (snapshot.connectionState == ConnectionState.waiting)
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                       child: CircularProgressIndicator(color: aViolet));
+                }
 
                 final rawList = snapshot.data ?? [];
 
@@ -329,23 +331,24 @@ class _StudentRequestsPanelState extends State<StudentRequestsPanel> {
           debugPrint("Full Error Log: ${snapshot.error}");
           return _buildErrorState(sub, "Identity Resolution Error");
         }
-        if (!snapshot.hasData)
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator(color: aViolet));
+        }
 
         final req = snapshot.data!;
 
         final dynamic pRaw = req['profiles'];
         Map<String, dynamic>? p;
-        if (pRaw is Map<String, dynamic>)
+        if (pRaw is Map<String, dynamic>) {
           p = pRaw;
-        else if (pRaw is List && pRaw.isNotEmpty) p = pRaw[0];
+        } else if (pRaw is List && pRaw.isNotEmpty) p = pRaw[0];
 
         Map<String, dynamic>? details;
         if (p != null) {
           final dynamic detailsRaw = p['student_details'];
-          if (detailsRaw is List && detailsRaw.isNotEmpty)
+          if (detailsRaw is List && detailsRaw.isNotEmpty) {
             details = detailsRaw[0];
-          else if (detailsRaw is Map<String, dynamic>) details = detailsRaw;
+          } else if (detailsRaw is Map<String, dynamic>) details = detailsRaw;
         }
 
         return Container(

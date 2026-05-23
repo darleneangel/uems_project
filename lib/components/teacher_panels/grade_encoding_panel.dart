@@ -263,8 +263,9 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
   /// 📐 LOGIC: Weighted Raw Average (40% Midterm, 60% Final)
   /// This provides the "Raw Performance Score" before scale conversion.
   double _calculateWeightedRaw(dynamic rawMidterm, dynamic rawFinal) {
-    if (rawMidterm.toString().isEmpty || rawFinal.toString().isEmpty)
+    if (rawMidterm.toString().isEmpty || rawFinal.toString().isEmpty) {
       return 0.0;
+    }
 
     double m = double.tryParse(rawMidterm.toString()) ?? 0.0;
     double f = double.tryParse(rawFinal.toString()) ?? 0.0;
@@ -576,8 +577,9 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
   }
 
   Widget _gwaBadge(double gwa) {
-    if (gwa == 0)
+    if (gwa == 0) {
       return const Text("-", style: TextStyle(color: Colors.blueGrey));
+    }
     final color = gwa <= 3.0 ? success : danger;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -714,7 +716,7 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
               ])),
     ));
     final dir = await getTemporaryDirectory();
-    final file = File("${dir.path}/GradeRoster_${_selectedSubjectId}.pdf");
+    final file = File("${dir.path}/GradeRoster_$_selectedSubjectId.pdf");
     await file.writeAsBytes(await pdf.save());
     await OpenFile.open(file.path);
   }
