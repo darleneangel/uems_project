@@ -15,7 +15,9 @@ import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 import '../../services/supabase_service.dart';
 
-/// CUSTOM CONVERTER CLASS
+// ─────────────────────────────────────────────
+// CUSTOM CSV CONVERTER
+// ─────────────────────────────────────────────
 class ListToCsvConverter {
   const ListToCsvConverter();
   String convert(List<List<dynamic>> rows) {
@@ -34,6 +36,9 @@ class ListToCsvConverter {
   }
 }
 
+// ─────────────────────────────────────────────
+// WIDGET
+// ─────────────────────────────────────────────
 class StudentPaymentPortal extends StatefulWidget {
   final bool isDarkMode;
   final Map<String, dynamic> userData;
@@ -49,86 +54,91 @@ class StudentPaymentPortal extends StatefulWidget {
 }
 
 class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
+  // ─── Services & Controllers ───────────────
   final SupabaseService _service = SupabaseService();
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _cashReceivedController = TextEditingController();
-  final TextEditingController _parentNameController =
-      TextEditingController(); // New
-  final TextEditingController _notesController = TextEditingController(); // New
+  final TextEditingController _parentNameController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
 
+  // ─── State ────────────────────────────────
   bool _isLoading = false;
   bool _isProcessing = false;
+  bool _isPollingDialogOpen = false;
   Map<String, dynamic>? _activeStudent;
   Map<String, dynamic>? _billingBreakdown;
   List<Map<String, dynamic>> _ledgerEntries = [];
 
+  // ─── Theme Constants ──────────────────────
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color success = Color.fromARGB(255, 10, 85, 7);
   static const Color surfaceDark = Color(0xFF0F071D);
-  // ==========================================
-  // 🔑 API & SMTP CONFIGURATION
-  // ==========================================
+
+  // ─── API & SMTP Configuration ─────────────
   static const String _paymongoSecretKey = 'sk_test_tHDd4rEX19bAfNmdz9WSC6Tj';
   static const String _successUrl = 'https://pay.paymongo.com/success';
   static const String _cancelUrl = 'https://pay.paymongo.com/cancel';
   static const String _senderEmail = 'lustredarlene45@gmail.com';
-  static const String _appPassword = 'xzgk bybb hiqh hrxh';
+  static const String _appPassword = 'dgyl ahnl jhvs oplr';
 
   String get _authHeader =>
       'Basic ${base64Encode(utf8.encode('$_paymongoSecretKey:'))}';
-  // ==========================================
 
+  // ─── Payment State ────────────────────────
   final String _selectedSemester = '2nd Semester 2025-2026';
   String _paymentPlan = 'Installment';
   String _paymentMethod = 'Cash';
-  double _lateSurcharge = 0.0;
   double _officialAssessmentTotal = 0.0;
   double _scholarshipDiscount = 0.0;
-  DateTime? _promissoryDueDate; // New
+  DateTime? _promissoryDueDate;
 
   String? _activeCheckoutSessionId;
   Timer? _pollingTimer;
 
+  // ─────────────────────────────────────────────
+  // LIFECYCLE
+  // ─────────────────────────────────────────────
   @override
   void dispose() {
     _pollingTimer?.cancel();
     _searchController.dispose();
     _amountController.dispose();
     _cashReceivedController.dispose();
-    _parentNameController.dispose(); // New
-    _notesController.dispose(); // New
+    _parentNameController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
+  // ─────────────────────────────────────────────
+  // AMOUNT CALCULATION
+  // ─────────────────────────────────────────────
   void _updateCalculatedAmount() {
-    if (_activeStudent == null || _paymentPlan == 'Promissory Note') {
-      return; // Added condition
-    }
+    if (_activeStudent == null || _paymentPlan == 'Promissory Note') return;
+
     final double balance = double.tryParse(_activeStudent!['student_details']
                     ?['account_balance']
                 ?.toString() ??
             "0") ??
         0.0;
     double targetAmount = 0.0;
-    _lateSurcharge = 0.0;
 
     if (_paymentPlan == 'Full Payment') {
       targetAmount = balance;
     } else if (_paymentPlan == 'Installment') {
-      // Assuming _officialAssessmentTotal and _scholarshipDiscount are correctly set
-      // from the student's assessment record.
-      double baseTranche =
-          (_officialAssessmentTotal - _scholarshipDiscount) / 4;
-      targetAmount = baseTranche;
+      targetAmount = (_officialAssessmentTotal - _scholarshipDiscount) / 4;
     } else {
-      return;
+      return; // Custom Amount — let the user type freely
     }
+
     setState(() {
       _amountController.text = targetAmount.toStringAsFixed(2);
     });
   }
 
+  // ─────────────────────────────────────────────
+  // FETCH STUDENT LEDGER
+  // ─────────────────────────────────────────────
   Future<void> _fetchStudentLedger() async {
     final term = _searchController.text.trim();
     if (term.isEmpty) return;
@@ -137,15 +147,17 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
       final student = await _service.client
           .from('profiles')
           .select(
-              '*, student_details(*, courses(name), year_levels(definition))') // Added year_levels(definition)
+              '*, student_details(*, courses(name), year_levels(definition))')
           .eq('role', 'student')
           .ilike('user_id_number', term)
           .maybeSingle();
+
       if (student == null) {
         _showToast("Student not found.", Colors.orangeAccent);
         setState(() => _isLoading = false);
         return;
       }
+
       final assessmentRecord = await _service.client
           .from('payments')
           .select()
@@ -154,11 +166,13 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
           .order('created_at', ascending: false)
           .limit(1)
           .maybeSingle();
+
       final paymentsRes = await _service.client
           .from('payments')
           .select('*')
           .eq('student_id', student['id'])
           .order('created_at', ascending: false);
+
       final details = student['student_details'];
       double officialTotal = double.tryParse(
               details?['total_assessment']?.toString() ?? "35000") ??
@@ -166,14 +180,16 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
       double discount = double.tryParse(
               details?['scholarship_discount']?.toString() ?? "0") ??
           0.0;
+
       Map<String, dynamic>? decodedBreakdown;
       if (assessmentRecord != null && assessmentRecord['remarks'] != null) {
         try {
           decodedBreakdown = jsonDecode(assessmentRecord['remarks']);
         } catch (e) {
-          debugPrint("JSON Decode Error");
+          debugPrint("JSON Decode Error: $e");
         }
       }
+
       setState(() {
         _activeStudent = student;
         _billingBreakdown = decodedBreakdown;
@@ -189,7 +205,9 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
     }
   }
 
-  /// 🛰️ FUNCTION: Grant Institutional Financial Clearance
+  // ─────────────────────────────────────────────
+  // GRANT CLEARANCE
+  // ─────────────────────────────────────────────
   Future<void> _grantClearance() async {
     if (_activeStudent == null) return;
     setState(() => _isProcessing = true);
@@ -197,7 +215,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
       await _service.client.from('student_details').update({
         'enrollment_status': 'Cleared',
         'accounting_clearance_date': DateTime.now().toIso8601String(),
-        'accounting_cleared_by': widget.userData['id']
+        'accounting_cleared_by': widget.userData['id'],
       }).eq('profile_id', _activeStudent!['id']);
 
       _showToast("Student successfully cleared for institutional activities.",
@@ -210,7 +228,9 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
     }
   }
 
-  /// 🛰️ FUNCTION: Generate professional Statement of Account (SOA)
+  // ─────────────────────────────────────────────
+  // GENERATE SOA PDF
+  // ─────────────────────────────────────────────
   Future<void> _generateSOA() async {
     if (_activeStudent == null) return;
     final pdf = pw.Document();
@@ -303,8 +323,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
     final bytes = await pdf.save();
     final dir = await getApplicationDocumentsDirectory();
     final path = "${dir.path}/SOA_${_activeStudent!['user_id_number']}.pdf";
-    final file = File(path);
-    await file.writeAsBytes(bytes);
+    await File(path).writeAsBytes(bytes);
     await OpenFile.open(path);
   }
 
@@ -330,11 +349,14 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                             : pw.FontWeight.normal)),
               ]));
 
+  // ─────────────────────────────────────────────
+  // ONLINE PAYMENT — PAYMONGO
+  // ─────────────────────────────────────────────
   Future<void> _processOnlinePayment() async {
     if (_activeStudent == null) return;
     final double payAmount = double.tryParse(_amountController.text) ?? 0;
     if (payAmount < 100) {
-      _showToast("Minimum ₱100.00 for online.", Colors.orangeAccent);
+      _showToast("Minimum ₱100.00 for online payments.", Colors.orangeAccent);
       return;
     }
     _showLoadingGateway();
@@ -349,13 +371,14 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
           "data": {
             "attributes": {
               "send_email_receipt": true,
-              "description": "Tuition ($_paymentPlan) - Institutional Payment",
+              "description":
+                  "Tuition ($_paymentPlan) — ${_activeStudent!['fn']} ${_activeStudent!['ln']}",
               "line_items": [
                 {
                   "currency": "PHP",
                   "amount": (payAmount * 100).toInt(),
                   "description":
-                      "Tuition for ${_activeStudent!['fn'] ?? ''} ${_activeStudent!['ln'] ?? ''}",
+                      "$_paymentPlan — ${_activeStudent!['fn'] ?? ''} ${_activeStudent!['ln'] ?? ''} (${_activeStudent!['user_id_number'] ?? ''})",
                   "name": "BFA Academic Fees",
                   "quantity": 1
                 }
@@ -367,6 +390,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
           }
         }),
       );
+
       final result = jsonDecode(response.body);
       if (response.statusCode == 200) {
         _activeCheckoutSessionId = result['data']['id'];
@@ -378,7 +402,8 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
           _startPaymentPolling(payAmount);
         }
       } else {
-        throw Exception(result['errors']?[0]['detail'] ?? "Payment Failure");
+        throw Exception(result['errors']?[0]['detail'] ??
+            "Payment session creation failed.");
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
@@ -386,6 +411,9 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
     }
   }
 
+  // ─────────────────────────────────────────────
+  // POLLING — VERIFY PAYMONGO SESSION
+  // ─────────────────────────────────────────────
   void _startPaymentPolling(double amount) {
     _pollingTimer?.cancel();
     _showPollingDialog();
@@ -396,6 +424,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
             Uri.parse(
                 'https://api.paymongo.com/v1/checkout_sessions/$_activeCheckoutSessionId'),
             headers: {'Authorization': _authHeader});
+
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           final String sessionStatus = data['data']['attributes']['status'];
@@ -404,7 +433,10 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
           if (sessionStatus == 'paid' || payments.isNotEmpty) {
             timer.cancel();
             if (mounted) {
-              Navigator.of(context, rootNavigator: true).pop();
+              if (_isPollingDialogOpen) {
+                _isPollingDialogOpen = false;
+                Navigator.of(context, rootNavigator: true).pop();
+              }
               await _finalizeTransaction(amount, method: 'Online (Paymongo)');
             }
           }
@@ -415,18 +447,27 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
     });
   }
 
+  // ─────────────────────────────────────────────
+  // CASH PAYMENT
+  // ─────────────────────────────────────────────
   Future<void> _processCashDisbursement() async {
     final double payAmount = double.tryParse(_amountController.text) ?? 0;
     final double received = double.tryParse(_cashReceivedController.text) ?? 0;
-    if (payAmount <= 0) return;
+    if (payAmount <= 0) {
+      _showToast("Enter a valid amount.", Colors.orangeAccent);
+      return;
+    }
     if (received < payAmount) {
-      _showToast("Insufficient cash.", Colors.orangeAccent);
+      _showToast("Insufficient cash tendered.", Colors.orangeAccent);
       return;
     }
     final double change = received - payAmount;
     _showCashSummary(payAmount, received, change);
   }
 
+  // ─────────────────────────────────────────────
+  // FINALIZE TRANSACTION (shared by Cash & Online)
+  // ─────────────────────────────────────────────
   Future<void> _finalizeTransaction(double payAmount,
       {required String method}) async {
     setState(() => _isProcessing = true);
@@ -437,7 +478,9 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                   "0") ??
           0.0;
       final double newBalance = currentBal - payAmount;
+      final String refNo = 'OR-${DateTime.now().millisecondsSinceEpoch}';
 
+      // 1. Insert payment record
       final txRes = await _service.client
           .from('payments')
           .insert({
@@ -445,28 +488,41 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
             'amount': payAmount,
             'amount_paid': payAmount,
             'payment_method': method,
+            'payment_type': 'Tuition Payment',
             'status': 'Success',
-            'reference_no': 'OR-${DateTime.now().millisecondsSinceEpoch}',
-            'remarks': "Plan: $_paymentPlan | Sem: $_selectedSemester"
+            'reference_no': refNo,
+            'remarks':
+                "Plan: $_paymentPlan | Sem: $_selectedSemester | Method: $method",
           })
           .select()
           .single();
 
+      // 2. Update balance in DB
       await _service.updateAccountBalance(_activeStudent!['id'], newBalance);
-      await _generateOR(txRes, payAmount, newBalance);
+
+      // 3. Generate Official Receipt PDF (with full student info)
+      await _generateOR(txRes, payAmount, newBalance, method);
+
+      // 4. Send e-receipt email
       await _sendEReceiptEmail(
-        recipientEmail: _activeStudent!['email'],
+        recipientEmail: _activeStudent!['email'] ?? '',
         studentName: "${_activeStudent!['fn']} ${_activeStudent!['ln']}",
+        studentId: _activeStudent!['user_id_number'] ?? 'N/A',
+        course:
+            _activeStudent!['student_details']?['courses']?['name'] ?? 'N/A',
         referenceNo: txRes['reference_no'],
         amount: payAmount,
         newBalance: newBalance,
+        method: method,
       );
 
+      // 5. Show success modal
       if (mounted) {
         _showSuccessModal(txRes['reference_no'], payAmount, method);
       }
-      _clearPromissoryNoteForm(); // Clear promissory note fields if they were used
 
+      // 6. Cleanup
+      _clearPromissoryNoteForm();
       _amountController.clear();
       _cashReceivedController.clear();
       _fetchStudentLedger();
@@ -477,6 +533,9 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
     }
   }
 
+  // ─────────────────────────────────────────────
+  // SUCCESS MODAL
+  // ─────────────────────────────────────────────
   void _showSuccessModal(String ref, double amount, String method) {
     showDialog(
       context: context,
@@ -505,6 +564,9 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                     fontWeight: FontWeight.bold)),
             Text("Posted via $method",
                 style: const TextStyle(color: Colors.blueGrey, fontSize: 11)),
+            const SizedBox(height: 4),
+            Text("Plan: $_paymentPlan",
+                style: const TextStyle(color: Colors.blueGrey, fontSize: 11)),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -521,98 +583,183 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
     );
   }
 
-  Future<void> _sendEReceiptEmail(
-      {required String recipientEmail,
-      required String studentName,
-      required String referenceNo,
-      required double amount,
-      required double newBalance}) async {
+  // ─────────────────────────────────────────────
+  // SEND E-RECEIPT EMAIL
+  // ─────────────────────────────────────────────
+  Future<void> _sendEReceiptEmail({
+    required String recipientEmail,
+    required String studentName,
+    required String studentId,
+    required String course,
+    required String referenceNo,
+    required double amount,
+    required double newBalance,
+    required String method,
+  }) async {
+    if (recipientEmail.isEmpty) {
+      debugPrint("No email address on record — skipping e-receipt.");
+      return;
+    }
     final smtpServer = gmail(_senderEmail, _appPassword);
     final String qrUrl =
         "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$referenceNo&margin=10&ecc=H";
+    final String dateStr =
+        DateFormat('MMMM dd, yyyy hh:mm a').format(DateTime.now());
+
     final message = Message()
-      ..from = const Address(_senderEmail, 'SSCR Accounting Office')
+      ..from = const Address(_senderEmail, 'BFA Accounting Office')
       ..recipients.add(recipientEmail)
-      ..subject = 'Institutional E-Receipt: Tuition Payment Verified'
+      ..subject = 'Official E-Receipt — Tuition Payment Confirmed'
       ..html = """
-        <div style='font-family: sans-serif; max-width: 500px; margin: auto; border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden;'>
+        <div style='font-family: sans-serif; max-width: 520px; margin: auto; border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden;'>
           <div style='background-color: #2E1065; padding: 40px; text-align: center;'>
-            <h1 style='color: white; margin: 0; font-size: 22px;'>OFFICIAL E-RECEIPT</h1>
+            <h1 style='color: white; margin: 0; font-size: 22px; letter-spacing: 2px;'>OFFICIAL E-RECEIPT</h1>
+            <p style='color: #c4b5fd; margin: 8px 0 0; font-size: 13px;'>BRIGHT FUTURE ACADEMY</p>
           </div>
           <div style='padding: 30px; background-color: #ffffff;'>
-            <p>Hello <b>$studentName</b>,</p>
-            <p>Your payment of <b>PHP ${NumberFormat('#,###.00').format(amount)}</b> has been successfully posted.</p>
-            <div style='text-align: center; margin: 30px 0;'>
-              <img src='$qrUrl' width='180' height='180' style='border: 4px solid #f1f5f9; border-radius: 12px;' />
-              <p style='color: #8B5CF6; font-weight: bold;'>REF: $referenceNo</p>
+            <table style='width:100%; font-size:13px; color:#374151; margin-bottom:20px;'>
+              <tr><td style='padding:4px 0; color:#6b7280;'>Student</td><td style='text-align:right; font-weight:bold;'>$studentName</td></tr>
+              <tr><td style='padding:4px 0; color:#6b7280;'>Student ID</td><td style='text-align:right; font-weight:bold;'>$studentId</td></tr>
+              <tr><td style='padding:4px 0; color:#6b7280;'>Course</td><td style='text-align:right;'>$course</td></tr>
+              <tr><td style='padding:4px 0; color:#6b7280;'>Semester</td><td style='text-align:right;'>$_selectedSemester</td></tr>
+              <tr><td style='padding:4px 0; color:#6b7280;'>Payment Plan</td><td style='text-align:right;'>$_paymentPlan</td></tr>
+              <tr><td style='padding:4px 0; color:#6b7280;'>Channel</td><td style='text-align:right;'>$method</td></tr>
+              <tr><td style='padding:4px 0; color:#6b7280;'>Date</td><td style='text-align:right;'>$dateStr</td></tr>
+            </table>
+            <hr style='border:none; border-top:1px solid #e5e7eb; margin:20px 0;'/>
+            <p style='text-align:center; font-size:28px; font-weight:bold; color:#1e1b4b; margin:0;'>
+              PHP ${NumberFormat('#,###.00').format(amount)}
+            </p>
+            <p style='text-align:center; font-size:12px; color:#6b7280; margin:4px 0 20px;'>Amount Paid</p>
+            <div style='text-align: center; margin: 20px 0;'>
+              <img src='$qrUrl' width='160' height='160' style='border: 4px solid #f1f5f9; border-radius: 12px;' />
+              <p style='color: #8B5CF6; font-weight: bold; letter-spacing:1px; margin:8px 0 0;'>REF: $referenceNo</p>
             </div>
-            <p style='font-size: 11px; color: #94a3b8; text-align: center;'>New Balance: PHP ${NumberFormat('#,###.00').format(newBalance)}</p>
+            <p style='font-size: 12px; color: #94a3b8; text-align: center;'>
+              Remaining Balance: <b>PHP ${NumberFormat('#,###.00').format(newBalance)}</b>
+            </p>
+            <p style='font-size: 10px; color: #d1d5db; text-align: center; margin-top:20px;'>
+              This is an official electronic receipt. Please keep this for your records.
+            </p>
           </div>
         </div>
       """;
+
     try {
       await send(message, smtpServer);
+      debugPrint("E-receipt sent to $recipientEmail");
     } catch (e) {
       debugPrint('SMTP Error: $e');
     }
   }
 
-  Future<void> _generateOR(
-      Map<String, dynamic> tx, double paid, double remaining) async {
+  // ─────────────────────────────────────────────
+  // GENERATE OFFICIAL RECEIPT PDF
+  // Now includes: Student Name, Student ID, Course,
+  // Date, Payment Method, Payment Plan, Amount, Remaining Balance
+  // ─────────────────────────────────────────────
+  Future<void> _generateOR(Map<String, dynamic> tx, double paid,
+      double remaining, String method) async {
     final pdf = pw.Document();
     final mono = pw.Font.courier();
     final monoBold = pw.Font.courierBold();
-    final date = DateFormat('MM/dd/yyyy hh:mm a').format(DateTime.now());
+    final dateStr = DateFormat('MM/dd/yyyy hh:mm a').format(DateTime.now());
+
+    // Pull all student fields safely
+    final String studentName =
+        "${(_activeStudent!['fn'] ?? '').toUpperCase()} ${(_activeStudent!['ln'] ?? '').toUpperCase()}";
+    final String studentId = _activeStudent!['user_id_number'] ?? 'N/A';
+    final String course =
+        _activeStudent!['student_details']?['courses']?['name'] ?? 'N/A';
+    final String yearLevel = _activeStudent!['student_details']?['year_levels']
+            ?['definition'] ??
+        'N/A';
+    final String refNo = tx['reference_no'] ?? 'N/A';
+
     pdf.addPage(pw.Page(
         pageFormat: PdfPageFormat.a5,
         build: (context) => pw.Container(
             padding: const pw.EdgeInsets.all(25),
-            decoration: pw.BoxDecoration(border: pw.Border.all(width: 1)),
+            decoration: pw.BoxDecoration(border: pw.Border.all(width: 1.5)),
             child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
+                  // ── Header ──────────────────────────────
                   pw.Center(
                       child: pw.Text("BRIGHT FUTURE ACADEMY",
                           style: pw.TextStyle(font: monoBold, fontSize: 13))),
                   pw.Center(
-                      child: pw.Text("OFFICIAL RECEIPT - STUDENT ACCOUNTS",
+                      child: pw.Text("OFFICIAL RECEIPT — STUDENT ACCOUNTS",
                           style: pw.TextStyle(font: mono, fontSize: 9))),
-                  pw.SizedBox(height: 15),
+                  pw.Center(
+                      child: pw.Text("Office of the Comptroller",
+                          style: pw.TextStyle(font: mono, fontSize: 8))),
+                  pw.SizedBox(height: 12),
+                  pw.Divider(borderStyle: pw.BorderStyle.dashed),
+                  pw.SizedBox(height: 8),
+
+                  // ── Receipt & Date Row ───────────────────
                   pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text("OR NO: ${tx['reference_no'] ?? 'N/A'}",
-                                  style: pw.TextStyle(font: mono, fontSize: 9)),
-                              pw.Text(
-                                  "STUDENT: ${(_activeStudent!['fn'] ?? '').toUpperCase()} ${(_activeStudent!['ln'] ?? '').toUpperCase()}",
-                                  style: pw.TextStyle(
-                                      font: monoBold, fontSize: 9)),
-                              pw.Text("PLAN: $_paymentPlan",
-                                  style: pw.TextStyle(font: mono, fontSize: 8)),
-                            ]),
-                        pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.end,
-                            children: [
-                              pw.Text("DATE: $date",
-                                  style: pw.TextStyle(font: mono, fontSize: 8)),
-                              pw.Text("TERM: $_selectedSemester",
-                                  style: pw.TextStyle(font: mono, fontSize: 8)),
-                            ])
+                        pw.Text("OR NO: $refNo",
+                            style: pw.TextStyle(font: monoBold, fontSize: 9)),
+                        pw.Text("DATE: $dateStr",
+                            style: pw.TextStyle(font: mono, fontSize: 8)),
                       ]),
-                  pw.Divider(borderStyle: pw.BorderStyle.dashed),
-                  pw.SizedBox(height: 10),
-                  _receiptLine("TUITION / ACCOUNTS", paid, mono),
-                  pw.Divider(thickness: 0.5),
-                  _receiptLine("TOTAL AMOUNT PAID", paid, monoBold),
-                  pw.SizedBox(height: 15),
+                  pw.SizedBox(height: 8),
+
+                  // ── Student Info Block ───────────────────
                   pw.Container(
                       padding: const pw.EdgeInsets.all(8),
                       decoration: pw.BoxDecoration(
                           border: pw.Border.all(
                               width: 0.5, style: pw.BorderStyle.dashed)),
+                      child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            _orInfoRow(
+                                "STUDENT NAME", studentName, mono, monoBold),
+                            pw.SizedBox(height: 3),
+                            _orInfoRow("STUDENT ID", studentId, mono, monoBold),
+                            pw.SizedBox(height: 3),
+                            _orInfoRow("COURSE & YEAR", "$course — $yearLevel",
+                                mono, mono),
+                            pw.SizedBox(height: 3),
+                            _orInfoRow(
+                                "SEMESTER", _selectedSemester, mono, mono),
+                          ])),
+                  pw.SizedBox(height: 10),
+
+                  // ── Payment Details Block ────────────────
+                  pw.Container(
+                      padding: const pw.EdgeInsets.all(8),
+                      decoration: pw.BoxDecoration(
+                          border: pw.Border.all(
+                              width: 0.5, style: pw.BorderStyle.dashed)),
+                      child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            _orInfoRow(
+                                "PAYMENT PLAN", _paymentPlan, mono, mono),
+                            pw.SizedBox(height: 3),
+                            _orInfoRow("PAYMENT METHOD", method, mono, mono),
+                          ])),
+                  pw.SizedBox(height: 10),
+
+                  // ── Amount Lines ─────────────────────────
+                  pw.Divider(borderStyle: pw.BorderStyle.dashed),
+                  _receiptLine("TUITION / ACCOUNTS RECEIVABLE", paid, mono),
+                  pw.Divider(thickness: 0.5),
+                  _receiptLine("TOTAL AMOUNT PAID", paid, monoBold),
+                  pw.SizedBox(height: 10),
+
+                  // ── Remaining Balance Box ────────────────
+                  pw.Container(
+                      padding: const pw.EdgeInsets.all(8),
+                      decoration: pw.BoxDecoration(
+                          border: pw.Border.all(
+                              width: 0.8, style: pw.BorderStyle.dashed)),
                       child: pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
@@ -625,19 +772,38 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                                     pw.TextStyle(font: monoBold, fontSize: 9)),
                           ])),
                   pw.Spacer(),
-                  pw.Align(
-                      alignment: pw.Alignment.centerRight,
-                      child: pw.Text("Finance Officer",
-                          style: pw.TextStyle(font: mono, fontSize: 8))),
+
+                  // ── Footer ───────────────────────────────
+                  pw.Divider(borderStyle: pw.BorderStyle.dashed),
+                  pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text("This is an official receipt.",
+                            style: pw.TextStyle(font: mono, fontSize: 7)),
+                        pw.Text("Finance Officer",
+                            style: pw.TextStyle(font: monoBold, fontSize: 8)),
+                      ]),
                 ]))));
+
     final bytes = await pdf.save();
     final dir = await getApplicationDocumentsDirectory();
-    final path = "${dir.path}/OR_${tx['reference_no'] ?? 'TEMP'}.pdf";
-    final file = File(path);
-    await file.writeAsBytes(bytes);
+    final path = "${dir.path}/OR_$refNo.pdf";
+    await File(path).writeAsBytes(bytes);
     await OpenFile.open(path);
   }
 
+  /// Helper: two-column label → value row inside the OR info blocks
+  pw.Widget _orInfoRow(
+          String label, String value, pw.Font labelFont, pw.Font valueFont) =>
+      pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+        pw.Text("$label:", style: pw.TextStyle(font: labelFont, fontSize: 8)),
+        pw.Flexible(
+            child: pw.Text(value,
+                textAlign: pw.TextAlign.right,
+                style: pw.TextStyle(font: valueFont, fontSize: 8))),
+      ]);
+
+  /// Helper: amount line
   pw.Widget _receiptLine(String l, double v, pw.Font f) => pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 2),
       child: pw.Row(
@@ -648,7 +814,9 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                 style: pw.TextStyle(font: f, fontSize: 8))
           ]));
 
-  // New function for Promissory Note PDF generation, adapted from promissory_note_panel.dart
+  // ─────────────────────────────────────────────
+  // PROMISSORY NOTE PDF
+  // ─────────────────────────────────────────────
   Future<void> _generatePromissoryNotePDF(
       String refNo, double amountDue) async {
     final pdf = pw.Document();
@@ -656,191 +824,182 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
     final dueDateStr = DateFormat('MMMM dd, yyyy').format(_promissoryDueDate!);
     final adminName =
         "${widget.userData['fn']} ${widget.userData['ln']}".toUpperCase();
-
     final studentName =
         "${_activeStudent!['fn']} ${_activeStudent!['ln']}".toUpperCase();
     final studentIdNumber = _activeStudent!['user_id_number'] ?? 'N/A';
     final courseYear =
-        "${_activeStudent!['student_details']?['courses']?['name'] ?? 'N/A'} - ${_activeStudent!['student_details']?['year_levels']?['definition'] ?? 'N/A'}";
+        "${_activeStudent!['student_details']?['courses']?['name'] ?? 'N/A'} — ${_activeStudent!['student_details']?['year_levels']?['definition'] ?? 'N/A'}";
 
     String amountInWords = '';
     try {
       int whole = amountDue.toInt();
       int cents = ((amountDue - whole) * 100).toInt();
-      amountInWords = "${whole.toString()} Pesos and $cents/100 Only";
+      amountInWords = "$whole Pesos and $cents/100 Only";
     } catch (e) {
       amountInWords = 'Amount in words conversion error';
     }
 
-    pdf.addPage(
-      pw.Page(
+    pdf.addPage(pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(48),
         build: (pw.Context context) {
           return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Center(
-                  child: pw.Text('BRIGHT FUTURE ACADEMY',
-                      style: pw.TextStyle(
-                          fontSize: 22,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.indigo900))),
-              pw.Center(
-                  child: pw.Text('OFFICE OF THE ACCOUNTING',
-                      style:
-                          const pw.TextStyle(fontSize: 10, letterSpacing: 1))),
-              pw.SizedBox(height: 12),
-              pw.Center(
-                  child: pw.Text('PROMISSORY NOTE',
-                      style: pw.TextStyle(
-                          fontSize: 16,
-                          fontWeight: pw.FontWeight.bold,
-                          decoration: pw.TextDecoration.underline))),
-              pw.SizedBox(height: 32),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text("Note Ref No.: $refNo",
-                      style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                  pw.Text("Date Issued: $dateIssued",
-                      style: const pw.TextStyle(fontSize: 10)),
-                ],
-              ),
-              pw.SizedBox(height: 32),
-              pw.RichText(
-                text: pw.TextSpan(
-                  style: const pw.TextStyle(fontSize: 11, height: 1.5),
-                  children: [
-                    const pw.TextSpan(text: "I, "),
-                    pw.TextSpan(
-                        text: studentName,
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                    const pw.TextSpan(
-                        text:
-                            ", a student of Bright Future Academy with Student ID No. "),
-                    pw.TextSpan(
-                        text: studentIdNumber,
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                    const pw.TextSpan(text: ", currently enrolled in "),
-                    pw.TextSpan(
-                        text: courseYear,
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                    const pw.TextSpan(
-                        text:
-                            ", hereby promise to pay to the order of the Office of the Comptroller the total amount of:"),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 24),
-              pw.Container(
-                width: double.infinity,
-                padding: const pw.EdgeInsets.all(12),
-                decoration: pw.BoxDecoration(border: pw.Border.all(width: 1.5)),
-                child: pw.Column(
-                  children: [
-                    pw.Text("PHP ${amountDue.toStringAsFixed(2)}",
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Center(
+                    child: pw.Text('BRIGHT FUTURE ACADEMY',
                         style: pw.TextStyle(
-                            fontSize: 20, fontWeight: pw.FontWeight.bold)),
-                    pw.SizedBox(height: 4),
-                    pw.Text("($amountInWords)",
+                            fontSize: 22,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.indigo900))),
+                pw.Center(
+                    child: pw.Text('OFFICE OF THE ACCOUNTING',
+                        style: const pw.TextStyle(
+                            fontSize: 10, letterSpacing: 1))),
+                pw.SizedBox(height: 12),
+                pw.Center(
+                    child: pw.Text('PROMISSORY NOTE',
                         style: pw.TextStyle(
-                            fontSize: 10, fontStyle: pw.FontStyle.italic)),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 32),
-              pw.Text("Payment Terms:",
-                  style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold, fontSize: 11)),
-              pw.SizedBox(height: 8),
-              pw.Text(
-                  "I agree to settle the above amount on or before $dueDateStr.",
-                  style: const pw.TextStyle(fontSize: 11)),
-              pw.SizedBox(height: 16),
-              pw.Text("Failure to pay within the agreed period may result in:",
-                  style: const pw.TextStyle(fontSize: 11)),
-              pw.Bullet(
-                  text: "Suspension of clearance processing",
-                  style: const pw.TextStyle(fontSize: 10)),
-              pw.Bullet(
-                  text:
-                      "Withholding of academic records (TOR, Diploma, Certifications)",
-                  style: const pw.TextStyle(fontSize: 10)),
-              pw.Bullet(
-                  text: "Additional penalties as determined by the institution",
-                  style: const pw.TextStyle(fontSize: 10)),
-              pw.SizedBox(height: 24),
-              pw.Text(
-                "I hereby acknowledge my obligation and voluntarily commit to pay the stated amount under the terms and conditions set by Bright Future Academy.",
-                style: pw.TextStyle(
-                  fontSize: 11,
-                  fontStyle: pw.FontStyle.italic,
-                  height: 1.5,
-                ),
-                textAlign: pw.TextAlign.justify,
-              ),
-              pw.Spacer(),
-              pw.Text("Signed:",
-                  style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold, fontSize: 11)),
-              pw.SizedBox(height: 32),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Column(
+                            fontSize: 16,
+                            fontWeight: pw.FontWeight.bold,
+                            decoration: pw.TextDecoration.underline))),
+                pw.SizedBox(height: 32),
+                pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text("Note Ref No.: $refNo",
+                          style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                      pw.Text("Date Issued: $dateIssued",
+                          style: const pw.TextStyle(fontSize: 10)),
+                    ]),
+                pw.SizedBox(height: 32),
+                pw.RichText(
+                    text: pw.TextSpan(
+                        style: const pw.TextStyle(fontSize: 11, height: 1.5),
+                        children: [
+                      const pw.TextSpan(text: "I, "),
+                      pw.TextSpan(
+                          text: studentName,
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      const pw.TextSpan(
+                          text:
+                              ", a student of Bright Future Academy with Student ID No. "),
+                      pw.TextSpan(
+                          text: studentIdNumber,
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      const pw.TextSpan(text: ", currently enrolled in "),
+                      pw.TextSpan(
+                          text: courseYear,
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      const pw.TextSpan(
+                          text:
+                              ", hereby promise to pay to the order of the Office of the Comptroller the total amount of:"),
+                    ])),
+                pw.SizedBox(height: 24),
+                pw.Container(
+                    width: double.infinity,
+                    padding: const pw.EdgeInsets.all(12),
+                    decoration:
+                        pw.BoxDecoration(border: pw.Border.all(width: 1.5)),
+                    child: pw.Column(children: [
+                      pw.Text("PHP ${amountDue.toStringAsFixed(2)}",
+                          style: pw.TextStyle(
+                              fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                      pw.SizedBox(height: 4),
+                      pw.Text("($amountInWords)",
+                          style: pw.TextStyle(
+                              fontSize: 10, fontStyle: pw.FontStyle.italic)),
+                    ])),
+                pw.SizedBox(height: 32),
+                pw.Text("Payment Terms:",
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                pw.SizedBox(height: 8),
+                pw.Text(
+                    "I agree to settle the above amount on or before $dueDateStr.",
+                    style: const pw.TextStyle(fontSize: 11)),
+                pw.SizedBox(height: 16),
+                pw.Text(
+                    "Failure to pay within the agreed period may result in:",
+                    style: const pw.TextStyle(fontSize: 11)),
+                pw.Bullet(
+                    text: "Suspension of clearance processing",
+                    style: const pw.TextStyle(fontSize: 10)),
+                pw.Bullet(
+                    text:
+                        "Withholding of academic records (TOR, Diploma, Certifications)",
+                    style: const pw.TextStyle(fontSize: 10)),
+                pw.Bullet(
+                    text:
+                        "Additional penalties as determined by the institution",
+                    style: const pw.TextStyle(fontSize: 10)),
+                pw.SizedBox(height: 24),
+                pw.Text(
+                    "I hereby acknowledge my obligation and voluntarily commit to pay the stated amount under the terms and conditions set by Bright Future Academy.",
+                    style: pw.TextStyle(
+                        fontSize: 11,
+                        fontStyle: pw.FontStyle.italic,
+                        height: 1.5),
+                    textAlign: pw.TextAlign.justify),
+                pw.Spacer(),
+                pw.Text("Signed:",
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                pw.SizedBox(height: 32),
+                pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Container(
+                                width: 180,
+                                decoration: const pw.BoxDecoration(
+                                    border: pw.Border(
+                                        top: pw.BorderSide(width: 1)))),
+                            pw.Text("Student: $studentName",
+                                style: pw.TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: pw.FontWeight.bold)),
+                            pw.Text("Date Signed: _________________",
+                                style: const pw.TextStyle(fontSize: 8)),
+                          ]),
+                      pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Container(
+                                width: 180,
+                                decoration: const pw.BoxDecoration(
+                                    border: pw.Border(
+                                        top: pw.BorderSide(width: 1)))),
+                            pw.Text(
+                                "Parent/Guardian: ${_parentNameController.text}",
+                                style: pw.TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: pw.FontWeight.bold)),
+                            pw.Text("Date Signed: _________________",
+                                style: const pw.TextStyle(fontSize: 8)),
+                          ]),
+                    ]),
+                pw.SizedBox(height: 40),
+                pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Container(
-                          width: 180,
+                          width: 250,
                           decoration: const pw.BoxDecoration(
                               border: pw.Border(top: pw.BorderSide(width: 1)))),
-                      pw.Text("Student Name: $studentName",
+                      pw.Text("Authorized Representative: $adminName",
                           style: pw.TextStyle(
                               fontSize: 9, fontWeight: pw.FontWeight.bold)),
-                      pw.Text("Date Signed: _________________",
+                      pw.Text("Office: Office of the Comptroller",
                           style: const pw.TextStyle(fontSize: 8)),
-                    ],
-                  ),
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Container(
-                          width: 180,
-                          decoration: const pw.BoxDecoration(
-                              border: pw.Border(top: pw.BorderSide(width: 1)))),
-                      pw.Text("Parent/Guardian: ${_parentNameController.text}",
-                          style: pw.TextStyle(
-                              fontSize: 9, fontWeight: pw.FontWeight.bold)),
-                      pw.Text("Date Signed: _________________",
+                      pw.Text("Date: $dateIssued",
                           style: const pw.TextStyle(fontSize: 8)),
-                    ],
-                  ),
-                ],
-              ),
-              pw.SizedBox(height: 40),
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Container(
-                      width: 250,
-                      decoration: const pw.BoxDecoration(
-                          border: pw.Border(top: pw.BorderSide(width: 1)))),
-                  pw.Text("Authorized Representative: $adminName",
-                      style: pw.TextStyle(
-                          fontSize: 9, fontWeight: pw.FontWeight.bold)),
-                  pw.Text("Office: Office of the Comptroller",
-                      style: const pw.TextStyle(fontSize: 8)),
-                  pw.Text("Date: $dateIssued",
-                      style: const pw.TextStyle(fontSize: 8)),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
-    );
+                    ]),
+              ]);
+        }));
 
     final bytes = await pdf.save();
     final output = await getTemporaryDirectory();
@@ -849,7 +1008,9 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
     await OpenFile.open(file.path);
   }
 
-  // New function to handle promissory note issuance
+  // ─────────────────────────────────────────────
+  // ISSUE PROMISSORY NOTE
+  // ─────────────────────────────────────────────
   Future<void> _issuePromissoryNote() async {
     if (_activeStudent == null || _promissoryDueDate == null) {
       _showToast(
@@ -857,11 +1018,9 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
       return;
     }
     if (_parentNameController.text.trim().isEmpty) {
-      _showToast("Parent/Guardian Name is required for Promissory Note.",
-          Colors.orangeAccent);
+      _showToast("Parent/Guardian Name is required.", Colors.orangeAccent);
       return;
     }
-
     setState(() => _isProcessing = true);
     try {
       final String refNo =
@@ -875,20 +1034,19 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
       await _service.client.from('office_requests').insert({
         'student_id': _activeStudent!['id'],
         'request_type': 'Promissory Note',
-        'request_status': 'Approved', // Directly approved by accounting staff
+        'request_status': 'Approved',
         'amount_due': currentBalance,
         'due_date': _promissoryDueDate?.toIso8601String(),
         'qr_hash': refNo,
         'processed_by': widget.userData['id'],
         'remarks':
-            'Issued Grace Period until ${DateFormat('MMMM dd, yyyy').format(_promissoryDueDate!)}. Parent: ${_parentNameController.text.trim()}. ${_notesController.text.trim()}',
+            'Grace Period until ${DateFormat('MMMM dd, yyyy').format(_promissoryDueDate!)}. Parent: ${_parentNameController.text.trim()}. ${_notesController.text.trim()}',
       });
 
       await _generatePromissoryNotePDF(refNo, currentBalance);
-
-      _showToast("Promissory Note Issued & PDF Generated.", success);
+      _showToast("Promissory Note issued & PDF generated.", success);
       _clearPromissoryNoteForm();
-      _fetchStudentLedger(); // Refresh ledger to show new request
+      _fetchStudentLedger();
     } catch (e) {
       _showToast("Promissory Note Issuance Failed: $e", Colors.redAccent);
     } finally {
@@ -901,7 +1059,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
       _parentNameController.clear();
       _notesController.clear();
       _promissoryDueDate = DateTime.now().add(const Duration(days: 30));
-      _paymentPlan = 'Full Payment'; // Reset to a default payment plan
+      _paymentPlan = 'Full Payment';
     });
   }
 
@@ -911,8 +1069,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
       initialDate:
           _promissoryDueDate ?? DateTime.now().add(const Duration(days: 30)),
       firstDate: DateTime.now(),
-      lastDate: DateTime.now()
-          .add(const Duration(days: 365 * 2)), // Up to 2 years from now
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
       builder: (context, child) => Theme(
         data: widget.isDarkMode
             ? ThemeData.dark().copyWith(
@@ -920,21 +1077,18 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                     primary: aViolet,
                     onPrimary: Colors.white,
                     surface: surfaceDark,
-                    onSurface: Colors.white),
-              )
+                    onSurface: Colors.white))
             : ThemeData.light().copyWith(
-                colorScheme: const ColorScheme.light(primary: aViolet),
-              ),
+                colorScheme: const ColorScheme.light(primary: aViolet)),
         child: child!,
       ),
     );
-    if (picked != null) {
-      setState(() {
-        _promissoryDueDate = picked;
-      });
-    }
+    if (picked != null) setState(() => _promissoryDueDate = picked);
   }
 
+  // ─────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final textColor =
@@ -948,7 +1102,12 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
           const SizedBox(height: 32),
           _buildSearchField(cardColor, textColor),
           const SizedBox(height: 24),
-          if (_activeStudent != null)
+          if (_isLoading)
+            const Center(
+                child: Padding(
+                    padding: EdgeInsets.all(60),
+                    child: CircularProgressIndicator(color: aViolet)))
+          else if (_activeStudent != null)
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(flex: 3, child: _buildLedgerView(cardColor, textColor)),
               const SizedBox(width: 24),
@@ -960,6 +1119,9 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
         ]));
   }
 
+  // ─────────────────────────────────────────────
+  // UI COMPONENTS
+  // ─────────────────────────────────────────────
   Widget _buildHeader(Color t) => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -976,11 +1138,10 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
           ]),
           if (_activeStudent != null)
             Row(children: [
-              _actionTool(
-                  "GENERATE STATEMENT", LucideIcons.fileText, _generateSOA),
+              _actionTool("GENERATE SOA", LucideIcons.fileText, _generateSOA),
               const SizedBox(width: 12),
-              _actionTool("FINANCIAL CLEARANCE", LucideIcons.shieldCheck,
-                  _grantClearance,
+              _actionTool(
+                  "GRANT CLEARANCE", LucideIcons.shieldCheck, _grantClearance,
                   color: success),
             ])
         ],
@@ -989,7 +1150,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
   Widget _actionTool(String l, IconData i, VoidCallback onTap,
           {Color color = aViolet}) =>
       ElevatedButton.icon(
-        onPressed: onTap,
+        onPressed: _isProcessing ? null : onTap,
         icon: Icon(i, size: 16),
         label: Text(l,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
@@ -1016,10 +1177,10 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                 onSubmitted: (_) => _fetchStudentLedger(),
                 style: TextStyle(color: t, fontWeight: FontWeight.bold),
                 decoration: const InputDecoration(
-                    hintText: "Search Student ID...",
+                    hintText: "Search by Student ID...",
                     border: InputBorder.none))),
         ElevatedButton(
-            onPressed: _fetchStudentLedger,
+            onPressed: _isLoading ? null : _fetchStudentLedger,
             style: ElevatedButton.styleFrom(
                 backgroundColor: aViolet, foregroundColor: Colors.white),
             child: const Text("PULL ACCOUNT")),
@@ -1036,6 +1197,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
             borderRadius: BorderRadius.circular(32),
             border: Border.all(color: Colors.white10)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Student card
           Row(children: [
             CircleAvatar(
                 backgroundColor: aViolet.withOpacity(0.1),
@@ -1050,13 +1212,18 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                       .toUpperCase(),
                   style:
                       GoogleFonts.inter(fontWeight: FontWeight.w900, color: t)),
-              Text(details?['courses']?['name'] ?? 'College Department',
+              Text(
+                  "${details?['courses']?['name'] ?? 'N/A'} — ${details?['year_levels']?['definition'] ?? 'N/A'}",
+                  style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+              Text("ID: ${_activeStudent!['user_id_number'] ?? 'N/A'}",
                   style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
             ]),
             const Spacer(),
             _balanceChip(balance),
           ]),
           const Divider(height: 60, color: Colors.white10),
+
+          // Financial standing
           Text("FINANCIAL STANDING",
               style: GoogleFonts.inter(
                   fontSize: 10,
@@ -1071,6 +1238,8 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
           const Divider(color: Colors.white10),
           _summaryRow("REMAINING ACCOUNTABILITY", balance, t, isTotal: true),
           const SizedBox(height: 40),
+
+          // Transaction history
           Text("TRANSACTION HISTORY",
               style: GoogleFonts.inter(
                   fontSize: 10,
@@ -1099,6 +1268,8 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                             (entry['amount_paid'] ?? entry['amount'] ?? "0")
                                 .toString()) ??
                         0.0;
+                    final String payMethod =
+                        entry['payment_method']?.toString() ?? 'N/A';
                     return ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(LucideIcons.receipt,
@@ -1107,8 +1278,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 13)),
                         subtitle: Text(
-                            DateFormat('MMM dd, yyyy')
-                                .format(DateTime.parse(rawDate)),
+                            "${DateFormat('MMM dd, yyyy').format(DateTime.parse(rawDate))} · $payMethod",
                             style: const TextStyle(fontSize: 11)),
                         trailing: Text(
                             "₱${NumberFormat('#,###.00').format(amt)}",
@@ -1173,16 +1343,15 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                 keyboardType: TextInputType.number,
                 style: const TextStyle(
                     color: success, fontWeight: FontWeight.bold, fontSize: 15),
-                decoration: _fieldStyle("Enter Amount Received", prefix: "₱ "))
+                decoration: _fieldStyle("Enter Amount Received", prefix: "₱ ")),
           ],
         ] else ...[
           const SizedBox(height: 24),
           _inputLabel("PARENT/GUARDIAN NAME"),
           TextField(
-            controller: _parentNameController,
-            style: TextStyle(color: t),
-            decoration: _fieldStyle("Full Name"),
-          ),
+              controller: _parentNameController,
+              style: TextStyle(color: t),
+              decoration: _fieldStyle("Full Name")),
           const SizedBox(height: 16),
           _inputLabel("PROMISSORY DUE DATE"),
           InkWell(
@@ -1191,31 +1360,27 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: _containerStyle(),
-              child: Row(
-                children: [
-                  const Icon(LucideIcons.calendar, size: 18, color: aViolet),
-                  const SizedBox(width: 12),
-                  Text(
-                    _promissoryDueDate == null
-                        ? "Select Due Date"
-                        : DateFormat('MMMM dd, yyyy')
-                            .format(_promissoryDueDate!),
-                    style: TextStyle(
-                        color: _promissoryDueDate == null ? Colors.blueGrey : t,
-                        fontSize: 14),
-                  ),
-                ],
-              ),
+              child: Row(children: [
+                const Icon(LucideIcons.calendar, size: 18, color: aViolet),
+                const SizedBox(width: 12),
+                Text(
+                  _promissoryDueDate == null
+                      ? "Select Due Date"
+                      : DateFormat('MMMM dd, yyyy').format(_promissoryDueDate!),
+                  style: TextStyle(
+                      color: _promissoryDueDate == null ? Colors.blueGrey : t,
+                      fontSize: 14),
+                ),
+              ]),
             ),
           ),
           const SizedBox(height: 16),
           _inputLabel("REMARKS (Optional)"),
           TextField(
-            controller: _notesController,
-            maxLines: 3,
-            style: TextStyle(color: t),
-            decoration: _fieldStyle("Additional notes..."),
-          ),
+              controller: _notesController,
+              maxLines: 3,
+              style: TextStyle(color: t),
+              decoration: _fieldStyle("Additional notes...")),
         ],
         const SizedBox(height: 24),
         SizedBox(
@@ -1233,16 +1398,23 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                     backgroundColor: aViolet,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16))),
-                child: Text(
-                    _paymentPlan == 'Promissory Note'
-                        ? "ISSUE PROMISSORY NOTE"
-                        : (_paymentMethod == 'Cash'
-                            ? "VALIDATE CASH"
-                            : "LAUNCH GATEWAY"),
-                    style: const TextStyle(fontWeight: FontWeight.w900)))),
+                child: _isProcessing
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
+                    : Text(
+                        _paymentPlan == 'Promissory Note'
+                            ? "ISSUE PROMISSORY NOTE"
+                            : (_paymentMethod == 'Cash'
+                                ? "VALIDATE CASH"
+                                : "LAUNCH GATEWAY"),
+                        style: const TextStyle(fontWeight: FontWeight.w900)))),
       ]));
 
-  Widget _buildDropdown(String v, List<String> i, ValueChanged<String?> o) =>
+  Widget _buildDropdown(
+          String v, List<String> i, ValueChanged<String?> o) =>
       Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: _containerStyle(),
@@ -1253,7 +1425,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                   dropdownColor: const Color(0xFF1E1B4B),
                   style: TextStyle(
                       color: widget.isDarkMode ? Colors.white : Colors.black,
-                      fontSize: 13), // Ensure text is visible in light mode
+                      fontSize: 13),
                   items: i
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                       .toList(),
@@ -1266,13 +1438,13 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                 backgroundColor: const Color(0xFF0F071D),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24)),
-                title: const Text("Confirm Entry",
+                title: const Text("Confirm Cash Entry",
                     style: TextStyle(color: Colors.white)),
                 content: Column(mainAxisSize: MainAxisSize.min, children: [
                   _summaryRow("Amount Due:", p, Colors.white),
                   _summaryRow("Cash Tendered:", r, Colors.white),
                   const Divider(color: Colors.white10),
-                  _summaryRow("Change:", c, success, isTotal: true)
+                  _summaryRow("Change:", c, success, isTotal: true),
                 ]),
                 actions: [
                   TextButton(
@@ -1285,7 +1457,7 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                       },
                       style: ElevatedButton.styleFrom(
                           backgroundColor: success,
-                          foregroundColor: Colors.black),
+                          foregroundColor: Colors.white),
                       child: const Text("PROCESS & PRINT"))
                 ]));
   }
@@ -1341,13 +1513,12 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
   BoxDecoration _containerStyle() => BoxDecoration(
       color: widget.isDarkMode
           ? Colors.white.withOpacity(0.05)
-          : Colors.grey
-              .shade200, // Use a solid light grey for better visibility in light mode
+          : Colors.grey.shade200,
       borderRadius: BorderRadius.circular(12));
 
   Widget _buildEmptyState(Color t) => Center(
           child: Column(children: [
-        const SizedBox(height: 100), // Keep spacing
+        const SizedBox(height: 100),
         Icon(LucideIcons.landmark,
             size: 64, color: Colors.blueGrey.withOpacity(0.1)),
         const SizedBox(height: 24),
@@ -1367,17 +1538,20 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
             content: Column(mainAxisSize: MainAxisSize.min, children: [
               CircularProgressIndicator(color: aViolet),
               SizedBox(height: 20),
-              Text("Launching Gateway...",
+              Text("Launching Payment Gateway...",
                   style: TextStyle(color: Colors.white))
             ])));
   }
 
   void _showPollingDialog() {
+    _isPollingDialogOpen = true;
     showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
             backgroundColor: const Color(0xFF1E1B4B),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             content: Column(mainAxisSize: MainAxisSize.min, children: [
               const CircularProgressIndicator(color: success),
               const SizedBox(height: 24),
@@ -1389,7 +1563,13 @@ class _StudentPaymentPortalState extends State<StudentPaymentPortal> {
                   style: TextStyle(color: Colors.white54, fontSize: 12)),
               const SizedBox(height: 20),
               ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    _pollingTimer?.cancel();
+                    if (_isPollingDialogOpen) {
+                      _isPollingDialogOpen = false;
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
                   style:
                       ElevatedButton.styleFrom(backgroundColor: Colors.white10),
                   child: const Text("CLOSE"))

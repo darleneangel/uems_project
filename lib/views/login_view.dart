@@ -58,7 +58,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
     _welcomeController =
         AnimationController(duration: const Duration(seconds: 2), vsync: this);
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
         CurvedAnimation(
             parent: _welcomeController, curve: Curves.easeInOutSine));
     _welcomeOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -97,6 +97,11 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
     setState(() => _isLoading = true);
 
+    // PERFORMANCE FIX: Yield control to the browser's paint loop first.
+    // This gives Flutter a frame to update the UI and render the active loading spinner
+    // BEFORE the heavy, synchronous Argon2id CPU calculations block the main thread.
+    await Future.delayed(const Duration(milliseconds: 150));
+
     try {
       final service = SupabaseService();
 
@@ -123,8 +128,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
 
         // ---------------------------------------------------------------------
         // SECURITY ASSURANCE: On-The-Fly Database Auto-Migration
-        // If your database contains plaintext passwords, this block hashes them
-        // using Argon2id instantly, writes the hash to Supabase, and logs you in.
         // ---------------------------------------------------------------------
         if (!isAlreadyHashed(storedHash) && storedHash == pass) {
           debugPrint(
@@ -294,7 +297,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
               maxLength: 6,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: "••••••",
+                hintText: "•••••",
                 hintStyle: const TextStyle(color: Colors.white24),
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.05),
@@ -451,7 +454,9 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                     ),
                     child: Stack(
                       children: [
-                        _MovingBackground(isDarkMode: _isDarkMode),
+                        // PERFORMANCE FIX: Halt dynamic moving background shapes entirely while loaded/authenticating
+                        _MovingBackground(
+                            isDarkMode: _isDarkMode, isPaused: _isLoading),
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -627,9 +632,13 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                                 width: double.infinity,
                                 height: 65,
                                 child: ElevatedButton(
-                                  onPressed: _isLoading ? null : _handleLogin,
+                                  // PERFORMANCE FIX: Prevent setting onPressed to null.
+                                  // This prevents the button from disabling and completely disappearing on dark mode!
+                                  onPressed: _isLoading ? () {} : _handleLogin,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: aViolet,
+                                    backgroundColor: _isLoading
+                                        ? aViolet.withOpacity(0.7)
+                                        : aViolet,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                         borderRadius:
@@ -638,8 +647,29 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                                     shadowColor: aViolet.withOpacity(0.4),
                                   ),
                                   child: _isLoading
-                                      ? const CircularProgressIndicator(
-                                          color: Colors.white, strokeWidth: 3)
+                                      ? const Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                  color: Colors.white,
+                                                  strokeWidth: 2.5),
+                                            ),
+                                            SizedBox(width: 12),
+                                            Text(
+                                              "SECURING SESSION...",
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 1.5,
+                                                fontSize: 14,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          ],
+                                        )
                                       : Row(
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
@@ -690,11 +720,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                          color: aViolet.withOpacity(0.5),
-                          blurRadius: 80,
-                          spreadRadius: 5),
-                      BoxShadow(
-                          color: sViolet.withOpacity(0.3),
+                          color: aViolet.withOpacity(0.35),
                           blurRadius: 40,
                           spreadRadius: 2),
                     ],
@@ -703,12 +729,9 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                       stops: [0.3, 0.7, 1.0],
                     ),
                   ),
-                  child: ClipOval(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: const Icon(LucideIcons.shieldCheck,
-                          color: Colors.white, size: 80),
-                    ),
+                  child: const ClipOval(
+                    child: Icon(LucideIcons.shieldCheck,
+                        color: Colors.white, size: 80),
                   ),
                 ),
               ),
@@ -866,7 +889,12 @@ class CopyOfEntranceAnimation extends StatelessWidget {
 
 class _MovingBackground extends StatefulWidget {
   final bool isDarkMode;
-  const _MovingBackground({required this.isDarkMode});
+  final bool
+      isPaused; // PERFORMANCE FIX: Add pause capability to the dynamic canvas background
+  const _MovingBackground({
+    required this.isDarkMode,
+    this.isPaused = false,
+  });
 
   @override
   _MovingBackgroundState createState() => _MovingBackgroundState();
@@ -884,14 +912,26 @@ class _MovingBackgroundState extends State<_MovingBackground>
     _controller = AnimationController(
       duration: const Duration(seconds: 30),
       vsync: this,
-    )..addListener(() {
-        setState(() {
-          _updateShapes();
-        });
-      });
+    );
 
     _generateShapes();
-    _controller.repeat();
+
+    if (!widget.isPaused) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _MovingBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // PERFORMANCE FIX: Halt animation execution immediately when login pipeline activates
+    if (widget.isPaused != oldWidget.isPaused) {
+      if (widget.isPaused) {
+        _controller.stop();
+      } else {
+        _controller.repeat();
+      }
+    }
   }
 
   @override
@@ -902,13 +942,13 @@ class _MovingBackgroundState extends State<_MovingBackground>
 
   void _generateShapes() {
     _shapes = List.generate(
-      10,
+      6,
       (index) => _MovingShape(
         color: _randomColor(),
         size: _random.nextDouble() * 100 + 50,
         x: _random.nextDouble() * 1.5,
         y: _random.nextDouble() * 1.5,
-        speed: _random.nextDouble() * 0.005 + 0.001,
+        speed: _random.nextDouble() * 0.003 + 0.001,
         direction: _random.nextBool() ? 1 : -1,
       ),
     );
@@ -938,7 +978,7 @@ class _MovingBackgroundState extends State<_MovingBackground>
       if (shape.x > 1.5 || shape.x < -0.5 || shape.y > 1.5 || shape.y < -0.5) {
         shape.x = _random.nextDouble() * 1.5;
         shape.y = _random.nextDouble() * 1.5;
-        shape.speed = _random.nextDouble() * 0.005 + 0.001;
+        shape.speed = _random.nextDouble() * 0.003 + 0.001;
         shape.direction = _random.nextBool() ? 1 : -1;
         shape.color = _randomColor();
         shape.size = _random.nextDouble() * 100 + 50;
@@ -948,35 +988,43 @@ class _MovingBackgroundState extends State<_MovingBackground>
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: _shapes.map((shape) {
-        return Positioned.fill(
-          child: Align(
-            alignment: Alignment(shape.x * 2 - 1, shape.y * 2 - 1),
-            child: Transform.scale(
-              scale: shape.size / 150,
-              child: Opacity(
-                opacity: shape.color.opacity,
-                child: Container(
-                  width: shape.size,
-                  height: shape.size,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: shape.color.withOpacity(1.0),
-                    boxShadow: [
-                      BoxShadow(
-                        color: shape.color.withOpacity(0.5),
-                        blurRadius: shape.size / 4,
-                        spreadRadius: shape.size / 8,
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          _updateShapes();
+          return Stack(
+            children: _shapes.map((shape) {
+              return Positioned.fill(
+                child: Align(
+                  alignment: Alignment(shape.x * 2 - 1, shape.y * 2 - 1),
+                  child: Transform.scale(
+                    scale: shape.size / 150,
+                    child: Opacity(
+                      opacity: shape.color.opacity,
+                      child: Container(
+                        width: shape.size,
+                        height: shape.size,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              shape.color.withOpacity(0.8),
+                              shape.color.withOpacity(0.3),
+                              Colors.transparent,
+                            ],
+                            stops: const [0.0, 0.5, 1.0],
+                          ),
+                        ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
+              );
+            }).toList(),
+          );
+        },
+      ),
     );
   }
 }
