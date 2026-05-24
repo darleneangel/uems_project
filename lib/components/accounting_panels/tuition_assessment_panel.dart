@@ -643,7 +643,9 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
           children: [
             Icon(LucideIcons.receipt, // Ensure visibility in light mode
                 size: 80,
-                color: widget.isDarkMode ? text.withOpacity(0.05) : Colors.black.withOpacity(0.05)),
+                color: widget.isDarkMode
+                    ? text.withOpacity(0.05)
+                    : Colors.black.withOpacity(0.05)),
             const SizedBox(height: 16),
             const Text("Select students from the queue to generate billing.",
                 style: TextStyle(color: Colors.blueGrey)),
