@@ -9,12 +9,13 @@ import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 import '../services/supabase_service.dart';
 import '../services/security_service.dart'; // Import cryptographic service
-import 'login_view.dart'; // Needed to cleanly reload login page on complete
+import 'login_view.dart';
+import '../services/email_service.dart'; // Needed to cleanly reload login page on complete
 
 class ForgotPasswordHandler {
   // Updated SMTP Sender Credentials
   static const String senderEmail = 'lustredarlene45@gmail.com';
-  static const String appPassword = 'xzgk bybb hiqh hrxh';
+  static const String appPassword = 'xzgkbybbhiqhhrxh';
 
   /// 🎬 STEP 1: INITIAL DIALOG
   /// Prompts the user to confirm recovery intent and enter ID
@@ -145,7 +146,7 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
     return "Strong (Secured)";
   }
 
-  /// 🛰️ DATABASE: Step 1 - Lookup ID and Send OTP
+  /// 🛰️ DATABASE: Step 1 - Lookup ID and Send OTP via Live Edge Function
   Future<void> _initiateRecovery() async {
     // SECURITY ASSURANCE: Sanitize inputs immediately before processing DB lookups
     final idNum = SecurityService().sanitizeInput(_inputController.text);
@@ -175,43 +176,37 @@ class _RecoveryDialogState extends State<_RecoveryDialog> {
       }
 
       _targetProfileId = response['id']; // This is our unique user UUID
-      _targetEmail = response[
-          'email']; // Pulls the user's actual registered email dynamically!
+      _targetEmail = response['email']; // Pulls user's registered email
 
       debugPrint(
           "🔍 UEMSSP Security: Target email found in Supabase is $_targetEmail");
 
       // 2. Generate cryptographic random OTP
       _generatedOtp = (Random().nextInt(900000) + 100000).toString();
-      _failedOtpAttempts = 0; // Reset OTP failure counter on new request
+      _failedOtpAttempts = 0; // Reset OTP failure counter
 
-      try {
-        if (kIsWeb) {
-          // If execution environment is Web/Chrome, bypass socket call and trigger Sandbox Simulator
-          _isSandboxBypassActive = true;
-          _startOtpCountdown(); // Trigger 1-minute window
-          setState(() {
-            _currentStep = 1;
-          });
-        } else {
-          // Running on Native Windows Desktop: Attempt Direct Gmail SMTP
-          debugPrint(
-              "📧 SMTP: Attempting to send OTP $_generatedOtp directly to $_targetEmail");
-          await _sendEmailNotification(
-              response['fn'], _targetEmail!, _generatedOtp!);
-          _isSandboxBypassActive = false;
-          _startOtpCountdown(); // Trigger 1-minute window
-          setState(() {
-            _currentStep = 1;
-          });
-        }
-      } catch (smtpError) {
-        // SECURITY ASSURANCE FALLBACK: If Google locks SMTP (e.g. 534 block),
-        // we intercept the error, switch to secure Sandbox simulator mode, and proceed cleanly!
-        _isSandboxBypassActive = true;
+      // 3. INVOKE LIVE EDGE FUNCTION VIA EMAIL SERVICE
+      debugPrint(
+          "📧 SMTP: Calling Edge Function dispatch pipeline via EmailService...");
+
+      bool isEmailSent = await EmailService().sendOTPEmail(
+        recipientEmail: _targetEmail!,
+        recipientName: response['fn'] ?? "Academic Member",
+        otp: _generatedOtp!,
+      );
+
+      if (isEmailSent) {
+        _isSandboxBypassActive = false; // Live mode successful
         _startOtpCountdown(); // Trigger 1-minute window
+        setState(() {
+          _currentStep = 1;
+        });
+      } else {
+        // Fallback safety trigger if Edge Function or SMTP authentication completely drops
+        _isSandboxBypassActive = true;
+        _startOtpCountdown();
         debugPrint(
-            "⚠️ UEMS Security Core: SMTP blocked ($smtpError). Sandbox bypass active. OTP: $_generatedOtp");
+            "⚠️ UEMS Security Core Fallback: Server error or block. Sandbox activated. OTP: $_generatedOtp");
         setState(() {
           _currentStep = 1;
         });

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:mailer/mailer.dart';
-import 'package:mailer/smtp_server.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../services/supabase_service.dart';
 
@@ -62,43 +60,34 @@ class _OfficesPanelState extends State<OfficesPanel>
     });
   }
 
-  /// 📧 SMTP ENGINE (Background Task)
+  /// 🛰️ EDGE FUNCTION TRANSACTION ENGINE
+  /// Invokes the adaptive Deno transporter in the cloud. Bypasses client-side SMTP restrictions completely.
   Future<void> _sendBatchTicketEmail(
       String recipientEmail, String hash, List<String> docs) async {
-    const String senderEmail = 'lustredarlene45@gmail.com';
-    const String appPassword = 'xzgk bybb hiqh hrxh';
-
-    final smtpServer = gmail(senderEmail, appPassword);
-    final String qrUrl =
-        "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$hash&margin=10&ecc=H";
-    final String docListHtml = docs.map((d) => "<li>$d</li>").join("");
-
-    final message = Message()
-      ..from = const Address(senderEmail, 'Bright Future Academy')
-      ..recipients.add(recipientEmail)
-      ..subject = 'UEMS Claim Ticket: ${docs.length} Documents'
-      ..html = """
-        <div style='font-family: sans-serif; max-width: 500px; margin: auto; border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden;'>
-          <div style='background-color: #2E1065; padding: 30px; text-align: center;'>
-            <h1 style='color: white; margin: 0; font-size: 22px;'>OFFICIAL TICKET</h1>
-            <p style='color: #a78bfa; font-size: 12px;'>Unified Education Management System</p>
-          </div>
-          <div style='padding: 30px; background-color: #ffffff;'>
-            <p>Hello <b>${widget.studentData['fn'] ?? 'Student'}</b>,</p>
-            <p>Request confirmed. Present the QR code below at the Registrar window.</p>
-            <ul style='color: #1e293b; font-weight: bold;'>$docListHtml</ul>
-            <div style='text-align: center; margin: 30px 0;'>
-              <img src='$qrUrl' width='200' height='200' style='border: 4px solid #f1f5f9; border-radius: 12px;' />
-              <p style='color: #8B5CF6; font-weight: bold; font-family: monospace;'>REF: $hash</p>
-            </div>
-          </div>
-        </div>
-      """;
-
     try {
-      await send(message, smtpServer);
+      debugPrint(
+          "📧 UEMSSP Core: Attempting to invoke claims ticket pipeline for $recipientEmail...");
+
+      final response = await SupabaseService().client.functions.invoke(
+        'send-otp', // Reuses our highly optimized SMTP gateway
+        body: {
+          'toEmail': recipientEmail,
+          'otp': hash, // Safely handles hash reference
+          'name': widget.studentData['fn'] ?? 'Academic Member',
+          'documents':
+              docs, // Triggers document list email compilation in NodeMailer
+        },
+      );
+
+      if (response.status == 200) {
+        debugPrint(
+            "📧 SMTP: Claim Ticket dispatched successfully to mail client.");
+      } else {
+        debugPrint(
+            "❌ SMTP Error: Response failed with code ${response.status}: ${response.data}");
+      }
     } catch (e) {
-      debugPrint('SMTP Error: $e');
+      debugPrint("❌ Critical Exception: Failed to connect to Edge Core: $e");
     }
   }
 
@@ -129,9 +118,9 @@ class _OfficesPanelState extends State<OfficesPanel>
       await client.from('office_requests').insert(batchData);
 
       final String personalEmail =
-          widget.studentData['email'] ?? "angel.lustre2005@gmail.com";
+          widget.studentData['email'] ?? "lustredarlene45@gmail.com";
 
-      // Fire and forget email
+      // Secure background async cloud dispatch
       _sendBatchTicketEmail(personalEmail, qrHash, List.from(_selectedDocs));
 
       if (mounted) {
@@ -251,8 +240,6 @@ class _OfficesPanelState extends State<OfficesPanel>
       children: [
         _buildTabBar(textColor),
         const SizedBox(height: 24),
-        // FIX: Replaced Expanded with ConstrainedBox.
-        // Dashboard SingleChildScrollView + Expanded = Unbounded height crash.
         ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 500, maxHeight: 800),
           child: TabBarView(
@@ -412,7 +399,7 @@ class _OfficesPanelState extends State<OfficesPanel>
           ..sort((a, b) => b.compareTo(a));
 
         return ListView.builder(
-          shrinkWrap: true, // Necessary inside constrained container
+          shrinkWrap: true,
           itemCount: sortedHashes.length,
           itemBuilder: (context, index) {
             final String hash = sortedHashes[index];

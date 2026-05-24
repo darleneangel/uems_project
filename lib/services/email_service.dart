@@ -1,96 +1,91 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 /// Email Service
-/// Handles sending emails for OTP and notifications
-/// Note: This is a mock implementation. In production, use a real email service
-/// like SendGrid, AWS SES, Firebase Cloud Functions, or your backend API
+/// Handles sending real SMTP emails via your Supabase Edge Function for OTPs.
 class EmailService {
   static final EmailService _instance = EmailService._internal();
   factory EmailService() => _instance;
   EmailService._internal();
 
-  /// Send OTP email to user
-  /// In production, this would connect to your email service provider
+  // Your actual deployed Supabase Edge Function URL:
+  final String _functionUrl =
+      'https://ipmkemontxkxzfymidej.supabase.co/functions/v1/send-otp';
+
+  /// Sends a secure OTP email via your deployed Supabase Edge Function.
   Future<bool> sendOTPEmail({
     required String recipientEmail,
     required String recipientName,
     required String otp,
   }) async {
     try {
-      // Simulate network delay
-      await Future.delayed(const Duration(seconds: 2));
+      print(
+          '📧 UEMSSP Core: Attempting to dispatch security payload to $_functionUrl...');
 
-      // In production, integrate with email service:
-      // 
-      // Example with HTTP request to backend:
-      // final response = await http.post(
-      //   Uri.parse('https://your-backend.com/api/send-otp'),
-      //   headers: {'Content-Type': 'application/json'},
-      //   body: jsonEncode({
-      //     'email': recipientEmail,
-      //     'name': recipientName,
-      //     'otp': otp,
-      //   }),
-      // );
-      // return response.statusCode == 200;
+      final response = await http.post(
+        Uri.parse(_functionUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'toEmail': recipientEmail,
+          'otp': otp,
+          'name': recipientName,
+        }),
+      );
 
-      // For development/demo, log the email details
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('📧 EMAIL SENT (SIMULATED)');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('To: $recipientEmail');
-      print('Subject: Your UEMS Password Reset OTP');
-      print('');
-      print('Hi $recipientName,');
-      print('');
-      print('Your OTP for password reset is:');
-      print('');
-      print('    ╔════════════════╗');
-      print('    ║   $otp   ║');
-      print('    ╚════════════════╝');
-      print('');
-      print('This OTP will expire in 5 minutes.');
-      print('');
-      print('If you did not request this, please ignore this email.');
-      print('');
-      print('Best regards,');
-      print('UEMS Team');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-      return true; // Simulate success
+      if (response.statusCode == 200) {
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('📧 EMAIL DISPATCHED LIVE');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('To: $recipientEmail');
+        print('Code: $otp');
+        print('Status: Successfully routed through Supabase SMTP Core.');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        return true;
+      } else {
+        print('❌ SMTP Error (${response.statusCode}): ${response.body}');
+        return false;
+      }
     } catch (e) {
-      print('Failed to send email: $e');
+      print('❌ Failed to connect to Edge Function: $e');
       return false;
     }
   }
 
-  /// Send password change confirmation email
+  /// Sends a password change confirmation email.
   Future<bool> sendPasswordChangedEmail({
     required String recipientEmail,
     required String recipientName,
   }) async {
     try {
-      await Future.delayed(const Duration(seconds: 1));
+      print(
+          '📧 UEMSSP Core: Requesting password change confirmation dispatch...');
 
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('📧 EMAIL SENT (SIMULATED)');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('To: $recipientEmail');
-      print('Subject: Your UEMS Password Has Been Changed');
-      print('');
-      print('Hi $recipientName,');
-      print('');
-      print('This is to confirm that your password has been successfully changed.');
-      print('');
-      print('If you did not make this change, please contact support immediately.');
-      print('');
-      print('Best regards,');
-      print('UEMS Team');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      final response = await http.post(
+        Uri.parse(_functionUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'toEmail': recipientEmail,
+          'otp':
+              'PASSWORD_CHANGED', // Let the function know this is a confirmation notification
+          'name': recipientName,
+        }),
+      );
 
-      return true;
+      if (response.statusCode == 200) {
+        print(
+            '📧 Security update confirmation dispatched successfully to $recipientEmail.');
+        return true;
+      } else {
+        print('❌ SMTP Error (${response.statusCode}): ${response.body}');
+        return false;
+      }
     } catch (e) {
-      print('Failed to send email: $e');
+      print('❌ Failed to connect to Edge Function: $e');
       return false;
     }
   }
