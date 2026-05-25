@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import '../../services/supabase_service.dart';
 
 class EnrollmentVerificationPanel extends StatefulWidget {
   final bool isDarkMode;
   final Map<String, dynamic> userData;
 
-  const EnrollmentVerificationPanel(
-      {super.key, required this.isDarkMode, required this.userData});
+  const EnrollmentVerificationPanel({
+    super.key,
+    required this.isDarkMode,
+    required this.userData,
+  });
 
   @override
   State<EnrollmentVerificationPanel> createState() =>
@@ -21,6 +23,11 @@ class _EnrollmentVerificationPanelState
   List<Map<String, dynamic>> _queue = [];
   List<Map<String, dynamic>> _allBylaws = [];
   bool _isLoading = true;
+
+  static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color success = Color(0xFF69F0AE);
+  static const Color danger = Color(0xFFFF5252);
+  static const Color warning = Color(0xFFFFD740);
 
   @override
   void initState() {
@@ -38,9 +45,6 @@ class _EnrollmentVerificationPanelState
           await _service.client.from('admission_bylaws').select('*');
 
       // 2. Fetch applicants who need policy review
-      // 🎯 THE FIX: The join logic has been hardened.
-      // We use .filter with 'in' to ensure 'Verified' students (who just came from Document Verification)
-      // are the priority for this terminal.
       final response = await _service.client
           .from('applicants')
           .select('''
@@ -66,7 +70,6 @@ class _EnrollmentVerificationPanelState
 
   /// 📝 POLICY REVIEW: Logic to promote student to 'Admitted'
   void _processPolicyDecision(Map<String, dynamic> applicant) {
-    // 🛡️ REFINEMENT: If they are 'Verified', the standard promotion target is 'Admitted'
     String selectedStatus = applicant['status'] == 'Verified'
         ? 'Admitted'
         : (applicant['status'] ?? 'Pending');
@@ -75,9 +78,9 @@ class _EnrollmentVerificationPanelState
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1B4B),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setModalState) => AlertDialog(
+          backgroundColor: const Color(0xFF0F071D),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           title: Column(
@@ -85,80 +88,110 @@ class _EnrollmentVerificationPanelState
             children: [
               Text("Policy Evaluation Audit",
                   style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w900, color: Colors.white)),
-              Text("Reviewing: ${applicant['fn']} ${applicant['ln']}",
-                  style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      fontSize: 20)),
+              const SizedBox(height: 4),
+              Text(
+                  "Reviewing: ${applicant['fn']} ${applicant['ln']}"
+                      .toUpperCase(),
+                  style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.blueGrey,
+                      fontWeight: FontWeight.bold)),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _fieldLabel("ADMISSION DECISION"),
-              DropdownButtonFormField<String>(
-                initialValue: ['Pending', 'Admitted', 'Rejected', 'Conditional']
-                        .contains(selectedStatus)
-                    ? selectedStatus
-                    : 'Pending',
-                dropdownColor: const Color(0xFF1E1B4B),
-                style: const TextStyle(color: Colors.white),
-                decoration: _fieldInput("Decision"),
-                items: [
-                  {'val': 'Pending', 'label': 'PENDING REVIEW'},
-                  {'val': 'Admitted', 'label': 'APPROVE & ADMIT student'},
-                  {'val': 'Rejected', 'label': 'REJECT APPLICATION'},
-                  {'val': 'Conditional', 'label': 'PLACE ON PROBATION'},
-                ]
-                    .map((s) => DropdownMenuItem(
-                        value: s['val'], child: Text(s['label']!.toString())))
-                    .toList(),
-                onChanged: (v) => setModalState(() {
-                  selectedStatus = v!;
-                  selectedBylawId = null;
-                }),
-              ),
-              const SizedBox(height: 20),
-              _fieldLabel("INSTITUTIONAL BYLAW BASIS"),
-              DropdownButtonFormField<String>(
-                initialValue: selectedBylawId,
-                isExpanded: true,
-                dropdownColor: const Color(0xFF1E1B4B),
-                style: const TextStyle(color: Colors.white, fontSize: 11),
-                decoration: _fieldInput("Select Clause"),
-                items: _allBylaws
-                    .where((b) {
-                      if (selectedStatus == 'Admitted') {
-                        return b['category'] == 'Approval';
-                      }
-                      if (selectedStatus == 'Rejected') {
-                        return b['category'] == 'Rejection';
-                      }
-                      if (selectedStatus == 'Conditional') {
-                        return b['category'] == 'Conditional';
-                      }
-                      return false;
-                    })
-                    .map((b) => DropdownMenuItem(
-                        value: b['id'].toString(),
-                        child: Text("${b['code']}: ${b['description']}")))
-                    .toList(),
-                onChanged: (v) => setModalState(() => selectedBylawId = v),
-              ),
-            ],
+          content: Container(
+            width: 500,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _fieldLabel("ADMISSION DECISION"),
+                DropdownButtonFormField<String>(
+                  value: ['Pending', 'Admitted', 'Rejected', 'Conditional']
+                          .contains(selectedStatus)
+                      ? selectedStatus
+                      : 'Pending',
+                  dropdownColor: const Color(0xFF1E1B4B),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
+                  decoration: _fieldInput("Decision"),
+                  items: [
+                    {'val': 'Pending', 'label': 'PENDING REVIEW'},
+                    {'val': 'Admitted', 'label': 'APPROVE & ADMIT STUDENT'},
+                    {'val': 'Rejected', 'label': 'REJECT APPLICATION'},
+                    {'val': 'Conditional', 'label': 'PLACE ON PROBATION'},
+                  ]
+                      .map((s) => DropdownMenuItem(
+                          value: s['val'], child: Text(s['label']!.toString())))
+                      .toList(),
+                  onChanged: (v) => setModalState(() {
+                    selectedStatus = v!;
+                    selectedBylawId = null;
+                  }),
+                ),
+                const SizedBox(height: 20),
+                _fieldLabel("INSTITUTIONAL BYLAW BASIS"),
+                DropdownButtonFormField<String>(
+                  value: selectedBylawId,
+                  isExpanded: true,
+                  dropdownColor: const Color(0xFF1E1B4B),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold),
+                  decoration: _fieldInput("Select Clause"),
+                  items: _allBylaws
+                      .where((b) {
+                        if (selectedStatus == 'Admitted') {
+                          return b['category'] == 'Approval';
+                        }
+                        if (selectedStatus == 'Rejected') {
+                          return b['category'] == 'Rejection';
+                        }
+                        if (selectedStatus == 'Conditional') {
+                          return b['category'] == 'Conditional';
+                        }
+                        return false;
+                      })
+                      .map((b) => DropdownMenuItem(
+                          value: b['id'].toString(),
+                          child: Text("${b['code']}: ${b['description']}",
+                              overflow: TextOverflow.ellipsis)))
+                      .toList(),
+                  onChanged: (v) => setModalState(() => selectedBylawId = v),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("CANCEL")),
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text("CANCEL",
+                    style: TextStyle(
+                        color: Colors.blueGrey,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14))),
             ElevatedButton(
               onPressed: () async {
+                // FIXED FLOW: Close dialog immediately to prevent context layering issues
+                Navigator.pop(dialogContext);
+
+                // Commit decision, reload parent UI, and present handover pop-up
                 await _commitDecision(
                     applicant, selectedStatus, selectedBylawId);
-                if (mounted) Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8B5CF6),
-                  foregroundColor: Colors.white),
-              child: const Text("SUBMIT & RELEASE"),
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12))),
+              child: const Text("SUBMIT & RELEASE",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
             )
           ],
         ),
@@ -169,6 +202,9 @@ class _EnrollmentVerificationPanelState
   /// 🛰️ DATABASE: Commits status and CRITICALLY triggers the Accounting Ticket.
   Future<void> _commitDecision(
       Map<String, dynamic> app, String status, String? bylawId) async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
     try {
       // 1. Update status to 'Admitted'
       await _service.client.from('applicants').update({
@@ -180,10 +216,11 @@ class _EnrollmentVerificationPanelState
       if (status == 'Admitted') {
         await _finalizeHandover(app);
       } else {
-        _loadData();
+        await _loadData();
       }
     } catch (e) {
       debugPrint("Handover Update Error: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -201,23 +238,54 @@ class _EnrollmentVerificationPanelState
             '${app['fn']} ${app['ln']}. Approved for Institutional Intake.',
       });
 
-      _loadData();
-      _showSuccess("${app['fn']} ${app['ln']} released to Accounting.");
+      // Reload first, then display Success modal with details directed to Accounting
+      await _loadData();
+      _showSuccess(
+        "${app['fn']} ${app['ln']} has been successfully approved for institutional admission.\n\n"
+        "DIRECTED TO ACCOUNTING: The student registration ledger has been initialized. "
+        "A pending Registration Fee ticket (₱2,000.00) has been created in the Accounting Office system.",
+      );
     } catch (e) {
       debugPrint("Ticket Creation Error: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _showSuccess(String msg) {
+    if (!mounted) return;
     showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-                title: const Text("Success"),
-                content: Text(msg),
+                backgroundColor: const Color(0xFF0F071D),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24)),
+                title: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline_rounded,
+                        color: success, size: 32),
+                    const SizedBox(width: 12),
+                    Text("Handover Successful",
+                        style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            fontSize: 18)),
+                  ],
+                ),
+                content: Container(
+                  width: 450,
+                  child: Text(msg,
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 14, height: 1.5)),
+                ),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text("OK"))
+                      child: const Text("UNDERSTOOD",
+                          style: TextStyle(
+                              color: aViolet,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14)))
                 ]));
   }
 
@@ -233,23 +301,33 @@ class _EnrollmentVerificationPanelState
       children: [
         Text("Enrollment Policy Audit",
             style: GoogleFonts.inter(
-                fontSize: 24, fontWeight: FontWeight.w900, color: textColor)),
+                fontSize: 34,
+                fontWeight: FontWeight.w900,
+                color: textColor,
+                letterSpacing: -1)),
+        const SizedBox(height: 6),
         const Text(
-            "Audit verified applicants and promote them to 'Admitted' status for Accounting.",
-            style: TextStyle(color: Colors.blueGrey)),
+            "Audit verified applicants and promote them to 'Admitted' status to initialize Accounting Ledgers.",
+            style: TextStyle(color: Colors.blueGrey, fontSize: 16)),
         const SizedBox(height: 32),
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator(color: aViolet))
               : Container(
                   decoration: BoxDecoration(
                       color: cardColor,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white10)),
+                      border: Border.all(
+                          color: widget.isDarkMode
+                              ? Colors.white10
+                              : Colors.black12)),
                   child: _queue.isEmpty
                       ? const Center(
                           child: Text("No applicants awaiting policy audit.",
-                              style: TextStyle(color: Colors.blueGrey)))
+                              style: TextStyle(
+                                  color: Colors.blueGrey,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold)))
                       : ListView.separated(
                           itemCount: _queue.length,
                           separatorBuilder: (_, __) =>
@@ -258,48 +336,60 @@ class _EnrollmentVerificationPanelState
                             final app = _queue[i];
                             final isVerified = app['status'] == 'Verified';
                             return ListTile(
-                              contentPadding: const EdgeInsets.all(24),
-                              leading: Icon(
-                                  isVerified
-                                      ? LucideIcons.checkCircle
-                                      : LucideIcons.fileSearch,
-                                  color: isVerified
-                                      ? const Color(0xFF69F0AE)
-                                      : const Color(0xFF8B5CF6)),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 28, vertical: 22),
+                              // GLYPH FIX: Replaced custom LucideIcons with high-fidelity Material Icons to protect from web rendering bugs
+                              leading: CircleAvatar(
+                                radius: 24,
+                                backgroundColor: isVerified
+                                    ? success.withOpacity(0.1)
+                                    : aViolet.withOpacity(0.1),
+                                child: Icon(
+                                    isVerified
+                                        ? Icons.check_circle_outline_rounded
+                                        : Icons.find_in_page_rounded,
+                                    color: isVerified ? success : aViolet,
+                                    size: 24),
+                              ),
                               title: Text(
                                   "${app['ln']}, ${app['fn']}".toUpperCase(),
                                   style: TextStyle(
                                       color: textColor,
-                                      fontWeight: FontWeight.bold)),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16)),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  const SizedBox(height: 6),
                                   Text(
-                                      "Program: ${app['courses']?['name'] ?? 'TBA'}",
+                                      "Program Track: ${app['courses']?['name'] ?? 'TBA'} (${app['courses']?['code'] ?? ''})",
                                       style: const TextStyle(
                                           color: Colors.blueGrey,
-                                          fontSize: 11)),
-                                  Text("Status: ${app['status']}",
-                                      style: TextStyle(
-                                          color: isVerified
-                                              ? const Color(0xFF69F0AE)
-                                              : Colors.orangeAccent,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold)),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500)),
+                                  const SizedBox(height: 6),
+                                  _statusBadge(
+                                      app['status'].toString().toUpperCase(),
+                                      isVerified ? success : warning),
                                 ],
                               ),
                               trailing: ElevatedButton.icon(
                                 onPressed: () => _processPolicyDecision(app),
-                                icon: const Icon(LucideIcons.gavel, size: 14),
-                                label: const Text("AUDIT",
+                                icon: const Icon(Icons.gavel_rounded, size: 18),
+                                label: const Text("AUDIT POLICIES",
                                     style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.bold)),
                                 style: ElevatedButton.styleFrom(
-                                    backgroundColor: isVerified
-                                        ? const Color(0xFF8B5CF6)
-                                        : Colors.blueGrey,
-                                    foregroundColor: Colors.white),
+                                    backgroundColor:
+                                        isVerified ? aViolet : Colors.blueGrey,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 20, vertical: 18),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                    elevation: 0),
                               ),
                             );
                           },
@@ -310,6 +400,22 @@ class _EnrollmentVerificationPanelState
     );
   }
 
+  Widget _statusBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: color.withOpacity(0.2))),
+      child: Text(text,
+          style: TextStyle(
+              color: color,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5)),
+    );
+  }
+
   Widget _fieldLabel(String text) => Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Align(
@@ -317,12 +423,15 @@ class _EnrollmentVerificationPanelState
           child: Text(text,
               style: const TextStyle(
                   color: Colors.blueGrey,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold))));
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1))));
+
   InputDecoration _fieldInput(String label) => InputDecoration(
       labelText: label,
+      labelStyle: const TextStyle(color: Colors.blueGrey, fontSize: 13),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
+      fillColor: Colors.white.withOpacity(0.04),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none));

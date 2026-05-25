@@ -1,17 +1,17 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
-import 'package:mailer/mailer.dart';
-import 'package:mailer/smtp_server.dart';
 import '../../services/supabase_service.dart';
 
 class RegistrarEnrollmentPanel extends StatefulWidget {
   final bool isDarkMode;
   final Map<String, dynamic> userData;
 
-  const RegistrarEnrollmentPanel(
-      {super.key, required this.isDarkMode, required this.userData});
+  const RegistrarEnrollmentPanel({
+    super.key,
+    required this.isDarkMode,
+    required this.userData,
+  });
 
   @override
   State<RegistrarEnrollmentPanel> createState() =>
@@ -28,6 +28,7 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color success = Color(0xFF69F0AE);
   static const Color surfaceDark = Color(0xFF1E1B4B);
+  static const Color pViolet = Color(0xFF2E1065);
 
   @override
   void initState() {
@@ -35,44 +36,40 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
     _fetchClearedApplicants();
   }
 
-  /// 📧 SMTP NOTIFICATION ENGINE
-  /// Dispatches institutional credentials to the student's registered email
-  Future<void> _sendEnrollmentEmail({
+  /// 🛰️ EDGE FUNCTION TRANSACTION ENGINE
+  /// Invokes the adaptive Deno transporter in the cloud to dispatch student credentials.
+  /// Bypasses client-side SMTP restrictions completely.
+  Future<void> _sendEnrollmentEmailViaEdge({
     required String recipientEmail,
     required String studentName,
     required String studentId,
     required String tempPassword,
   }) async {
-    const String senderEmail = 'bright.future.academyUEMSSP@gmail.com';
-    const String appPassword = 'jnea wnbk atjg gyqi';
-    final smtpServer = gmail(senderEmail, appPassword);
-
-    final message = Message()
-      ..from = const Address(senderEmail, 'Bright Future Academy Registrar')
-      ..recipients.add(recipientEmail)
-      ..subject = 'Official Enrollment Confirmation - Bright Future Academy'
-      ..html = """
-        <div style='font-family: sans-serif; max-width: 500px; margin: auto; border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden;'>
-          <div style='background-color: #2E1065; padding: 40px; text-align: center;'>
-            <h1 style='color: white; margin: 0; font-size: 24px;'>WELCOME TO THE ACADEMY</h1>
-          </div>
-          <div style='padding: 30px; background-color: #ffffff;'>
-            <p>Hello <b>$studentName</b>,</p>
-            <p>Your institutional portal access has been provisioned. Please use the following credentials to access your student dashboard:</p>
-            <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0; border: 1px dashed #cbd5e1;'>
-              <p style='margin: 0; font-size: 11px; color: #64748b;'>STUDENT ID NUMBER</p>
-              <p style='margin: 5px 0 15px 0; font-size: 22px; font-weight: bold; color: #8B5CF6;'>$studentId</p>
-              <p style='margin: 0; font-size: 11px; color: #64748b;'>TEMPORARY PASSWORD</p>
-              <p style='margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #1e293b;'>$tempPassword</p>
-            </div>
-            <p style='font-size: 13px; color: #475569;'>You are required to update your security credentials upon first login.</p>
-          </div>
-        </div>
-      """;
     try {
-      await send(message, smtpServer);
+      debugPrint(
+          "📧 UEMSSP Core: Attempting to invoke credential dispatch pipeline for $recipientEmail...");
+
+      final response = await _service.client.functions.invoke(
+        'send-otp', // Reuses our centralized SMTP gateway
+        body: {
+          'type': 'enrollment',
+          'toEmail': recipientEmail,
+          'name': studentName,
+          'studentId': studentId,
+          'tempPassword': tempPassword,
+        },
+      );
+
+      if (response.status == 200) {
+        debugPrint(
+            "📧 SMTP: Student credentials successfully dispatched via Edge Core.");
+      } else {
+        debugPrint(
+            "❌ SMTP Error: Response failed with code ${response.status}: ${response.data}");
+      }
     } catch (e) {
-      debugPrint('SMTP Credential Dispatch Error: $e');
+      debugPrint(
+          "❌ Critical Exception: Failed to connect to Edge Core for credential dispatch: $e");
     }
   }
 
@@ -122,8 +119,9 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
       final String ln = app['ln'] ?? 'TBA';
       final String fullName = "$fn ${mn.isNotEmpty ? '$mn ' : ''}$ln";
 
-      // Temporary password defaults to lowercase last name
-      final String defaultPassword = ln.toLowerCase().replaceAll(' ', '');
+      // 🛠️ CUSTOM FORMULA: Passwords default to clean firstname + StudentID
+      final String cleanFn = fn.toLowerCase().replaceAll(' ', '');
+      final String defaultPassword = "$cleanFn$studentIdNum";
 
       // 1. Create official Institutional Profile
       final profileRes = await _service.client
@@ -145,7 +143,6 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
       final String newProfileId = profileRes['id'];
 
       // 2. Initialize Student Academic Details
-      // Mapping 'year_level_id' which is now strictly a UUID reference
       await _service.client.from('student_details').insert({
         'profile_id': newProfileId,
         'course_id': app['target_course_id'],
@@ -160,14 +157,15 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
           .from('applicants')
           .update({'status': 'Enrolled'}).eq('id', app['id']);
 
-      // 4. Dispatch Digital Credentials
-      _sendEnrollmentEmail(
+      // 4. Dispatch Digital Credentials via Deno Edge Core
+      _sendEnrollmentEmailViaEdge(
           recipientEmail: app['email'],
           studentName: fullName,
           studentId: studentIdNum,
           tempPassword: defaultPassword);
 
-      _showSuccessDialog(studentIdNum, fullName, app['email']);
+      // 5. Present dialog showing Student ID and Temp Password for Registrar cross-checking
+      _showSuccessDialog(studentIdNum, fullName, app['email'], defaultPassword);
       _fetchClearedApplicants();
     } catch (e) {
       _showToast("Registration Ledger Error: $e", Colors.redAccent);
@@ -176,12 +174,13 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
   }
 
   List<Map<String, dynamic>> get _filteredQueue {
-    final query = _searchController.text.toLowerCase();
+    final query = _searchController.text.toLowerCase().trim();
     if (query.isEmpty) return _queue;
     return _queue.where((item) {
       final fn = (item['fn'] ?? '').toString().toLowerCase();
       final ln = (item['ln'] ?? '').toString().toLowerCase();
-      return fn.contains(query) || ln.contains(query);
+      final appNo = (item['application_no'] ?? '').toString().toLowerCase();
+      return fn.contains(query) || ln.contains(query) || appNo.contains(query);
     }).toList();
   }
 
@@ -216,7 +215,7 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
               }
 
               return AlertDialog(
-                backgroundColor: surfaceDark,
+                backgroundColor: const Color(0xFF0F071D),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(28)),
                 title: Column(
@@ -224,11 +223,15 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
                   children: [
                     const Text("Enrollment Finalization",
                         style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold)),
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20)),
+                    const SizedBox(height: 4),
                     Text("Registering: ${app['fn']} ${app['ln']}".toUpperCase(),
                         style: const TextStyle(
-                            fontSize: 10,
+                            fontSize: 12,
                             color: Colors.blueGrey,
+                            fontWeight: FontWeight.bold,
                             letterSpacing: 1)),
                   ],
                 ),
@@ -237,45 +240,59 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
                         height: 100,
                         child: Center(
                             child: CircularProgressIndicator(color: aViolet)))
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          DropdownButtonFormField<String>(
-                            initialValue: selectedYearLevelId,
-                            dropdownColor: surfaceDark,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              labelText: "Assign Year Level",
-                              labelStyle: const TextStyle(
-                                  color: Colors.blueGrey, fontSize: 12),
-                              filled: true,
-                              fillColor: Colors.white.withOpacity(0.05),
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none),
+                    : Container(
+                        width: 450,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text("ASSIGN ACADEMIC LEVEL",
+                                style: TextStyle(
+                                    color: Colors.blueGrey,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1)),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String>(
+                              value: selectedYearLevelId,
+                              dropdownColor: const Color(0xFF1E1B4B),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14),
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.04),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none),
+                              ),
+                              items: yearLevels
+                                  .map((y) => DropdownMenuItem(
+                                      value: y['id'].toString(),
+                                      child: Text(y['definition'] ?? 'N/A')))
+                                  .toList(),
+                              onChanged: (v) =>
+                                  setModalState(() => selectedYearLevelId = v),
                             ),
-                            // Mapping to the 'definition' column from public.year_levels
-                            items: yearLevels
-                                .map((y) => DropdownMenuItem(
-                                    value: y['id'].toString(),
-                                    child: Text(y['definition'] ?? 'N/A')))
-                                .toList(),
-                            onChanged: (v) =>
-                                setModalState(() => selectedYearLevelId = v),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                              "Note: New enrollees typically enter as 1st Year students.",
-                              style: TextStyle(
-                                  color: Colors.blueGrey,
-                                  fontSize: 10,
-                                  fontStyle: FontStyle.italic)),
-                        ],
+                            const SizedBox(height: 16),
+                            const Text(
+                                "Note: Admitted enrollees will enter the academy roster at their designated year level.",
+                                style: TextStyle(
+                                    color: Colors.blueGrey,
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic)),
+                          ],
+                        ),
                       ),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text("CANCEL")),
+                      child: const Text("CANCEL",
+                          style: TextStyle(
+                              color: Colors.blueGrey,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14))),
                   ElevatedButton(
                     onPressed: selectedYearLevelId == null
                         ? null
@@ -285,8 +302,14 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
                           },
                     style: ElevatedButton.styleFrom(
                         backgroundColor: success,
-                        foregroundColor: Colors.black),
-                    child: const Text("FINALIZE ENROLLMENT"),
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 18, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12))),
+                    child: const Text("FINALIZE ENROLLMENT",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14)),
                   ),
                 ],
               );
@@ -312,20 +335,22 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Enrollment Verification",
+                  Text("Enrollment Finalization",
                       style: GoogleFonts.inter(
-                          fontSize: 28,
+                          fontSize: 34,
                           fontWeight: FontWeight.w900,
                           color: textColor,
-                          letterSpacing: -0.5)),
+                          letterSpacing: -1)),
+                  const SizedBox(height: 6),
                   const Text(
-                      "Finalize verified applicant records and generate institutional credentials.",
-                      style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
+                      "Finalize admitted applicant records, generate student profiles, and dispatch portal credentials.",
+                      style: TextStyle(color: Colors.blueGrey, fontSize: 16)),
                 ],
               ),
               IconButton(
                   onPressed: _fetchClearedApplicants,
-                  icon: const Icon(LucideIcons.refreshCw, color: aViolet)),
+                  icon: const Icon(Icons.autorenew_rounded,
+                      color: aViolet, size: 28)),
             ],
           ),
           const SizedBox(height: 32),
@@ -338,7 +363,10 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
                     decoration: BoxDecoration(
                         color: cardColor,
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.white10)),
+                        border: Border.all(
+                            color: widget.isDarkMode
+                                ? Colors.white10
+                                : Colors.black12)),
                     child: _filteredQueue.isEmpty
                         ? _buildEmptyState()
                         : ListView.separated(
@@ -362,21 +390,26 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
                                     style: TextStyle(
                                         color: textColor,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 14)),
+                                        fontSize: 16)),
                                 subtitle: Text(
-                                    "REF: ${app['application_no']} • ${app['courses']?['name'] ?? 'College'}",
+                                    "APP REF: ${app['application_no']} • ${app['courses']?['name'] ?? 'College'}",
                                     style: const TextStyle(
-                                        color: Colors.blueGrey, fontSize: 11)),
+                                        color: Colors.blueGrey,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500)),
                                 trailing: ElevatedButton.icon(
                                     onPressed: () => _showRegistrationForm(app),
-                                    icon: const Icon(LucideIcons.userCheck,
-                                        size: 14),
+                                    icon: const Icon(Icons.person_add_rounded,
+                                        size: 18, color: Colors.white),
                                     label: const Text("VERIFY & ENROLL",
                                         style: TextStyle(
-                                            fontSize: 11,
+                                            color: Colors.white,
+                                            fontSize: 13,
                                             fontWeight: FontWeight.bold)),
                                     style: ElevatedButton.styleFrom(
                                         backgroundColor: aViolet,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 20, vertical: 18),
                                         shape: RoundedRectangleBorder(
                                             borderRadius:
                                                 BorderRadius.circular(12)))),
@@ -391,75 +424,119 @@ class _RegistrarEnrollmentPanelState extends State<RegistrarEnrollmentPanel> {
   }
 
   Widget _buildSearchBar(Color bg, Color text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white10)),
+            border: Border.all(
+                color: widget.isDarkMode ? Colors.white10 : Colors.black12)),
         child: TextField(
           controller: _searchController,
           onChanged: (v) => setState(() {}),
-          style: TextStyle(color: text),
+          style:
+              TextStyle(color: text, fontSize: 15, fontWeight: FontWeight.w500),
           decoration: const InputDecoration(
-              hintText: "Search verified queue...",
+              hintText: "Search verified admitting queue...",
               border: InputBorder.none,
-              prefixIcon: Icon(LucideIcons.search, size: 18, color: aViolet)),
+              prefixIcon: Icon(Icons.search_rounded, size: 22, color: aViolet)),
         ),
       );
 
   Widget _buildEmptyState() => Center(
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(LucideIcons.clipboardCheck, // Ensure visibility in light mode
+        Icon(Icons.assignment_turned_in_rounded,
             size: 48,
             color: widget.isDarkMode
                 ? Colors.blueGrey.withOpacity(0.2)
                 : Colors.black.withOpacity(0.2)),
         const SizedBox(height: 16),
-        const Text("Verification queue is currently clear.",
-            style:
-                TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+        const Text("Enrollment finalized queue is currently clear.",
+            style: TextStyle(
+                color: Colors.blueGrey,
+                fontWeight: FontWeight.bold,
+                fontSize: 15)),
       ]));
 
-  void _showSuccessDialog(String id, String name, String email) {
+  void _showSuccessDialog(
+      String id, String name, String email, String tempPassword) {
     showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (context) => AlertDialog(
-            backgroundColor: surfaceDark,
+            backgroundColor: const Color(0xFF0F071D),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            content: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(LucideIcons.partyPopper, color: success, size: 64),
-              const SizedBox(height: 24),
-              Text("Registration Complete",
-                  style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900)),
-              const SizedBox(height: 8),
-              Text(name.toUpperCase(),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
-              const Divider(height: 32, color: Colors.white10),
-              Text(id,
-                  style: GoogleFonts.orbitron(
-                      fontSize: 32,
-                      color: aViolet,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 4)),
-              const SizedBox(height: 8),
-              Text("Portal credentials dispatched to $email",
-                  style: const TextStyle(color: Colors.blueGrey, fontSize: 11)),
-              const SizedBox(height: 32),
-              SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("DONE")))
-            ])));
+            content: Container(
+              width: 450,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.celebration_rounded, color: success, size: 64),
+                const SizedBox(height: 24),
+                Text("Registration Complete",
+                    style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900)),
+                const SizedBox(height: 8),
+                Text(name.toUpperCase(),
+                    style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold)),
+                const Divider(height: 32, color: Colors.white10),
+                const Text("STUDENT ID NUMBER",
+                    style: TextStyle(
+                        color: Colors.blueGrey,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1)),
+                const SizedBox(height: 4),
+                Text(id,
+                    style: TextStyle(
+                        fontSize: 32,
+                        color: aViolet,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: 'monospace',
+                        letterSpacing: 4)),
+                const SizedBox(height: 24),
+                const Text("TEMPORARY PASSWORD",
+                    style: TextStyle(
+                        color: Colors.blueGrey,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1)),
+                const SizedBox(height: 4),
+                Text("Portal credentials dispatched to $email",
+                    style: const TextStyle(
+                        color: Colors.blueGrey,
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic)),
+                const SizedBox(height: 32),
+                SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: aViolet,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14))),
+                        child: const Text("DONE",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14))))
+              ]),
+            )));
   }
 
-  void _showToast(String m, Color c) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(m),
-          backgroundColor: c,
-          behavior: SnackBarBehavior.floating));
+  void _showToast(String m, Color c) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        backgroundColor: c,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(24),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
+  }
 }

@@ -247,8 +247,8 @@ class _GradeBookPanelState extends State<GradeBookPanel> {
           TableRow(children: [
             _header("Code", subTextColor),
             _header("Subject", subTextColor),
-            _header("Mid", subTextColor, center: true),
-            _header("Fin", subTextColor, center: true),
+            _header("MIDTERM", subTextColor, center: true),
+            _header("FINAL", subTextColor, center: true),
             _header("GWA", subTextColor, center: true),
           ]),
           ...grades.map((g) {

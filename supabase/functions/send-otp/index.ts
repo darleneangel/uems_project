@@ -19,15 +19,24 @@ Deno.serve(async (req: Request) => {
     const otp = body.otp;
     const name = body.name || "Academic Member";
     const documents: string[] = body.documents || [];
+    const type = body.type || ""; // "otp", "document", "enrollment", "assessment_billing"
+    const tempPassword = body.tempPassword || "";
+    const studentId = body.studentId || "";
+    
+    // Financial Breakdown Data Structure payloads
+    const tuitionFee = body.tuitionFee || "₱0.00";
+    const labFee = body.labFee || "₱0.00";
+    const totalNetFees = body.totalNetFees || "₱0.00";
+    const totalUnits = body.totalUnits || "0.0";
+    const blockSection = body.blockSection || "N/A";
 
-    if (!email || !otp) {
-      return new Response(JSON.stringify({ error: "Missing email or identification payload." }), {
+    if (!email) {
+      return new Response(JSON.stringify({ error: "Missing recipient email address." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Programmatically trim whitespace, newlines (\n), and carriage returns (\r)
     const gmailUser = (Deno.env.get("GMAIL_USER") || "lustredarlene45@gmail.com").trim();
     const gmailPass = (Deno.env.get("GMAIL_APP_PASSWORD") || "dgylahnljhvsoplr").trim();
 
@@ -35,25 +44,128 @@ Deno.serve(async (req: Request) => {
       throw new Error("SMTP Configuration Error: Missing GMAIL_USER or GMAIL_APP_PASSWORD secrets.");
     }
 
-    // 2. Configure Nodemailer with modern pool stream configurations
+    // 2. Configure Nodemailer with modern pool configurations
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
-      secure: true, // Use SSL/TLS
+      secure: true,
       auth: {
         user: gmailUser,
         pass: gmailPass,
       },
     });
 
-    // 3. Adaptive Template Generator: Check if payload is a Document Claim Ticket
-    const isDocumentTicket = otp.startsWith("BATCH-") || documents.length > 0;
-    
+    // 3. Adaptive Template Generator: Determine the target transaction type
     let subject = "UEMSSP Adaptive Security Verification Code";
-    let text = `Hello, your security verification code is: ${otp}. This code expires in 10 minutes.`;
+    let text = `Hello, your security verification code is: ${otp}.`;
     let htmlContent = "";
 
-    if (isDocumentTicket) {
+    // NEW TEMPLATE: Detailed Tuition Assessment & Academic Load Invoice Dispatch
+    if (type === "assessment_billing") {
+      subject = "Official Course Assessment & Schedule Invoice - Bright Future Academy";
+      text = `Hello ${name}, your course loading and tuition assessment has been approved for this term. Total Amount Due: ${totalNetFees}.`;
+      
+      const detailedSubjectsHtml = documents.map((subLine) => `
+        <li style="padding: 12px 0; border-bottom: 1px solid #F1F5F9; color: #334155; font-size: 13px; font-weight: 500;">
+          ${subLine}
+        </li>
+      `).join("");
+
+      htmlContent = `
+        <div style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 550px; margin: 40px auto; padding: 32px; border: 1px solid #E2E8F0; border-radius: 24px; color: #1E1033; background: #FFFFFF; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h2 style="color: #8B5CF6; margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.5px;">COURSE ASSESSMENT STATEMENT</h2>
+            <p style="color: #64748B; font-size: 11px; margin: 4px 0 0 0; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase;">Bright Future Academy</p>
+          </div>
+          <div style="height: 1px; background: #E2E8F0; margin-bottom: 24px;"></div>
+          
+          <p style="font-size: 14px; line-height: 1.6; color: #334155; margin-bottom: 16px;">
+            Hello <strong>${name}</strong>,
+          </p>
+          <p style="font-size: 14px; line-height: 1.6; color: #334155; margin-bottom: 24px;">
+            Your academic curriculum courses have been successfully reviewed and loaded by your Program Chair. Below is your official schedule matrix and breakdown of fees:
+          </p>
+          
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px; padding: 20px; margin-bottom: 24px;">
+            <p style="font-size: 11px; color: #64748B; font-weight: bold; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">Allocated Course Roster (${totalUnits} Total Units):</p>
+            <ul style="margin: 0; padding: 0; list-style-type: none;">
+              ${detailedSubjectsHtml}
+            </ul>
+          </div>
+
+          <div style="background: #2E1065; border-radius: 16px; padding: 24px; color: #FFFFFF; margin-bottom: 24px;">
+            <p style="font-size: 11px; color: #C084FC; font-weight: bold; margin: 0 0 14px 0; text-transform: uppercase; letter-spacing: 1px;">Account Financial Summary:</p>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tr>
+                <td style="padding: 6px 0; color: #E9D5FF;">Gross Tuition Base:</td>
+                <td style="padding: 6px 0; text-align: right; font-weight: bold; font-family: monospace;">${tuitionFee}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #E9D5FF;">Laboratory Matrix Fees:</td>
+                <td style="padding: 6px 0; text-align: right; font-weight: bold; font-family: monospace;">${labFee}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #E9D5FF;">Institutional Miscellaneous:</td>
+                <td style="padding: 6px 0; text-align: right; font-weight: bold; font-family: monospace;">₱4,850.00</td>
+              </tr>
+              <tr>
+                <td colspan="2" style="padding-top: 12px; border-top: 1px solid #4C1D95;"></td>
+              </tr>
+              <tr style="font-size: 16px; font-weight: bold;">
+                <td style="color: #FFFFFF;">TOTAL BALANCE ASSESSED:</td>
+                <td style="color: #69F0AE; text-align: right; font-family: monospace;">${totalNetFees}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <p style="font-size: 12px; line-height: 1.6; color: #64748B; margin-bottom: 28px; font-style: italic; text-align: center;">
+            Note: Your account is currently under status 'Assessment'. Please proceed to the Accounting Portal or Comptroller Window to clear your standing balance.
+          </p>
+          <div style="height: 1px; background: #E2E8F0; margin-bottom: 20px;"></div>
+          <div style="text-align: center; font-size: 11px; color: #94A3B8;">
+            UEMSSP Core Systems • Program Chair Curriculum Handover Dispatch
+          </div>
+        </div>
+      `;
+    }
+    // Template B: Registrar Enrollment Credentials Dispatch
+    else if (type === "enrollment" || tempPassword !== "") {
+      subject = "Official Enrollment Confirmation - Bright Future Academy";
+      text = `Hello ${name}, welcome to Bright Future Academy. Your Student ID is ${studentId} and your temporary password is ${tempPassword}`;
+      htmlContent = `
+        <div style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 500px; margin: 40px auto; padding: 32px; border: 1px solid #E2E8F0; border-radius: 24px; color: #1E1033; background: #FFFFFF; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h2 style="color: #8B5CF6; margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.5px;">WELCOME TO THE ACADEMY</h2>
+            <p style="color: #64748B; font-size: 11px; margin: 4px 0 0 0; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase;">Bright Future Academy</p>
+          </div>
+          <div style="height: 1px; background: #E2E8F0; margin-bottom: 28px;"></div>
+          <p style="font-size: 14px; line-height: 1.6; color: #334155; margin-bottom: 20px;">
+            Hello <strong>${name}</strong>,
+          </p>
+          <p style="font-size: 14px; line-height: 1.6; color: #334155; margin-bottom: 24px;">
+            Your institutional portal access has been provisioned. Please use the following credentials to access your student dashboard:
+          </p>
+          
+          <div style="background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 24px;">
+            <p style="font-size: 11px; color: #64748B; font-weight: bold; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Student ID Number</p>
+            <span style="font-family: monospace; font-size: 26px; font-weight: bold; color: #8B5CF6; display: inline-block; margin-bottom: 16px;">${studentId}</span>
+            
+            <p style="font-size: 11px; color: #64748B; font-weight: bold; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Temporary Password</p>
+            <span style="font-family: monospace; font-size: 18px; font-weight: bold; color: #1E293B; display: inline-block;">${tempPassword}</span>
+          </div>
+          
+          <p style="font-size: 12px; line-height: 1.6; color: #64748B; margin-bottom: 28px; font-style: italic; text-align: center;">
+            Note: For security reasons, you will be required to update your temporary login password immediately upon your first workstation login.
+          </p>
+          <div style="height: 1px; background: #E2E8F0; margin-bottom: 20px;"></div>
+          <div style="text-align: center; font-size: 11px; color: #94A3B8;">
+            UEMSSP Core Systems • Registrar Enrollment Dispatch
+          </div>
+        </div>
+      `;
+    } 
+    // Template C: Document Claim Ticket
+    else if (otp?.startsWith("BATCH-") || documents.length > 0) {
       const docListHtml = documents.map((doc) => `
         <li style="padding: 10px 0; border-bottom: 1px solid #F1F5F9; color: #1E293B; font-weight: 600; font-size: 13px;">
           • ${doc}
@@ -99,8 +211,9 @@ Deno.serve(async (req: Request) => {
           </div>
         </div>
       `;
-    } else {
-      // Standard layout for normal OTP security challenges
+    } 
+    // Template D: Standard Security OTP Code
+    else {
       htmlContent = `
         <div style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 500px; margin: 40px auto; padding: 32px; border: 1px solid #E2E8F0; border-radius: 24px; color: #1E1033; background: #FFFFFF; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);">
           <div style="text-align: center; margin-bottom: 24px;">

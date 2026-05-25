@@ -410,7 +410,9 @@ class _RegistrationPaymentPanelState extends State<RegistrationPaymentPanel> {
               icon: const Icon(LucideIcons.refreshCw, size: 14),
               label: const Text("FORCE SYNC STATUS"),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B5CF6)),
+                backgroundColor: const Color(0xFF8B5CF6),
+                foregroundColor: Colors.white,
+              ),
             ),
             const SizedBox(height: 12),
             TextButton(

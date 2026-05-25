@@ -1,15 +1,18 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 
 class TuitionAssessmentPanel extends StatefulWidget {
   final bool isDarkMode;
   final Map<String, dynamic> userData;
 
-  const TuitionAssessmentPanel(
-      {super.key, required this.isDarkMode, required this.userData});
+  const TuitionAssessmentPanel({
+    super.key,
+    required this.isDarkMode,
+    required this.userData,
+  });
 
   @override
   State<TuitionAssessmentPanel> createState() => _TuitionAssessmentPanelState();
@@ -69,6 +72,7 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
       TextEditingController(text: "15000.00");
 
   static const Color aViolet = Color(0xFF8B5CF6);
+  static const Color pViolet = Color(0xFF2E1065);
   static const Color success = Color(0xFF69F0AE);
   static const Color surfaceDark = Color(0xFF1E1B4B);
 
@@ -137,6 +141,38 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
       _grandTotal - (double.tryParse(_downpayment.text) ?? 0.0);
   double get _perInstallment => _installmentBalance / 4.0;
 
+  /// 🛰️ EDGE FUNCTION EMAIL DISPATCHER
+  /// Invokes centralized SMTP gateway to dispatch detailed assessment statement to student's email
+  Future<void> _sendBillingEmailViaEdge({
+    required String recipientEmail,
+    required String studentName,
+    required double tuitionVal,
+    required double labVal,
+    required double totalVal,
+    required double unitsVal,
+    required List<String> feeBreakdown,
+  }) async {
+    try {
+      debugPrint(
+          "📧 UEMSSP Core: Invoking billing notification gateway for $recipientEmail...");
+      await _service.client.functions.invoke(
+        'send-otp',
+        body: {
+          'type': 'assessment_billing',
+          'toEmail': recipientEmail,
+          'name': studentName,
+          'totalUnits': unitsVal.toStringAsFixed(1),
+          'tuitionFee': "₱${NumberFormat('#,##0.00').format(tuitionVal)}",
+          'labFee': "₱${NumberFormat('#,##0.00').format(labVal)}",
+          'totalNetFees': "₱${NumberFormat('#,##0.00').format(totalVal)}",
+          'documents': feeBreakdown,
+        },
+      );
+    } catch (e) {
+      debugPrint("❌ Edge Billing Dispatch Failure: $e");
+    }
+  }
+
   /// 🛰️ RELEASE ACTION: Save billing (Supports Batch)
   Future<void> _releaseAssessment() async {
     final List<String> profileIds = _selectedQueueIds.isNotEmpty
@@ -147,25 +183,43 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
 
     try {
       for (String pId in profileIds) {
-        // Create the breakdown object
+        // Resolve dynamic curriculum parameters individually per student
+        final loadRes = await _service.client
+            .from('study_loads')
+            .select('*, subjects(*)')
+            .eq('student_id', pId);
+        final List studentLoads = loadRes as List;
+
+        double studentUnits = studentLoads.fold(
+            0.0,
+            (sum, l) =>
+                sum +
+                (double.tryParse(l['subjects']['units'].toString()) ?? 0.0));
+
+        double studentTuition =
+            studentUnits * (double.tryParse(_tuitionRate.text) ?? 0.0);
+        double studentTotal =
+            studentTuition + _miscTotal + _otherTotal + _labTotal;
+
         final String breakdownJson = jsonEncode({
-          'tuition': _tuitionTotal,
+          'tuition': studentTuition,
           'misc_breakdown': _miscControllers.map((k, v) => MapEntry(k, v.text)),
           'other_breakdown':
               _otherControllers.map((k, v) => MapEntry(k, v.text)),
           'lab_fee': _labTotal,
           'installment_plan': {
             'downpayment': _downpayment.text,
-            'periodic': _perInstallment.toStringAsFixed(2),
+            'periodic':
+                ((studentTotal - (double.tryParse(_downpayment.text) ?? 0.0)) /
+                        4.0)
+                    .toStringAsFixed(2),
           }
         });
 
-        // 1. Create Payment Record
-        // FIX: Added 'amount_paid': 0.0 to satisfy the NOT NULL constraint in the database.
-        // We are using 'amount' for the total billable and 'amount_paid' for tracked collections.
+        // 1. Create Payment Record (Unpaid Enrollment Assessment)
         await _service.client.from('payments').insert({
           'student_id': pId,
-          'amount': _grandTotal,
+          'amount': studentTotal,
           'amount_paid': 0.0, // Initial release always has zero payment
           'status': 'Unpaid',
           'payment_type': 'Enrollment Assessment',
@@ -175,12 +229,53 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
         // 2. Official Enrollment Handover
         await _service.client.from('student_details').update({
           'enrollment_status': 'Enrolled',
-          'account_balance': _grandTotal,
+          'account_balance': studentTotal,
         }).eq('profile_id', pId);
+
+        // 3. COMPILE DETAILED EMAIL INVOICE BREAKDOWN
+        final matchedStudent = _queue.firstWhere((q) => q['profile_id'] == pId);
+        final String recipientEmail =
+            matchedStudent['profiles']['email'] ?? 'lustredarlene45@gmail.com';
+        final String studentName =
+            "${matchedStudent['profiles']['fn']} ${matchedStudent['profiles']['ln']}";
+
+        final List<String> itemizedFeesList = [];
+        itemizedFeesList.add(
+            "Tuition Fee Base: ₱${NumberFormat('#,##0.00').format(studentTuition)} ($studentUnits Units @ ₱${_tuitionRate.text}/Unit)");
+        if (_labTotal > 0) {
+          itemizedFeesList.add(
+              "Laboratory Matrix Fee: ₱${NumberFormat('#,##0.00').format(_labTotal)}");
+        }
+
+        // Itemize active Miscellaneous and other charges
+        _miscControllers.forEach((k, v) {
+          final val = double.tryParse(v.text) ?? 0.0;
+          if (val > 0)
+            itemizedFeesList
+                .add("$k: ₱${NumberFormat('#,##0.00').format(val)}");
+        });
+        _otherControllers.forEach((k, v) {
+          final val = double.tryParse(v.text) ?? 0.0;
+          if (val > 0)
+            itemizedFeesList
+                .add("$k: ₱${NumberFormat('#,##0.00').format(val)}");
+        });
+
+        // 4. DISPATCH DETAILED BILLING STATEMENT VIA SUPABASE EDGE NODEMAILER
+        _sendBillingEmailViaEdge(
+          recipientEmail: recipientEmail,
+          studentName: studentName,
+          tuitionVal: studentTuition,
+          labVal: _labTotal,
+          totalVal: studentTotal,
+          unitsVal: studentUnits,
+          feeBreakdown: itemizedFeesList,
+        );
       }
 
       _showToast(
-          "Assessment Released for ${profileIds.length} Student(s).", success);
+          "Assessment approved & invoice statements sent to ${profileIds.length} Student(s).",
+          success);
       setState(() {
         _activeStudent = null;
         _selectedQueueIds.clear();
@@ -199,20 +294,24 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: surfaceDark,
+        backgroundColor: const Color(0xFF0F071D),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text("Save Fee Template",
-            style: TextStyle(color: Colors.white)),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: TextField(
           controller: nameCtrl,
           autofocus: true,
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
-              hintText: "Template Name (e.g., BSIT Regular)"),
+              hintText: "Template Name (e.g., BSIT Regular)",
+              hintStyle: TextStyle(color: Colors.white30)),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("CANCEL")),
+              child: const Text("CANCEL",
+                  style: TextStyle(
+                      color: Colors.blueGrey, fontWeight: FontWeight.bold))),
           ElevatedButton(
               onPressed: () {
                 setState(() {
@@ -228,7 +327,9 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
                 Navigator.pop(context);
                 _showToast("Template '${nameCtrl.text}' saved.", aViolet);
               },
-              child: const Text("SAVE")),
+              style: ElevatedButton.styleFrom(backgroundColor: aViolet),
+              child: const Text("SAVE TEMPLATE",
+                  style: TextStyle(fontWeight: FontWeight.bold))),
         ],
       ),
     );
@@ -256,7 +357,7 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
       children: [
         // LEFT: ASSESSMENT QUEUE
         Container(
-          width: 340,
+          width: 360,
           decoration: const BoxDecoration(
               border: Border(right: BorderSide(color: Colors.white10))),
           child: _buildQueue(textColor, cardColor),
@@ -281,7 +382,10 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
             children: [
               Text("Billing Queue",
                   style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w900, color: text, fontSize: 22)),
+                      fontWeight: FontWeight.w900,
+                      color: text,
+                      fontSize: 24,
+                      letterSpacing: -0.5)),
               if (_selectedQueueIds.isNotEmpty)
                 _badge("${_selectedQueueIds.length} Selected", aViolet),
             ],
@@ -318,16 +422,19 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
                       title: InkWell(
                         onTap: () => _loadStudentContext(s),
                         child: Text(
-                            "${s['profiles']['fn']} ${s['profiles']['ln']}",
+                            "${s['profiles']['fn']} ${s['profiles']['ln']}"
+                                .toUpperCase(),
                             style: TextStyle(
                                 color: text,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 13)),
+                                fontSize: 14)),
                       ),
                       subtitle: Text(
                           "${s['courses']['code']} • ${s['year_levels']['definition']}",
                           style: const TextStyle(
-                              color: Colors.blueGrey, fontSize: 10)),
+                              color: Colors.blueGrey,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500)),
                     );
                   },
                 ),
@@ -340,6 +447,7 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
     final bool isBatch = _selectedQueueIds.isNotEmpty;
 
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.all(40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -352,29 +460,30 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
               Expanded(
                   child: _sectionCard("TUITION CONFIGURATION", [
                 _feeInput("Rate per Unit", _tuitionRate),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 if (!isBatch) ...[
                   _summaryRow("Calculated Units:", "$_totalUnits Units"),
                   _summaryRow("Tuition Subtotal:",
-                      "₱${_tuitionTotal.toStringAsFixed(2)}"),
+                      "₱${NumberFormat('#,##0.00').format(_tuitionTotal)}"),
                 ] else
                   const Text(
-                      "Units will be calculated individually per student.",
+                      "Units will be calculated individually per student in the queue.",
                       style: TextStyle(
                           color: Colors.blueGrey,
-                          fontSize: 11,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
                           fontStyle: FontStyle.italic)),
               ])),
               const SizedBox(width: 24),
               Expanded(
                   child: _sectionCard("SPECIAL FEES", [
                 _feeInput("Laboratory Fees", _labFee),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 _templateMenu(text),
               ])),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 30),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -382,7 +491,8 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
                   child: _sectionCard("MISCELLANEOUS BREAKDOWN", [
                 _buildGridInputs(_miscControllers),
                 const Divider(height: 32, color: Colors.white10),
-                _summaryRow("Misc Total:", "₱${_miscTotal.toStringAsFixed(2)}",
+                _summaryRow("Misc Total Sum:",
+                    "₱${NumberFormat('#,##0.00').format(_miscTotal)}",
                     isBold: true),
               ])),
               const SizedBox(width: 24),
@@ -390,8 +500,8 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
                   child: _sectionCard("OTHER FEES BREAKDOWN", [
                 _buildGridInputs(_otherControllers),
                 const Divider(height: 32, color: Colors.white10),
-                _summaryRow(
-                    "Other Total:", "₱${_otherTotal.toStringAsFixed(2)}",
+                _summaryRow("Other Total Sum:",
+                    "₱${NumberFormat('#,##0.00').format(_otherTotal)}",
                     isBold: true),
               ])),
             ],
@@ -404,18 +514,21 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
             height: 65,
             child: ElevatedButton.icon(
               onPressed: _releaseAssessment,
-              icon: const Icon(LucideIcons.shieldCheck),
+              icon: const Icon(Icons.verified_user_rounded, size: 22),
               label: Text(
                   isBatch
                       ? "BATCH RELEASE TO ${_selectedQueueIds.length} STUDENTS"
                       : "FINALIZE & RELEASE TO STUDENT PORTAL",
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                      fontSize: 15)),
               style: ElevatedButton.styleFrom(
                   backgroundColor: success,
                   foregroundColor: Colors.black,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16))),
+                      borderRadius: BorderRadius.circular(16)),
+                  elevation: 0),
             ),
           ),
         ],
@@ -434,7 +547,7 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
             color: aViolet.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
@@ -442,11 +555,14 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(LucideIcons.copy, size: 16, color: aViolet),
+            const Icon(Icons.copy_all_rounded, size: 18, color: aViolet),
             const SizedBox(width: 8),
             Text("FEE TEMPLATES",
                 style: GoogleFonts.inter(
-                    fontSize: 11, fontWeight: FontWeight.bold, color: aViolet)),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: aViolet,
+                    letterSpacing: 0.5)),
           ],
         ),
       ),
@@ -454,9 +570,10 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
         const PopupMenuItem(
             value: 'save',
             child: Row(children: [
-              Icon(LucideIcons.save, size: 16),
+              Icon(Icons.save_rounded, size: 18, color: success),
               SizedBox(width: 8),
-              Text("Save Current Settings")
+              Text("Save Current Settings",
+                  style: TextStyle(fontWeight: FontWeight.bold))
             ])),
         const PopupMenuDivider(),
         if (_savedTemplates.isEmpty)
@@ -487,17 +604,19 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
                     style: TextStyle(
                         color: aViolet,
                         fontWeight: FontWeight.bold,
-                        fontSize: 10)),
-                _summaryRow(
-                    "Gross Total:", "₱${_grandTotal.toStringAsFixed(2)}"),
+                        fontSize: 11,
+                        letterSpacing: 1)),
+                const SizedBox(height: 10),
+                _summaryRow("Gross Total:",
+                    "₱${NumberFormat('#,##0.00').format(_grandTotal)}"),
                 _summaryRow("Prompt Discount:", "- ₱${_cashDiscount.text}"),
-                _summaryRow(
-                    "NET CASH DUE:", "₱${_cashTotal.toStringAsFixed(2)}",
+                _summaryRow("NET CASH DUE:",
+                    "₱${NumberFormat('#,##0.00').format(_cashTotal)}",
                     isBold: true, color: success),
               ],
             ),
           ),
-          const VerticalDivider(width: 64, color: Colors.white10),
+          const SizedBox(width: 48),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -506,12 +625,15 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
                     style: TextStyle(
                         color: Colors.orangeAccent,
                         fontWeight: FontWeight.bold,
-                        fontSize: 10)),
-                _summaryRow("Upon Registration:", "₱${_downpayment.text}"),
-                _summaryRow("Balance (4 mos):",
-                    "₱${_installmentBalance.toStringAsFixed(2)}"),
+                        fontSize: 11,
+                        letterSpacing: 1)),
+                const SizedBox(height: 10),
                 _summaryRow(
-                    "PERIODIC DUE:", "₱${_perInstallment.toStringAsFixed(2)}",
+                    "Upon Registration Downpayment:", "₱${_downpayment.text}"),
+                _summaryRow("Balance Outstanding (4 mos):",
+                    "₱${NumberFormat('#,##0.00').format(_installmentBalance)}"),
+                _summaryRow("PERIODIC MONTHLY DUE:",
+                    "₱${NumberFormat('#,##0.00').format(_perInstallment)}",
                     isBold: true, color: Colors.orangeAccent),
               ],
             ),
@@ -526,12 +648,13 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.03),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white10)),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+              color: widget.isDarkMode ? Colors.white10 : Colors.black12)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(title,
             style: GoogleFonts.inter(
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: FontWeight.w900,
                 color: Colors.blueGrey,
                 letterSpacing: 1.5)),
@@ -547,9 +670,9 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 4,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12),
+          childAspectRatio: 4.5,
+          crossAxisSpacing: 14,
+          mainAxisSpacing: 14),
       itemCount: ctrls.length,
       itemBuilder: (context, i) => _feeInput(
           ctrls.keys.elementAt(i), ctrls.values.elementAt(i),
@@ -564,18 +687,20 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
       keyboardType: TextInputType.number,
       onChanged: (v) => setState(() {}),
       style: TextStyle(
-          fontSize: isSmall ? 11 : 14, // Keep font size
+          fontSize: isSmall ? 12 : 15,
           color: widget.isDarkMode ? Colors.white : Colors.black,
+          fontFamily: 'monospace',
           fontWeight: FontWeight.bold),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.blueGrey, fontSize: 10),
+        labelStyle: const TextStyle(
+            color: Colors.blueGrey, fontSize: 11, fontWeight: FontWeight.bold),
         prefixText: "₱ ",
         isDense: true,
         filled: true,
         fillColor: Colors.white.withOpacity(0.02),
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none),
       ),
     );
@@ -588,12 +713,17 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(l,
-                style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+                style: const TextStyle(
+                    color: Colors.blueGrey,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500)),
             Text(v,
                 style: TextStyle(
-                    color: color ?? Colors.white,
-                    fontWeight: isBold ? FontWeight.w900 : FontWeight.normal,
-                    fontSize: isBold ? 16 : 13)),
+                    color:
+                        color ?? (widget.isDarkMode ? Colors.white : pViolet),
+                    fontFamily: 'monospace',
+                    fontWeight: isBold ? FontWeight.w900 : FontWeight.bold,
+                    fontSize: isBold ? 17 : 14)),
           ],
         ),
       );
@@ -605,32 +735,47 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
         children: [
           Text("Batch Assessment Mode",
               style: GoogleFonts.inter(
-                  fontSize: 22, fontWeight: FontWeight.w900, color: text)),
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  color: text,
+                  letterSpacing: -0.5)),
+          const SizedBox(height: 4),
           Text(
-              "Processing ${_selectedQueueIds.length} students simultaneously.",
-              style:
-                  const TextStyle(color: aViolet, fontWeight: FontWeight.bold)),
+              "Processing ${_selectedQueueIds.length} students simultaneously with adaptive dynamic loading.",
+              style: const TextStyle(
+                  color: aViolet, fontWeight: FontWeight.bold, fontSize: 14)),
         ],
       );
     }
     return Row(
       children: [
         CircleAvatar(
-            radius: 24,
+            radius: 28,
             backgroundColor: aViolet,
             child: Text(_activeStudent!['profiles']['ln'][0],
                 style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold))),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18))),
         const SizedBox(width: 16),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-                "${_activeStudent!['profiles']['fn']} ${_activeStudent!['profiles']['ln']}",
+                "${_activeStudent!['profiles']['fn']} ${_activeStudent!['profiles']['ln']}"
+                    .toUpperCase(),
                 style: GoogleFonts.inter(
-                    fontSize: 22, fontWeight: FontWeight.w900, color: text)),
-            Text("${_activeStudent!['courses']['name']} • SY 2025-2026",
-                style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: text,
+                    letterSpacing: -0.5)),
+            const SizedBox(height: 4),
+            Text(
+                "${_activeStudent!['courses']['name']} • Academic Session: 2025-2026",
+                style: const TextStyle(
+                    color: Colors.blueGrey,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold)),
           ],
         ),
       ],
@@ -641,29 +786,40 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(LucideIcons.receipt, // Ensure visibility in light mode
+            Icon(Icons.receipt_long_rounded,
                 size: 80,
                 color: widget.isDarkMode
                     ? text.withOpacity(0.05)
                     : Colors.black.withOpacity(0.05)),
-            const SizedBox(height: 16),
-            const Text("Select students from the queue to generate billing.",
-                style: TextStyle(color: Colors.blueGrey)),
+            const SizedBox(height: 20),
+            const Text(
+                "Select students from the queue to generate official billing assessments.",
+                style: TextStyle(
+                    color: Colors.blueGrey,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold)),
           ],
         ),
       );
 
   Widget _badge(String t, Color c) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-          color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+          color: c.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: c.withOpacity(0.2))),
       child: Text(t,
           style:
-              TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold)));
+              TextStyle(color: c, fontSize: 10, fontWeight: FontWeight.bold)));
 
   void _showToast(String m, Color c) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(m),
+          content: Text(m,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           backgroundColor: c,
-          behavior: SnackBarBehavior.floating));
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(24),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
 }

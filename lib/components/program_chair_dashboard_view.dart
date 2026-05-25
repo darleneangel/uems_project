@@ -48,7 +48,8 @@ class _ProgramChairDashboardViewState extends State<ProgramChairDashboardView> {
         ),
         content: Text(
           "Are you sure you want to logout?",
-          style: GoogleFonts.inter(color: Colors.red),
+          style: GoogleFonts.inter(
+              color: const Color.fromARGB(255, 255, 255, 255)),
         ),
         actions: [
           TextButton(

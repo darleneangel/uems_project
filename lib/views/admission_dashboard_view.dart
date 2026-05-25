@@ -47,14 +47,19 @@ class _AdmissionDashboardViewState extends State<AdmissionDashboardView> {
             style: TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("CANCEL")),
+            onPressed: () => Navigator.pop(context),
+            child: const Text("CANCEL",
+                style: TextStyle(color: Color.fromARGB(255, 213, 217, 219))),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               widget.onLogout();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
             child: const Text("LOGOUT SYSTEM"),
           ),
         ],

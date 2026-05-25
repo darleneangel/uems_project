@@ -188,7 +188,12 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
                   border: Border.all(color: Colors.white10)),
               child: _selectedApplicantId == null
                   ? const Center(
-                      child: Text("Select an applicant to verify documents"))
+                      child: Text(
+                        "Select an applicant to verify documents",
+                        style: TextStyle(
+                            color: Color.fromARGB(255, 255, 255, 255)),
+                      ),
+                    )
                   : Column(
                       children: [
                         Text("Checklist for $_selectedApplicantName",
@@ -215,7 +220,8 @@ class _DocumentVerificationPanelState extends State<DocumentVerificationPanel> {
                             onPressed:
                                 _canFinalize ? _completeVerification : null,
                             style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF8B5CF6)),
+                                backgroundColor: const Color(0xFF8B5CF6),
+                                foregroundColor: Colors.white),
                             child: const Text("PROMOTE TO POLICY AUDIT"),
                           ),
                         )

@@ -326,7 +326,8 @@ class _ApplicationsManagementPanelState
                 }
               },
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B5CF6)),
+                  backgroundColor: const Color(0xFF8B5CF6),
+                  foregroundColor: Colors.white),
               child: const Text("INTAKE APPLICANT"),
             ),
           ],
@@ -448,14 +449,15 @@ class _ApplicationsManagementPanelState
               ),
               ElevatedButton.icon(
                 onPressed: _showPreRegistrationForm,
-                icon: Icon(LucideIcons.userPlus, 
+                icon: Icon(LucideIcons.userPlus,
                     color: widget.isDarkMode ? Colors.white : Colors.white),
                 label: Text("NEW APPLICANT",
                     style: TextStyle(
-                        color: widget.isDarkMode ? Colors.white : Colors.white)),
+                        color:
+                            widget.isDarkMode ? Colors.white : Colors.white)),
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: widget.isDarkMode 
-                        ? const Color(0xFF8B5CF6) 
+                    backgroundColor: widget.isDarkMode
+                        ? const Color(0xFF8B5CF6)
                         : const Color(0xFF8B5CF6),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24, vertical: 22),

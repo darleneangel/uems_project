@@ -248,7 +248,8 @@ class _AssessmentSummaryPanelState extends State<AssessmentSummaryPanel> {
                   "Authorized by: ${widget.userData['fn']} ${widget.userData['ln']}",
                   style: const pw.TextStyle(fontSize: 8)),
               pw.Text("Generated via UEMSSP Core on $timestamp",
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey)),
+                  style:
+                      const pw.TextStyle(fontSize: 8, color: PdfColors.grey)),
             ],
           ),
         ),
@@ -409,12 +410,9 @@ class _AssessmentSummaryPanelState extends State<AssessmentSummaryPanel> {
                     fontWeight: FontWeight.w900,
                     color: Colors.blueGrey)),
             const SizedBox(height: 16),
-            ...(_activeAssessment!['misc'] as Map<String, double>)
-                .entries
-                .map((e) => _itemRow(
-                    e.key, "Fixed Institutional Fee", e.value, text,
-                    isMisc: true))
-                ,
+            ...(_activeAssessment!['misc'] as Map<String, double>).entries.map(
+                (e) => _itemRow(e.key, "Fixed Institutional Fee", e.value, text,
+                    isMisc: true)),
           ],
         ),
       );
