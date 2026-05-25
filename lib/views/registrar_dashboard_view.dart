@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../components/registrar_panel_content.dart';
+import '../services/security_service.dart';
 
 class RegistrarDashboardView extends StatefulWidget {
   final VoidCallback onLogout;

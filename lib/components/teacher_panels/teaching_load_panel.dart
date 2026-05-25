@@ -1,11 +1,10 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart'
+    show kIsWeb; // FIXED: Imported platform check for safe web downloads
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart'; // Standard cross-platform PDF layout/share engine
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 
@@ -13,8 +12,11 @@ class TeachingLoadPanel extends StatefulWidget {
   final bool isDarkMode;
   final Map<String, dynamic> userData;
 
-  const TeachingLoadPanel(
-      {super.key, required this.isDarkMode, required this.userData});
+  const TeachingLoadPanel({
+    super.key,
+    required this.isDarkMode,
+    required this.userData,
+  });
 
   @override
   State<TeachingLoadPanel> createState() => _TeachingLoadPanelState();
@@ -56,8 +58,6 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
 
       // 2. Aggregate Student Counts per Subject
       for (var load in loadData) {
-        // 🛠️ FIX: Removed invalid FetchOptions positional argument to resolve the compilation error.
-        // We fetch the student_id list to ensure we can count UNIQUE students.
         final List res = await _service.client
             .from('study_loads')
             .select('student_id')
@@ -83,7 +83,6 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
   }
 
   /// 🛰️ DATABASE: Fetches the roster and filters out duplicates
-  /// This addresses the "double student" issue for specific subjects.
   Future<List<Map<String, dynamic>>> _getRosterData(String subjectId) async {
     final response = await _service.client
         .from('study_loads')
@@ -103,13 +102,12 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
     final List<Map<String, dynamic>> rawRoster =
         List<Map<String, dynamic>>.from(response);
 
-    // 🛡️ UNIQUE FILTER: Prevents duplicate students (e.g. Amber De Castro appearing 3 times)
+    // 🛡️ UNIQUE FILTER: Prevents duplicate student list rendering
     final Map<String, Map<String, dynamic>> uniqueRoster = {};
     for (var entry in rawRoster) {
       final profile = entry['profiles'];
       if (profile != null) {
         final String studentId = profile['user_id_number'].toString();
-        // Overwriting ensures only one entry per ID exists in the final list
         uniqueRoster[studentId] = profile;
       }
     }
@@ -125,7 +123,7 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         title: Row(
           children: [
-            const Icon(LucideIcons.users, color: aViolet),
+            const Icon(Icons.people_rounded, color: aViolet, size: 28),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -144,7 +142,8 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
             ),
             IconButton(
               onPressed: () => _generateRosterPDF(load),
-              icon: const Icon(LucideIcons.fileDown, color: aViolet, size: 20),
+              icon: const Icon(Icons.file_download_rounded,
+                  color: aViolet, size: 24),
             ),
           ],
         ),
@@ -241,6 +240,7 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
     );
   }
 
+  /// 📥 PDF GENERATION: Unified, web-safe, cross-platform export and save action for teaching load
   Future<void> _generateTeachingLoadPDF() async {
     final pdf = pw.Document();
     final date = DateFormat('MMMM dd, yyyy').format(DateTime.now());
@@ -275,12 +275,28 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
       ),
     ));
 
-    final dir = await getTemporaryDirectory();
-    final file = File("${dir.path}/TeachingLoad_${widget.userData['ln']}.pdf");
-    await file.writeAsBytes(await pdf.save());
-    await OpenFile.open(file.path);
+    try {
+      final bytes = await pdf.save();
+      // FIXED FOR WEB & DESKTOP: Bypasses the native path/sharing locks by conditionally calling Printing layout or share triggers
+      if (kIsWeb) {
+        await Printing.layoutPdf(
+          onLayout: (PdfPageFormat format) async => bytes,
+          name: 'TeachingLoad_${widget.userData['ln']}.pdf',
+        );
+        _showToast("PDF Teaching Load ready for print/download!", success);
+      } else {
+        await Printing.sharePdf(
+          bytes: bytes,
+          filename: 'TeachingLoad_${widget.userData['ln']}.pdf',
+        );
+        _showToast("PDF Teaching Load successfully saved!", success);
+      }
+    } catch (e) {
+      _showToast("Could not save PDF file.", Colors.redAccent);
+    }
   }
 
+  /// 📥 PDF GENERATION: Unified, web-safe, cross-platform export and save action for class roster
   Future<void> _generateRosterPDF(Map<String, dynamic> load) async {
     final roster = await _getRosterData(load['subject_id'].toString());
     final pdf = pw.Document();
@@ -315,10 +331,25 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
       ),
     ));
 
-    final dir = await getTemporaryDirectory();
-    final file = File("${dir.path}/Roster_${load['subjects']['code']}.pdf");
-    await file.writeAsBytes(await pdf.save());
-    await OpenFile.open(file.path);
+    try {
+      final bytes = await pdf.save();
+      // FIXED FOR WEB & DESKTOP: Bypasses the native path/sharing locks by conditionally calling Printing layout or share triggers
+      if (kIsWeb) {
+        await Printing.layoutPdf(
+          onLayout: (PdfPageFormat format) async => bytes,
+          name: 'Roster_${load['subjects']['code']}.pdf',
+        );
+        _showToast("PDF Class Roster ready for print/download!", success);
+      } else {
+        await Printing.sharePdf(
+          bytes: bytes,
+          filename: 'Roster_${load['subjects']['code']}.pdf',
+        );
+        _showToast("PDF Class Roster successfully saved!", success);
+      }
+    } catch (e) {
+      _showToast("Could not save PDF file.", Colors.redAccent);
+    }
   }
 
   @override
@@ -339,28 +370,36 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Faculty Teaching Load",
-                      style: GoogleFonts.inter(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: textColor,
-                          letterSpacing: -1)),
-                  const Text("Active Semester: 2nd Semester SY 2025-2026",
-                      style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Faculty Teaching Load",
+                        style: GoogleFonts.inter(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: textColor,
+                            letterSpacing: -1)),
+                    const SizedBox(height: 4),
+                    const Text("Active Semester: 2nd Semester SY 2025-2026",
+                        style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
+                  ],
+                ),
               ),
               ElevatedButton.icon(
                   onPressed: _generateTeachingLoadPDF,
-                  icon: const Icon(LucideIcons.fileDown),
+                  icon: const Icon(Icons.file_download_rounded, size: 20),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: aViolet,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 15)),
-                  label: const Text("DOWNLOAD LOAD")),
+                          horizontal: 24, vertical: 20),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      elevation: 0),
+                  label: const Text("DOWNLOAD LOAD",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13))),
             ],
           ),
           const SizedBox(height: 32),
@@ -405,17 +444,21 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
                           ],
                         ),
                       ),
-                      ElevatedButton(
+                      ElevatedButton.icon(
                           onPressed: () => _showRosterDialog(load),
+                          icon: const Icon(Icons.people_outline_rounded,
+                              size: 18),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: aViolet,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 12),
+                                horizontal: 20, vertical: 16),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
                           ),
-                          child: const Text("VIEW ROSTER")),
+                          label: const Text("VIEW ROSTER",
+                              style: TextStyle(fontWeight: FontWeight.bold))),
                     ],
                   ),
                 );
@@ -430,7 +473,7 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
         child: Column(
           children: [
             const SizedBox(height: 60),
-            Icon(LucideIcons.bookX, size: 64, color: t.withOpacity(0.1)),
+            Icon(Icons.menu_book_rounded, size: 64, color: t.withOpacity(0.1)),
             const SizedBox(height: 24),
             const Text("No teaching loads assigned in current cycle.",
                 style: TextStyle(
@@ -438,4 +481,15 @@ class _TeachingLoadPanelState extends State<TeachingLoadPanel> {
           ],
         ),
       );
+
+  void _showToast(String m, Color c) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: c,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(24),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
+  }
 }

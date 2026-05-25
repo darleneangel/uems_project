@@ -178,6 +178,7 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
               Text(isEnrolled ? "OFFICIALLY ENROLLED" : "ASSESSMENT RELEASED",
                   style: GoogleFonts.inter(
                       fontWeight: FontWeight.w900,
+                      color: Colors.white,
                       fontSize: 12,
                       letterSpacing: 1)),
               Text(
@@ -229,25 +230,23 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
                   color: const Color(0xFF8B5CF6),
                   letterSpacing: 1.5)),
           const SizedBox(height: 16),
-          ...data.entries
-              .map((e) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(e.key,
-                            style: const TextStyle(
-                                color: Colors.blueGrey, fontSize: 12)),
-                        Text(
-                            "₱${double.tryParse(e.value.toString())?.toStringAsFixed(2) ?? '0.00'}",
-                            style: TextStyle(
-                                color: text,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12)),
-                      ],
-                    ),
-                  ))
-              ,
+          ...data.entries.map((e) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(e.key,
+                        style: const TextStyle(
+                            color: Colors.blueGrey, fontSize: 12)),
+                    Text(
+                        "₱${double.tryParse(e.value.toString())?.toStringAsFixed(2) ?? '0.00'}",
+                        style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
+                  ],
+                ),
+              )),
         ],
       ),
     );
@@ -304,8 +303,7 @@ class _AssessmentPanelState extends State<AssessmentPanel> {
         children: [
           const Row(
             children: [
-              Icon(LucideIcons.calendar,
-                  size: 14, color: Color(0xFF8B5CF6)),
+              Icon(LucideIcons.calendar, size: 14, color: Color(0xFF8B5CF6)),
               SizedBox(width: 8),
               Text("INSTALLMENT OPTION",
                   style: TextStyle(

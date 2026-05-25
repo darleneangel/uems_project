@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart'
+    show kIsWeb; // FIXED: Imported platform check for safe web downloads
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -291,9 +294,6 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
   }
 
   /// 📐 LOGIC: Transmutation to 1.00-6.00 Scale (New Institutional Standard)
-  /// Ceiling is 95.0.
-  /// 75.0 - 65.0 is Failed (5.00).
-  /// 64.0 & Below is Dropped (6.00).
   double _transmuteToScale(double average) {
     if (average == 0) return 0.0;
     if (average >= 95) return 1.00;
@@ -497,7 +497,7 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
           _tableHead("FINAL (60%)", 2),
           _tableHead("WEIGHTED RAW", 2),
           _tableHead("NUMERIC GWA", 2),
-          _tableHead("REMARKS", 2), // Added REMARKS header column
+          _tableHead("REMARKS", 2),
         ],
       ),
     );
@@ -535,10 +535,7 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
                           fontWeight: FontWeight.bold,
                           fontSize: 13)))),
           Expanded(flex: 2, child: Center(child: _gwaBadge(transmuted))),
-          Expanded(
-              flex: 2,
-              child: Center(
-                  child: _remarksBadge(transmuted))), // Added Remarks Badge
+          Expanded(flex: 2, child: Center(child: _remarksBadge(transmuted))),
         ],
       ),
     );
@@ -808,12 +805,23 @@ class _GradeEncodingPanelState extends State<GradeEncodingPanel> {
 
     try {
       final bytes = await pdf.save();
-      // Directly share and save/download the PDF instead of loading print layout selector
-      await Printing.sharePdf(
-        bytes: bytes,
-        filename: 'GradeRoster_${_selectedSubjectId}.pdf',
-      );
-      _showToast("PDF Grade Roster successfully saved!", success);
+
+      // FIXED FOR WEB & DESKTOP: Bypassed the native path/sharing locks by conditionally calling Printing layout or share triggers
+      if (kIsWeb) {
+        // Safe Web Download Action: Opens the browser's PDF viewer/downloader system instantly
+        await Printing.layoutPdf(
+          onLayout: (PdfPageFormat format) async => bytes,
+          name: 'GradeRoster_${_selectedSubjectId}.pdf',
+        );
+        _showToast("PDF Grade Roster ready for print/download!", success);
+      } else {
+        // Safe Native Desktop Action: Launches the local platform share/save selector
+        await Printing.sharePdf(
+          bytes: bytes,
+          filename: 'GradeRoster_${_selectedSubjectId}.pdf',
+        );
+        _showToast("PDF Grade Roster successfully saved!", success);
+      }
     } catch (e) {
       _showToast("Could not save PDF file.", danger);
     }

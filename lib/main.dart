@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'views/login_view.dart';
 import 'services/supabase_service.dart'; // Import the service from the Canvas
 import 'services/navigation_helper.dart';
+import 'services/security_service.dart';
 
 // 1. Change main to async to allow for database initialization
 void main() async {
@@ -32,6 +33,13 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: 'UEMS - Unified Education Management System',
+      builder: (context, child) {
+        return Listener(
+          onPointerDown: (_) => SecurityService().resetInactivityTimer(),
+          onPointerMove: (_) => SecurityService().resetInactivityTimer(),
+          child: child!,
+        );
+      },
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.indigo,

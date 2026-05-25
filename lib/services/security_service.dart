@@ -19,11 +19,11 @@ import 'package:mailer/smtp_server.dart';
 // Services
 import 'supabase_service.dart';
 
-/// UEMSSP Client-Side Security Service
-/// Handles Argon2id client-side cryptography, local secure storage, input validation,
-/// active session inactivity tracking, and multi-tier brute force defense.
 class SecurityService {
   // Singleton pattern for global access
+
+  DateTime _lastReset = DateTime.now();
+
   SecurityService._internal();
   static final SecurityService _instance = SecurityService._internal();
   factory SecurityService() => _instance;
@@ -32,16 +32,10 @@ class SecurityService {
   // Guaranteed compatible across all versions of flutter_secure_storage
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
-  // ---------------------------------------------------------------------
-  // STATE TRACKING FOR ACTIVE SESSION INACTIVITY (AUTO-LOGOUT)
-  // ---------------------------------------------------------------------
   Timer? _inactivityTimer;
   VoidCallback? _onSessionTimeout;
   static const Duration sessionTimeoutDuration = Duration(minutes: 2);
 
-  // ---------------------------------------------------------------------
-  // STATE TRACKING FOR ADAPTIVE BRUTE FORCE LIMITING
-  // ---------------------------------------------------------------------
   int _failedAttempts = 0;
   bool _isThisYouVerified = false;
   String? _generatedOTP;
@@ -104,15 +98,10 @@ class SecurityService {
   String sanitizeInput(String input) {
     return input
         .trim()
-        .replaceAll(
-            RegExp(r"['" r'";#\-]'), '') // Strips malicious SQL syntax
+        .replaceAll(RegExp(r"['" r'";#\-]'), '') // Strips malicious SQL syntax
         .replaceAll('<', '&lt;') // Sanitizes HTML tags against XSS
         .replaceAll('>', '&gt;');
   }
-
-  // ---------------------------------------------------------------------
-  // 3. ACTIVE SESSION INACTIVITY AUTO-LOGOUT (2-MINUTE TIMER)
-  // ---------------------------------------------------------------------
 
   /// Starts the inactivity timer. Bind this in your dashboard views.
   void startInactivityMonitoring({required VoidCallback onTimeout}) {
@@ -123,6 +112,12 @@ class SecurityService {
   /// Resets the countdown. Call this on any interactive gesture.
   void resetInactivityTimer() {
     if (_onSessionTimeout == null) return;
+
+    // DEBOUNCE: Only process if at least 1 second has passed since the last reset.
+    // This prevents flooding the timer when the user moves the mouse.
+    if (DateTime.now().difference(_lastReset).inSeconds < 1) return;
+
+    _lastReset = DateTime.now();
 
     _inactivityTimer?.cancel();
     _inactivityTimer = Timer(sessionTimeoutDuration, () {

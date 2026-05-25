@@ -670,7 +670,7 @@ class _TuitionAssessmentPanelState extends State<TuitionAssessmentPanel> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 4.5,
+          childAspectRatio: 4.8,
           crossAxisSpacing: 14,
           mainAxisSpacing: 14),
       itemCount: ctrls.length,

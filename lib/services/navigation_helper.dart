@@ -111,20 +111,86 @@ void _showAccessDeniedDialog(
     BuildContext context, String title, String message) {
   showDialog(
     context: context,
-    builder: (context) => AlertDialog(
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF1E1B4B),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       title: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded,
+          const Icon(Icons.desktop_windows_rounded,
               color: Colors.amber, size: 28),
-          const SizedBox(width: 10),
-          Text(title),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
         ],
       ),
-      content: Text(message),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.amber.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.amber.withOpacity(0.25)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded,
+                    color: Colors.amber, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            "Please use the UEMSSP Desktop Application installed on your workstation.",
+            style: TextStyle(color: Colors.blueGrey, fontSize: 12, height: 1.5),
+          ),
+        ],
+      ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('OK'),
+        ElevatedButton.icon(
+          onPressed: () {
+            Navigator.pop(ctx); // close dialog
+            // Clear stack and return to a fresh login screen
+            navigatorKey.currentState?.pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const UEMSLoginPage()),
+              (route) => false,
+            );
+          },
+          icon: const Icon(Icons.refresh_rounded, size: 18),
+          label: const Text(
+            "OK, BACK TO LOGIN",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.amber,
+            foregroundColor: Colors.black,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            elevation: 0,
+          ),
         ),
       ],
     ),

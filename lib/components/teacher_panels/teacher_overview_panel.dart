@@ -1,15 +1,17 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import '../../services/supabase_service.dart';
 
 class TeacherOverviewPanel extends StatefulWidget {
   final bool isDarkMode;
   final Map<String, dynamic> userData;
 
-  const TeacherOverviewPanel(
-      {super.key, required this.isDarkMode, required this.userData});
+  const TeacherOverviewPanel({
+    super.key,
+    required this.isDarkMode,
+    required this.userData,
+  });
 
   @override
   State<TeacherOverviewPanel> createState() => _TeacherOverviewPanelState();
@@ -41,16 +43,18 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
     if (!mounted) return;
     setState(() => _isLoading = true);
 
-    // We use the 'id' (UUID) for precise database querying
     final String profId = widget.userData['id'];
 
     try {
       // 1. Fetch all enrollment loads associated with this teacher
-      // This includes the joined 'grades' to check for encoding completion
+      // This includes the joined 'grades' to check for encoding completion.
+      // We filter out rows where student_id is null (which are master schedule placeholders).
       final response = await _service.client
           .from('study_loads')
-          .select('id, student_id, subject_id, grades(final_numeric_grade)')
-          .eq('professor_id', profId);
+          .select(
+              'id, student_id, subject_id, grades(final_numeric_grade, status)')
+          .eq('professor_id', profId)
+          .filter('student_id', 'not.is', null);
 
       final List<dynamic> data = response as List;
 
@@ -74,7 +78,6 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
         final String? studentId = row['student_id']?.toString();
         final String? subjectId = row['subject_id']?.toString();
 
-        // Only process rows that are actual student enrollments (student_id is not null)
         if (studentId != null && subjectId != null) {
           final String slotKey = "${studentId}_$subjectId";
 
@@ -85,20 +88,31 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
           uniqueStudentHeadcount.add(studentId);
           uniqueSubjectCatalog.add(subjectId);
 
-          // Check joined grades record
-          final gradeRecord = row['grades'] as List?;
-          if (gradeRecord == null || gradeRecord.isEmpty) {
+          // Check joined grades record safely handling Map vs List variations
+          final dynamic gradeData = row['grades'];
+          Map<String, dynamic>? activeGradeMap;
+
+          if (gradeData is List && gradeData.isNotEmpty) {
+            activeGradeMap = Map<String, dynamic>.from(gradeData.first);
+          } else if (gradeData is Map) {
+            activeGradeMap = Map<String, dynamic>.from(gradeData);
+          }
+
+          if (activeGradeMap == null) {
             pending++;
           } else {
             final double g = double.tryParse(
-                    gradeRecord.first['final_numeric_grade']?.toString() ??
+                    activeGradeMap['final_numeric_grade']?.toString() ??
                         "0.0") ??
                 0.0;
+            final String status =
+                (activeGradeMap['status'] ?? '').toString().toUpperCase();
 
-            if (g == 0) {
+            // If the GWA is uncalculated or status is not 'Encoded'/'Submitted', treat as pending
+            if (g == 0.0 || status == 'DRAFT' || status.isEmpty) {
               pending++;
             } else {
-              // Map into the visualization distro
+              // Map into the GWA visualization distro
               String key = g <= 1.0
                   ? "1.00"
                   : g <= 1.25
@@ -162,11 +176,16 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
           Row(
             children: [
               _statCard("Unique Students", _totalStudents.toString(),
-                  LucideIcons.users, aViolet, bgColor, textColor),
+                  Icons.people_alt_rounded, aViolet, bgColor, textColor),
               _statCard("Active Subjects", _activeClasses.toString(),
-                  LucideIcons.bookOpen, Colors.blue, bgColor, textColor),
-              _statCard("Pending Encoding", _pendingGrades.toString(),
-                  LucideIcons.clock, Colors.orangeAccent, bgColor, textColor),
+                  Icons.menu_book_rounded, Colors.blue, bgColor, textColor),
+              _statCard(
+                  "Pending Encoding",
+                  _pendingGrades.toString(),
+                  Icons.hourglass_empty_rounded,
+                  Colors.orangeAccent,
+                  bgColor,
+                  textColor),
             ],
           ),
           const SizedBox(height: 32),
@@ -177,7 +196,7 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
                   flex: 6,
                   child: _chart(
                       "Performance Distribution",
-                      "Headcount per transmuted GWA bracket",
+                      "Headcount per GWA grading scale bracket",
                       _buildBarChart(),
                       bgColor,
                       textColor)),
@@ -186,7 +205,7 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
                   flex: 4,
                   child: _chart(
                       "Encoding Completion",
-                      "Institutional roster progress",
+                      "Institutional grade sheet progress",
                       _buildProgressDonut(textColor),
                       bgColor,
                       textColor)),
@@ -229,11 +248,11 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(i, color: c, size: 20),
+              Icon(i, color: c, size: 24),
               const SizedBox(height: 15),
               Text(v,
                   style: GoogleFonts.inter(
-                      fontSize: 24, fontWeight: FontWeight.w900, color: t)),
+                      fontSize: 28, fontWeight: FontWeight.w900, color: t)),
               Text(l.toUpperCase(),
                   style: const TextStyle(
                       color: Colors.blueGrey,
@@ -304,12 +323,16 @@ class _TeacherOverviewPanelState extends State<TeacherOverviewPanel> {
 
   Widget _buildProgressDonut(Color t) => Center(
         child: Stack(alignment: Alignment.center, children: [
-          SizedBox(
-            width: 150,
-            height: 150,
-            child: CustomPaint(
-                painter: DonutPainter(
-                    progress: _completionRate.clamp(0.0, 1.0), color: success)),
+          RepaintBoundary(
+            // PERFORMANCE OPTIMIZATION: Prevents parent paint loops from invalidating this custom canvas
+            child: SizedBox(
+              width: 150,
+              height: 150,
+              child: CustomPaint(
+                  painter: DonutPainter(
+                      progress: _completionRate.clamp(0.0, 1.0),
+                      color: success)),
+            ),
           ),
           Column(
             mainAxisSize: MainAxisSize.min,
@@ -357,5 +380,7 @@ class DonutPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(CustomPainter old) => true;
+  bool shouldRepaint(DonutPainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.color != color;
+  }
 }

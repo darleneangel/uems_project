@@ -12,6 +12,7 @@ import '../components/accounting_panels/accounting_payroll_manager_panel.dart';
 import '../components/accounting_panels/clearance_assessment_terminal_panel.dart';
 import '../components/accounting_panels/student_payment_portal_panel.dart';
 import '../components/accounting_panels/promissory_note_panel.dart';
+import '../components/accounting_panels/accounting_audit_panel.dart';
 
 class AccountingDashboardView extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -140,6 +141,9 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
       case 10:
         return PromissoryNotePanel(
             isDarkMode: _isDarkMode, userData: widget.userData);
+      case 11:
+        return AccountingAuditPanel(
+            isDarkMode: _isDarkMode, userData: widget.userData);
       case 0:
       default:
         return AccountingOverviewPanel(isDarkMode: _isDarkMode);
@@ -226,6 +230,7 @@ class _AccountingDashboardViewState extends State<AccountingDashboardView> {
                 _menuItem(LucideIcons.wallet, "Student Payment Portal", 8),
                 _menuItem(LucideIcons.fileCheck, "Financial Clearance", 9),
                 _menuItem(LucideIcons.stickyNote, "Promisory Note", 10),
+                _menuItem(LucideIcons.fileText, "Accounting Audit", 11),
                 _sidebarHeader("INTERNAL"),
                 _menuItem(LucideIcons.users, "Employee Payroll", 3),
                 _sidebarHeader("MESSAGES"),

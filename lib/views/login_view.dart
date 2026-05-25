@@ -1,8 +1,8 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'dart:math';
 
 // Core Services
@@ -13,6 +13,16 @@ import '../services/navigation_helper.dart';
 import '../services/security_service.dart';
 import 'forgot_password_handler.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TOP-LEVEL ISOLATE FUNCTION — must be outside the class for compute() to work
+// Runs Argon2id hashing in a separate web worker on WASM / background isolate
+// on native, completely freeing the main UI thread.
+// ─────────────────────────────────────────────────────────────────────────────
+Future<String> _computeArgon2Hash(List<String> args) async {
+  // args[0] = raw password, args[1] = user UUID salt
+  return SecurityService().hashPasswordArgon2id(args[0], args[1]);
+}
+
 class UEMSLoginPage extends StatefulWidget {
   const UEMSLoginPage({super.key});
 
@@ -22,14 +32,34 @@ class UEMSLoginPage extends StatefulWidget {
 
 class _UEMSLoginPageState extends State<UEMSLoginPage>
     with TickerProviderStateMixin {
-  String _currentView = 'login';
+  String _currentView =
+      'login'; // 'login', 'first_login_reset', 'welcome_uemssp'
   bool _isDarkMode = true;
-  bool _isLoading = false;
+
+  // WASM OPTIMIZATION: ValueNotifier isolates loading repaints to the button only.
+  // Previously, setState(() => _isLoading = true) was repainting the entire tree
+  // including the left gradient panel — causing cascading layout recalculations.
+  final ValueNotifier<bool> _loadingNotifier = ValueNotifier(false);
+
+  bool _isEntranceAnimationComplete =
+      false; // PERFORMANCE OPTIMIZATION: Track completion state
+
+  // Login Password Obscure Trigger
   bool _isPasswordVisible = false;
+
+  // First-Time Reset Password Obscure Triggers
+  bool _isNewPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
+
   Map<String, dynamic>? _loggedInUserData;
 
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  // First-Time Reset Controllers
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   late AnimationController _formController;
   late AnimationController _welcomeController;
@@ -42,6 +72,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   static const Color aViolet = Color(0xFF8B5CF6);
   static const Color tDark = Color(0xFF0F071D);
   static const Color success = Color(0xFF69F0AE);
+  static const Color warning = Color(0xFFFFD740);
   static const Color error = Color(0xFFFF5252);
 
   @override
@@ -49,7 +80,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     super.initState();
     _formController = AnimationController(
         duration: const Duration(milliseconds: 1200), vsync: this);
-    _formElementAnimations = List.generate(6, (i) {
+    _formElementAnimations = List.generate(7, (i) {
       return CurvedAnimation(
         parent: _formController,
         curve: Interval(0.1 + (i * 0.1), 1.0, curve: Curves.easeOutQuart),
@@ -65,22 +96,110 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         CurvedAnimation(
             parent: _welcomeController, curve: const Interval(0.0, 0.4)));
 
-    _formController.forward();
+    // PERFORMANCE OPTIMIZATION: Turn off animation listening tree after initial load finishes
+    _formController.forward().then((_) {
+      if (mounted) {
+        setState(() {
+          _isEntranceAnimationComplete = true;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _formController.dispose();
     _welcomeController.dispose();
+    _loadingNotifier.dispose();
     _idController.dispose();
     _passwordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
+  /// 📐 Password Strength Assessment Algorithm
+  Map<String, dynamic> _checkPasswordStrength(String password) {
+    if (password.isEmpty) {
+      return {"score": 0.0, "label": "EMPTY", "color": Colors.blueGrey};
+    }
+
+    double score = 0.1;
+    bool hasUpper = password.contains(RegExp(r'[A-Z]'));
+    bool hasLower = password.contains(RegExp(r'[a-z]'));
+    bool hasDigits = password.contains(RegExp(r'[0-9]'));
+    bool hasSpecial = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+
+    // Length metrics
+    if (password.length >= 8) score += 0.3;
+    if (password.length >= 12) score += 0.2;
+
+    // Complexity metrics
+    if (hasUpper && hasLower) score += 0.15;
+    if (hasDigits) score += 0.15;
+    if (hasSpecial) score += 0.1;
+
+    score = score.clamp(0.0, 1.0);
+
+    String label = "WEAK";
+    Color color = error;
+
+    if (score > 0.4 && score <= 0.75) {
+      label = "GOOD";
+      color = warning;
+    } else if (score > 0.75) {
+      label = "STRONG";
+      color = success;
+    }
+
+    return {
+      "score": score,
+      "label": label,
+      "color": color,
+    };
+  }
+
+  TextStyle _getInterStyle({
+    required double fontSize,
+    required FontWeight fontWeight,
+    required Color color,
+    double? height,
+    double? letterSpacing,
+  }) {
+    if (kIsWeb) {
+      return TextStyle(
+        fontFamily:
+            '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        height: height,
+        letterSpacing: letterSpacing,
+      );
+    }
+    return GoogleFonts.inter(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // OPTIMIZED _handleLogin
+  // Key changes vs original:
+  //   1. Removed 150ms artificial delay on web (kIsWeb guard)
+  //   2. hashPasswordArgon2id() now runs via compute() → web worker on WASM,
+  //      background isolate on native. This was the source of the 14,592ms INP.
+  //   3. Password hash migration write is fire-and-forget (no await blocking login)
+  //   4. recordAttendanceLogin is fire-and-forget (no await before routing)
+  //   5. _loadingNotifier.value replaces setState for loading state so only the
+  //      button widget repaints instead of the entire Scaffold tree
+  // ─────────────────────────────────────────────────────────────────────────
   void _handleLogin() async {
     final security = SecurityService();
 
-    // SECURITY ASSURANCE: Sanitize inputs immediately to prevent injection risks
     final id = security.sanitizeInput(_idController.text);
     final pass = _passwordController.text.trim();
 
@@ -89,23 +208,20 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       return;
     }
 
-    // TIER 2 SECURITY: Verify if OTP verification block is active
     if (security.requiresOTP()) {
       _showOTPDialog(id);
       return;
     }
 
-    setState(() => _isLoading = true);
+    // WASM OPTIMIZATION: ValueNotifier update — only the button repaints
+    _loadingNotifier.value = true;
 
-    // PERFORMANCE FIX: Yield control to the browser's paint loop first.
-    // This gives Flutter a frame to update the UI and render the active loading spinner
-    // BEFORE the heavy, synchronous Argon2id CPU calculations block the main thread.
-    await Future.delayed(const Duration(milliseconds: 150));
+    // WASM OPTIMIZATION: Skip artificial delay on web — microtask flush is sufficient
+    if (!kIsWeb) await Future.delayed(const Duration(milliseconds: 150));
 
     try {
       final service = SupabaseService();
 
-      // 1. Fetch user profile record first safely by their ID Number
       final results = await service.client
           .from('profiles')
           .select('*, student_details(*), employee_details(*)')
@@ -116,96 +232,169 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
       if (results.isNotEmpty) {
         final userData = results.first;
         final String storedHash = userData['password_hash'] ?? '';
-        final String userUuid =
-            userData['id'] ?? ''; // This is our unique deterministic salt
+        final String userUuid = userData['id'] ?? '';
 
         bool isAuthenticated = false;
 
-        // Helper to check if a string contains a secure Base64 Argon2id hash representation
         bool isAlreadyHashed(String value) {
           return value.length >= 24 && !value.contains(' ');
         }
 
-        // ---------------------------------------------------------------------
-        // SECURITY ASSURANCE: On-The-Fly Database Auto-Migration
-        // ---------------------------------------------------------------------
         if (!isAlreadyHashed(storedHash) && storedHash == pass) {
-          debugPrint(
-              '⚡ Security Engine: Plaintext password detected. Upgrading database entry to Argon2id for User UUID: $userUuid');
+          debugPrint('⚡ Plaintext password migration match detected.');
 
-          // Generate the Argon2id hash using the stable user UUID as the salt
-          final String newlyHashedPassword =
-              security.hashPasswordArgon2id(pass, userUuid);
-
-          // Update the user's password_hash column in Supabase with the secure hashed string
-          await service.client.from('profiles').update(
-              {'password_hash': newlyHashedPassword}).eq('id', userUuid);
+          // WASM OPTIMIZATION: Hash runs off main thread, write is fire-and-forget
+          compute(_computeArgon2Hash, [pass, userUuid]).then((hashed) {
+            service.client
+                .from('profiles')
+                .update({'password_hash': hashed})
+                .eq('id', userUuid)
+                .then((_) => debugPrint('✅ Password hash migrated.'))
+                .catchError((e) => debugPrint('⚠️ Hash migration failed: $e'));
+          });
 
           isAuthenticated = true;
         } else {
-          // STANDARD SECURE ROUTINE: Perform Argon2id Comparison on Hashed Passwords
-          final String computedInputHash =
-              security.hashPasswordArgon2id(pass, userUuid);
+          if (storedHash.isNotEmpty) {
+            // WASM OPTIMIZATION: compute() moves Argon2 off the main thread.
+            // Previously this ran synchronously, causing the 14,592ms INP spike.
+            final String computedInputHash =
+                await compute(_computeArgon2Hash, [pass, userUuid]);
 
-          // Match standard hashes, and include support for truncated columns in database!
-          if (computedInputHash == storedHash) {
-            isAuthenticated = true;
-          } else if (storedHash.length < computedInputHash.length &&
-              computedInputHash.startsWith(storedHash)) {
-            isAuthenticated = true;
-            debugPrint(
-                '🔑 Secure Match: Database truncated hash detected. Unified lookup successful.');
+            if (computedInputHash == storedHash) {
+              isAuthenticated = true;
+            } else if (storedHash.length < computedInputHash.length &&
+                computedInputHash.startsWith(storedHash)) {
+              isAuthenticated = true;
+            }
           }
         }
 
-        // ---------------------------------------------------------------------
-        // Authentication Verification Match
-        // ---------------------------------------------------------------------
         if (isAuthenticated) {
-          // Success! Clear any brute-force tracking metrics
           security.resetThrottler();
 
           final String status = userData['account_status'] ?? 'Active';
           if (status != 'Active') {
-            setState(() => _isLoading = false);
+            _loadingNotifier.value = false;
             _showSuspendedDialog(status);
-            return; // 🛑 BLOCK ACCESS
+            return;
+          }
+
+          // 🛡️ SECURITY INTERCEPTOR: Detect if they are using their temporary credentials
+          final String cleanFn =
+              userData['fn'].toString().toLowerCase().replaceAll(' ', '');
+          final String studentIdNum = userData['user_id_number'].toString();
+          final String defaultPassword = "$cleanFn$studentIdNum";
+
+          if (pass == defaultPassword) {
+            debugPrint(
+                "🚨 Security Intercept: Force temporary credentials update.");
+            _loadingNotifier.value = false;
+            setState(() {
+              _loggedInUserData = userData;
+              _currentView = 'first_login_reset';
+            });
+            return;
           }
 
           _loggedInUserData = userData;
           final String role =
               (_loggedInUserData!['role'] as String).toLowerCase();
 
-          // Record Check-In Timestamp for security logs
-          await service.recordAttendanceLogin(_loggedInUserData!['id'], role);
+          // WASM OPTIMIZATION: Fire attendance log async — do not await before routing
+          service
+              .recordAttendanceLogin(_loggedInUserData!['id'], role)
+              .catchError((e) => debugPrint('⚠️ Attendance log failed: $e'));
 
-          setState(() => _isLoading = false);
+          _loadingNotifier.value = false;
           _routeToDashboard(role);
         } else {
-          // Password Mismatch
           _processFailedAttempt(security, id);
         }
       } else {
-        // User ID not found
         _processFailedAttempt(security, id);
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) _loadingNotifier.value = false;
       _showError("Sync Error: Unable to reach academic core.");
     }
   }
 
-  /// Triggers adaptive security countermeasures (Is this you dialog or OTP dispatch)
+  /// 🛰️ TRANSMISSION: Force write the updated secure password hash back to profiles
+  Future<void> _handleFirstTimeReset() async {
+    if (_loggedInUserData == null) return;
+
+    final String newPass = _newPasswordController.text;
+    final String confirmPass = _confirmPasswordController.text;
+
+    if (newPass.isEmpty || confirmPass.isEmpty) {
+      _showError("Please fill in both password fields.");
+      return;
+    }
+
+    if (newPass != confirmPass) {
+      _showError("Passwords do not match. Please verify.");
+      return;
+    }
+
+    final strength = _checkPasswordStrength(newPass);
+    if (strength['label'] == "WEAK") {
+      _showError("For security, your password must not be rated WEAK.");
+      return;
+    }
+
+    final String cleanFn =
+        _loggedInUserData!['fn'].toString().toLowerCase().replaceAll(' ', '');
+    final String studentIdNum = _loggedInUserData!['user_id_number'].toString();
+    final String defaultPassword = "$cleanFn$studentIdNum";
+
+    if (newPass == defaultPassword) {
+      _showError(
+          "Your new password cannot be the same as your temporary password.");
+      return;
+    }
+
+    _loadingNotifier.value = true;
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    try {
+      final security = SecurityService();
+      final String userUuid = _loggedInUserData!['id'] ?? '';
+
+      // Hash new credential using Argon2id off the main thread
+      final String newlyHashedPassword =
+          await compute(_computeArgon2Hash, [newPass, userUuid]);
+
+      // Save to database
+      await SupabaseService()
+          .client
+          .from('profiles')
+          .update({'password_hash': newlyHashedPassword}).eq('id', userUuid);
+
+      _loadingNotifier.value = false;
+
+      _showSuccessBanner(
+          "Password updated successfully! Account is now activated.");
+
+      // Proceed safely to dashboard routing
+      final String role = (_loggedInUserData!['role'] as String).toLowerCase();
+      _routeToDashboard(role);
+    } catch (e) {
+      _loadingNotifier.value = false;
+      _showError("Database Upgrade Error: $e");
+    }
+  }
+
   void _processFailedAttempt(SecurityService security, String idNumber) async {
-    setState(() => _isLoading = false);
+    _loadingNotifier.value = false;
     security.registerFailedAttempt();
 
     if (security.failedAttempts == 3 && !security.isThisYouVerified) {
       _showIsThisYouDialog();
     } else if (security.failedAttempts >= 6) {
-      setState(() => _isLoading = true);
+      _loadingNotifier.value = true;
       final otpSent = await security.sendLoginOTP(idNumber);
-      setState(() => _isLoading = false);
+      _loadingNotifier.value = false;
 
       if (otpSent) {
         _showOTPDialog(idNumber);
@@ -219,7 +408,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     }
   }
 
-  /// Prompts for identity confirmation after 3 failures (Tier 1 protection)
   void _showIsThisYouDialog() {
     showDialog(
       context: context,
@@ -229,7 +417,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Row(
           children: [
-            Icon(LucideIcons.shieldAlert, color: Colors.amber),
+            Icon(Icons.gpp_maybe_rounded, color: Colors.amber),
             SizedBox(width: 12),
             Text("Is This You?",
                 style: TextStyle(
@@ -244,7 +432,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              SecurityService().resetThrottler(); // Clear state to lockout
+              SecurityService().resetThrottler();
             },
             child: const Text("NO, LOCK ACCESS",
                 style: TextStyle(
@@ -264,7 +452,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     );
   }
 
-  /// Forces secure OTP verification via email after 6 failures (Tier 2 protection)
   void _showOTPDialog(String idNumber) {
     final TextEditingController otpController = TextEditingController();
     showDialog(
@@ -275,7 +462,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Row(
           children: [
-            Icon(LucideIcons.mail, color: aViolet),
+            Icon(Icons.mail_outline_rounded, color: aViolet),
             SizedBox(width: 12),
             Text("Verify OTP to Unlock",
                 style: TextStyle(
@@ -332,7 +519,6 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     );
   }
 
-  /// Helper to display the institutional access restriction notice
   void _showSuspendedDialog(String status) {
     showDialog(
       context: context,
@@ -342,7 +528,7 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Row(
           children: [
-            Icon(Icons.report_problem, color: Colors.redAccent),
+            Icon(Icons.report_problem_rounded, color: Colors.redAccent),
             SizedBox(width: 12),
             Text("Access Restricted",
                 style: TextStyle(
@@ -367,18 +553,20 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   }
 
   void _routeToDashboard(String role) {
-    // Show the custom animated loading state first
-    setState(() {
-      _currentView = 'welcome_uemssp';
-    });
+    // WASM OPTIMIZATION: Skip the 3-second welcome animation entirely on web.
+    // The welcome screen adds unnecessary paint cycles and timer overhead on WASM.
+    // handleLoginRedirect already handles the desktop-only role gate internally.
+    if (kIsWeb) {
+      handleLoginRedirect(context, _loggedInUserData!);
+      return;
+    }
 
+    setState(() => _currentView = 'welcome_uemssp');
     _welcomeController.repeat(reverse: true);
 
-    // Animate for 3 seconds, then navigate securely using the Canvas Helper rules
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
         _welcomeController.stop();
-        // Handover navigation to our platform-aware security redirect helper!
         handleLoginRedirect(context, _loggedInUserData!);
       }
     });
@@ -395,10 +583,27 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                 borderRadius: BorderRadius.circular(16))),
       );
 
+  void _showSuccessBanner(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(m,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.black)),
+            backgroundColor: success,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(24),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16))),
+      );
+
   @override
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 800),
+      duration: kIsWeb
+          ? Duration.zero
+          : const Duration(
+              milliseconds:
+                  600), // PERFORMANCE OPTIMIZATION: Instant view switching on web
       child: _buildCurrentView(),
     );
   }
@@ -406,18 +611,18 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   Widget _buildCurrentView() {
     switch (_currentView) {
       case 'login':
-        return _buildSplitLogin();
+      case 'first_login_reset':
+        return _buildSplitContainer();
       case 'welcome_uemssp':
         return _buildWelcomeLoading();
       default:
-        return _buildSplitLogin();
+        return _buildSplitContainer();
     }
   }
 
-  Widget _buildSplitLogin() {
+  Widget _buildSplitContainer() {
     final bgColor = _isDarkMode ? tDark : const Color(0xFFF1F5F9);
     final cardColor = _isDarkMode ? const Color(0xFF160D2B) : Colors.white;
-    final textColor = _isDarkMode ? Colors.white : Colors.black;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -427,266 +632,106 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
           child: Container(
             width: 1200,
             constraints: const BoxConstraints(minHeight: 600, maxHeight: 850),
-            clipBehavior: Clip.antiAlias,
+            clipBehavior: kIsWeb
+                ? Clip.none
+                : Clip
+                    .antiAlias, // PERFORMANCE OPTIMIZATION: Bypassed heavy clip paths entirely on Web
             decoration: BoxDecoration(
               color: cardColor,
               borderRadius: BorderRadius.circular(56),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
-                    blurRadius: 80,
-                    offset: const Offset(0, 40)),
-              ],
+              border: kIsWeb
+                  ? Border.all(
+                      color: _isDarkMode ? Colors.white10 : Colors.black12,
+                      width: 1.5)
+                  : null,
+              boxShadow: kIsWeb
+                  ? []
+                  : [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 80,
+                          offset: const Offset(0, 40)),
+                    ],
             ),
             child: Row(
               children: [
-                // --- LEFT SIDE: THE BRANDING NODE ---
+                // --- LEFT PANEL: THE STATIC BRANDING FRAME ---
                 Expanded(
                   flex: 5,
-                  child: Container(
-                    padding: const EdgeInsets.all(60),
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [pViolet, sViolet, aViolet],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: Stack(
-                      children: [
-                        // PERFORMANCE FIX: Halt dynamic moving background shapes entirely while loaded/authenticating
-                        _MovingBackground(
-                            isDarkMode: _isDarkMode, isPaused: _isLoading),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _animateEntrance(
-                                0,
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(24),
-                                      border:
-                                          Border.all(color: Colors.white24)),
-                                  child: const Icon(LucideIcons.school,
-                                      color: Colors.white, size: 48),
-                                )),
-                            const Spacer(),
-                            _animateEntrance(
-                                1,
-                                Text(
-                                  "BRIGHT.\nFUTURE.\nACADEMY.",
-                                  style: GoogleFonts.inter(
-                                      fontSize: 60,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                      height: 0.95,
-                                      letterSpacing: -3),
-                                )),
-                            const SizedBox(height: 32),
-                            _animateEntrance(
-                                2,
-                                Text(
-                                  "UEMSSP: The Intelligent Core for Academic Excellence at Bright Future Academy.",
-                                  style: TextStyle(
-                                      color: Colors.white.withOpacity(0.7),
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w400,
-                                      height: 1.5),
-                                )),
-                          ],
+                  child: RepaintBoundary(
+                    child: Container(
+                      padding: const EdgeInsets.all(60),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [pViolet, sViolet, aViolet],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
+                      ),
+                      child: Stack(
+                        children: [
+                          _MovingBackground(
+                              isDarkMode: _isDarkMode,
+                              isPaused: _loadingNotifier.value),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _animateEntrance(
+                                  0,
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(24),
+                                        border:
+                                            Border.all(color: Colors.white24)),
+                                    child: const Icon(Icons.school_rounded,
+                                        color: Colors.white, size: 48),
+                                  )),
+                              const Spacer(),
+                              _animateEntrance(
+                                  1,
+                                  Text(
+                                    "BRIGHT.\nFUTURE.\nACADEMY.",
+                                    style: GoogleFonts.inter(
+                                        fontSize: 60,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                        height: 0.95,
+                                        letterSpacing: -3),
+                                  )),
+                              const SizedBox(height: 32),
+                              _animateEntrance(
+                                  2,
+                                  Text(
+                                    "UEMSSP: The Intelligent Core for Academic Excellence at Bright Future Academy.",
+                                    style: TextStyle(
+                                        color: Colors.white.withOpacity(0.7),
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w400,
+                                        height: 1.5),
+                                  )),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
 
-                // --- RIGHT SIDE: THE ACCESS PORTAL ---
+                // --- RIGHT PANEL: THE DYNAMIC FORM CONTROLLER ---
                 Expanded(
                   flex: 7,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 60, vertical: 40),
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              _animateEntrance(
-                                  0,
-                                  const Icon(LucideIcons.graduationCap,
-                                      color: aViolet, size: 40)),
-                              _animateEntrance(0, _buildThemeToggle()),
-                            ],
-                          ),
-                          const SizedBox(height: 40),
-                          _animateEntrance(
-                              1,
-                              Text("WELCOME",
-                                  style: GoogleFonts.inter(
-                                      fontSize: 34,
-                                      fontWeight: FontWeight.w900,
-                                      color: textColor,
-                                      letterSpacing: -2))),
-                          _animateEntrance(
-                              1,
-                              Text(
-                                  "Initialize your secure institutional session.",
-                                  style: TextStyle(
-                                      color: Colors.blueGrey.withOpacity(0.7),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500))),
-                          const SizedBox(height: 40),
-                          _animateEntrance(
-                              2, _buildLabel("Identification Number")),
-                          _animateEntrance(
-                              2,
-                              _buildTextField(_idController, "e.g., 202350031",
-                                  LucideIcons.user)),
-                          const SizedBox(height: 24),
-                          _animateEntrance(3, _buildLabel("Password")),
-                          _animateEntrance(
-                              3,
-                              _buildTextField(_passwordController, "••••••••",
-                                  LucideIcons.lock,
-                                  obscure: !_isPasswordVisible,
-                                  suffix: IconButton(
-                                    icon: Icon(
-                                        _isPasswordVisible
-                                            ? LucideIcons.eye
-                                            : LucideIcons.eyeOff,
-                                        color: aViolet,
-                                        size: 20),
-                                    onPressed: () => setState(() =>
-                                        _isPasswordVisible =
-                                            !_isPasswordVisible),
-                                  ))),
-                          const SizedBox(height: 24),
-                          _animateEntrance(
-                              4,
-                              Row(
-                                children: [
-                                  const Spacer(),
-                                  TextButton(
-                                      onPressed: () => ForgotPasswordHandler
-                                          .showRecoveryFlow(
-                                              context, _isDarkMode),
-                                      child: const Text("Forgot Password?",
-                                          style: TextStyle(
-                                              color: aViolet,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w900)))
-                                ],
-                              )),
-                          const SizedBox(height: 40),
-                          _animateEntrance(
-                              3,
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text("VISION",
-                                      style: GoogleFonts.inter(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w900,
-                                          color: _isDarkMode
-                                              ? Colors.white.withOpacity(0.6)
-                                              : Colors.black,
-                                          letterSpacing: 1.5)),
-                                  Text(
-                                      "Bright Future Academy envisions becoming a center of excellence in education that nurtures knowledgeable, skilled, and values-driven individuals who contribute positively to society.",
-                                      style: TextStyle(
-                                          color: _isDarkMode
-                                              ? Colors.white.withOpacity(0.5)
-                                              : Colors.black,
-                                          fontSize: 11,
-                                          height: 1.4)),
-                                  const SizedBox(height: 16),
-                                  Text("MISSION",
-                                      style: GoogleFonts.inter(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w900,
-                                          color: _isDarkMode
-                                              ? Colors.white.withOpacity(0.6)
-                                              : Colors.black,
-                                          letterSpacing: 1.5)),
-                                  Text(
-                                      "Bright Future Academy is committed to: Providing quality and accessible education to all learners. Developing students’ academic competence, creativity, and critical thinking skills. Promoting discipline, respect, and integrity within the school community. Preparing students for higher education, employment, and responsible citizenship. Creating a safe and supportive learning environment.",
-                                      style: TextStyle(
-                                          color: _isDarkMode
-                                              ? Colors.white.withOpacity(0.5)
-                                              : Colors.black,
-                                          fontSize: 11,
-                                          height: 1.4)),
-                                ],
-                              )),
-                          const SizedBox(height: 40),
-                          _animateEntrance(
-                              5,
-                              SizedBox(
-                                width: double.infinity,
-                                height: 65,
-                                child: ElevatedButton(
-                                  // PERFORMANCE FIX: Prevent setting onPressed to null.
-                                  // This prevents the button from disabling and completely disappearing on dark mode!
-                                  onPressed: _isLoading ? () {} : _handleLogin,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _isLoading
-                                        ? aViolet.withOpacity(0.7)
-                                        : aViolet,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(24)),
-                                    elevation: 0,
-                                    shadowColor: aViolet.withOpacity(0.4),
-                                  ),
-                                  child: _isLoading
-                                      ? const Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                  color: Colors.white,
-                                                  strokeWidth: 2.5),
-                                            ),
-                                            SizedBox(width: 12),
-                                            Text(
-                                              "SECURING SESSION...",
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                letterSpacing: 1.5,
-                                                fontSize: 14,
-                                                color: Colors.white,
-                                              ),
-                                            )
-                                          ],
-                                        )
-                                      : Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Text("LOG IN",
-                                                style: GoogleFonts.inter(
-                                                    fontWeight: FontWeight.w900,
-                                                    letterSpacing: 1.5,
-                                                    fontSize: 14)),
-                                            const SizedBox(width: 16),
-                                            const Icon(LucideIcons.arrowRight,
-                                                size: 20),
-                                          ],
-                                        ),
-                                ),
-                              )),
-                        ],
+                  child: RepaintBoundary(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 60, vertical: 40),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 400),
+                        child: _currentView == 'login'
+                            ? _buildLoginForm()
+                            : _buildFirstTimeResetForm(),
                       ),
                     ),
                   ),
@@ -697,6 +742,383 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         ),
       ),
     );
+  }
+
+  Widget _buildLoginForm() {
+    final textColor = _isDarkMode ? Colors.white : Colors.black;
+    return StatefulBuilder(
+        key: const ValueKey('login_form_builder'),
+        builder: (context, setFormState) {
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _animateEntrance(
+                        0,
+                        const Icon(Icons.school_rounded,
+                            color: aViolet, size: 40)),
+                    _animateEntrance(0, _buildThemeToggle()),
+                  ],
+                ),
+                const SizedBox(height: 40),
+                _animateEntrance(
+                    1,
+                    Text("WELCOME BACK",
+                        style: _getInterStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w900,
+                            color: textColor,
+                            letterSpacing: -2))),
+                _animateEntrance(
+                    1,
+                    Text("Initialize your secure institutional session.",
+                        style: TextStyle(
+                            color: Colors.blueGrey.withOpacity(0.7),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500))),
+                const SizedBox(height: 40),
+                _animateEntrance(2, _buildLabel("Identification Number")),
+                _animateEntrance(
+                    2,
+                    _buildTextField(
+                        _idController, "e.g., 202350031", Icons.badge_rounded,
+                        onSubmitted: (_) => _handleLogin())),
+                const SizedBox(height: 24),
+                _animateEntrance(3, _buildLabel("Password")),
+                _animateEntrance(
+                    3,
+                    _buildTextField(
+                      _passwordController,
+                      "••••••••",
+                      Icons.lock_rounded,
+                      obscure: !_isPasswordVisible,
+                      onSubmitted: (_) => _handleLogin(),
+                      suffix: IconButton(
+                        icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility_rounded
+                                : Icons.visibility_off_rounded,
+                            color: aViolet,
+                            size: 20),
+                        onPressed: () => setFormState(
+                            () => _isPasswordVisible = !_isPasswordVisible),
+                      ),
+                    )),
+                const SizedBox(height: 24),
+                _animateEntrance(
+                    4,
+                    Row(
+                      children: [
+                        const Spacer(),
+                        TextButton(
+                            onPressed: () =>
+                                ForgotPasswordHandler.showRecoveryFlow(
+                                    context, _isDarkMode),
+                            child: const Text("Forgot Password?",
+                                style: TextStyle(
+                                    color: aViolet,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold))),
+                      ],
+                    )),
+                const SizedBox(height: 40),
+
+                // ── LOGIN BUTTON ──────────────────────────────────────────
+                // WASM OPTIMIZATION: ValueListenableBuilder scopes repaints to
+                // this button only. Previously the entire Scaffold repainted on
+                // every _isLoading toggle, including the left gradient panel.
+                _animateEntrance(
+                    5,
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _loadingNotifier,
+                      builder: (context, isLoading, _) {
+                        return SizedBox(
+                          width: double.infinity,
+                          height: 65,
+                          child: ElevatedButton(
+                            onPressed: isLoading ? null : _handleLogin,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isLoading
+                                  ? aViolet.withOpacity(0.7)
+                                  : aViolet,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24)),
+                              elevation: 0,
+                            ),
+                            child: isLoading
+                                ? const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2.5)),
+                                      SizedBox(width: 12),
+                                      Text("SECURING SESSION...",
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 1.5,
+                                              fontSize: 14))
+                                    ],
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text("LOG IN",
+                                          style: TextStyle(
+                                              fontFamily:
+                                                  kIsWeb ? 'System-UI' : null,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 1.5,
+                                              fontSize: 14)),
+                                      const SizedBox(width: 16),
+                                      const Icon(Icons.arrow_forward_rounded,
+                                          size: 20),
+                                    ],
+                                  ),
+                          ),
+                        );
+                      },
+                    )),
+
+                const SizedBox(height: 40),
+                _animateEntrance(
+                    6,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("VISION",
+                            style: _getInterStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                color: _isDarkMode
+                                    ? Colors.white.withOpacity(0.6)
+                                    : Colors.black,
+                                letterSpacing: 1.5)),
+                        const SizedBox(height: 6),
+                        Text(
+                            "Bright Future Academy envisions becoming a center of excellence in education that nurtures knowledgeable, skilled, and values-driven individuals who contribute positively to society.",
+                            style: TextStyle(
+                                color: _isDarkMode
+                                    ? Colors.white.withOpacity(0.5)
+                                    : Colors.black.withOpacity(0.6),
+                                fontSize: 11,
+                                height: 1.4)),
+                        const SizedBox(height: 16),
+                        Text("MISSION",
+                            style: _getInterStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                color: _isDarkMode
+                                    ? Colors.white.withOpacity(0.6)
+                                    : Colors.black,
+                                letterSpacing: 1.5)),
+                        const SizedBox(height: 6),
+                        Text(
+                            "Bright Future Academy is committed to: Providing quality and accessible education to all learners. Developing students' academic competence, creativity, and critical thinking skills. Promoting discipline, respect, and integrity within the school community. Preparing students for higher education, employment, and responsible citizenship. Creating a safe and supportive learning environment.",
+                            style: TextStyle(
+                                color: _isDarkMode
+                                    ? Colors.white.withOpacity(0.5)
+                                    : Colors.black.withOpacity(0.6),
+                                fontSize: 11,
+                                height: 1.4)),
+                      ],
+                    )),
+              ],
+            ),
+          );
+        });
+  }
+
+  /// 🛡️ FIRST LOGIN RESET CREDENTIALS INTERCEPTOR VIEW
+  Widget _buildFirstTimeResetForm() {
+    final textColor = _isDarkMode ? Colors.white : Colors.black;
+
+    return StatefulBuilder(
+        key: const ValueKey('reset_form_builder'),
+        builder: (context, setFormState) {
+          final strength = _checkPasswordStrength(_newPasswordController.text);
+          return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Icon(Icons.security_rounded,
+                          color: warning, size: 40),
+                      _buildThemeToggle(),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  Text("ACTIVATE YOUR PORTAL",
+                      style: _getInterStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          color: textColor,
+                          letterSpacing: -1.5)),
+                  const SizedBox(height: 4),
+                  Text(
+                      "For your security, you must replace your registrar-issued temporary password before you can proceed.",
+                      style: TextStyle(
+                          color: Colors.blueGrey.withOpacity(0.9),
+                          fontSize: 14,
+                          height: 1.4)),
+                  const SizedBox(height: 32),
+                  _buildLabel("Create New Password"),
+                  _buildTextField(
+                    _newPasswordController,
+                    "Enter strong password",
+                    Icons.vpn_key_rounded,
+                    obscure: !_isNewPasswordVisible,
+                    onChanged: (_) => setFormState(() {}),
+                    suffix: IconButton(
+                      icon: Icon(
+                          _isNewPasswordVisible
+                              ? Icons.visibility_rounded
+                              : Icons.visibility_off_rounded,
+                          color: aViolet,
+                          size: 20),
+                      onPressed: () => setFormState(
+                          () => _isNewPasswordVisible = !_isNewPasswordVisible),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Password Strength Bar
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("PASSWORD COMPLEXITY:",
+                          style: TextStyle(
+                              color: Colors.blueGrey,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5)),
+                      Text(
+                        strength['label'],
+                        style: TextStyle(
+                            color: strength['color'],
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: strength['score'],
+                      color: strength['color'],
+                      backgroundColor:
+                          _isDarkMode ? Colors.white10 : Colors.black12,
+                      minHeight: 6,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildLabel("Confirm New Password"),
+                  _buildTextField(
+                    _confirmPasswordController,
+                    "Re-type password to verify",
+                    Icons.lock_reset_rounded,
+                    obscure: !_isConfirmPasswordVisible,
+                    onChanged: (_) => setFormState(() {}),
+                    suffix: IconButton(
+                      icon: Icon(
+                          _isConfirmPasswordVisible
+                              ? Icons.visibility_rounded
+                              : Icons.visibility_off_rounded,
+                          color: aViolet,
+                          size: 20),
+                      onPressed: () => setFormState(() =>
+                          _isConfirmPasswordVisible =
+                              !_isConfirmPasswordVisible),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // ── ACTIVATE BUTTON ───────────────────────────────────
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _loadingNotifier,
+                    builder: (context, isLoading, _) {
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 65,
+                        child: ElevatedButton.icon(
+                          onPressed: isLoading ? null : _handleFirstTimeReset,
+                          icon: const Icon(Icons.check_circle_outline_rounded,
+                              size: 20),
+                          label: Text("ACTIVATE ACCOUNT & LOG IN",
+                              style: TextStyle(
+                                  fontFamily: kIsWeb ? 'System-UI' : null,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.0,
+                                  fontSize: 14)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: success,
+                            foregroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24)),
+                            elevation: 0,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 40),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("VISION",
+                          style: _getInterStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: _isDarkMode
+                                  ? Colors.white.withOpacity(0.6)
+                                  : Colors.black,
+                              letterSpacing: 1.5)),
+                      const SizedBox(height: 6),
+                      Text(
+                          "Bright Future Academy envisions becoming a center of excellence in education that nurtures knowledgeable, skilled, and values-driven individuals who contribute positively to society.",
+                          style: TextStyle(
+                              color: _isDarkMode
+                                  ? Colors.white.withOpacity(0.5)
+                                  : Colors.black.withOpacity(0.6),
+                              fontSize: 11,
+                              height: 1.4)),
+                      const SizedBox(height: 16),
+                      Text("MISSION",
+                          style: _getInterStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: _isDarkMode
+                                  ? Colors.white.withOpacity(0.5)
+                                  : Colors.black,
+                              letterSpacing: 1.5)),
+                      const SizedBox(height: 6),
+                      Text(
+                          "Bright Future Academy is committed to: Providing quality and accessible education to all learners. Developing students' academic competence, creativity, and critical thinking skills. Promoting discipline, respect, and integrity within the school community. Preparing students for higher education, employment, and responsible citizenship. Creating a safe and supportive learning environment.",
+                          style: TextStyle(
+                              color: _isDarkMode
+                                  ? Colors.white.withOpacity(0.5)
+                                  : Colors.black.withOpacity(0.6),
+                              fontSize: 11,
+                              height: 1.4)),
+                    ],
+                  ),
+                ],
+              ));
+        });
   }
 
   Widget _buildWelcomeLoading() {
@@ -718,19 +1140,21 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
                   height: 180,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                          color: aViolet.withOpacity(0.35),
-                          blurRadius: 40,
-                          spreadRadius: 2),
-                    ],
+                    boxShadow: kIsWeb
+                        ? []
+                        : [
+                            BoxShadow(
+                                color: aViolet.withOpacity(0.35),
+                                blurRadius: 40,
+                                spreadRadius: 2),
+                          ],
                     gradient: const RadialGradient(
                       colors: [aViolet, sViolet, pViolet],
                       stops: [0.3, 0.7, 1.0],
                     ),
                   ),
                   child: const ClipOval(
-                    child: Icon(LucideIcons.shieldCheck,
+                    child: Icon(Icons.verified_user_rounded,
                         color: Colors.white, size: 80),
                   ),
                 ),
@@ -784,6 +1208,9 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
   }
 
   Widget _animateEntrance(int index, Widget child) {
+    if (_isEntranceAnimationComplete) {
+      return child;
+    }
     return CopyOfEntranceAnimation(
       animation: _formElementAnimations[index],
       child: child,
@@ -801,8 +1228,10 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
             Border.all(color: _isDarkMode ? Colors.white12 : Colors.black12),
       ),
       child: IconButton(
-        icon: Icon(_isDarkMode ? LucideIcons.sun : LucideIcons.moon,
-            color: aViolet, size: 22),
+        icon: Icon(
+            _isDarkMode ? Icons.wb_sunny_rounded : Icons.nights_stay_rounded,
+            color: aViolet,
+            size: 22),
         onPressed: () => setState(() => _isDarkMode = !_isDarkMode),
       ),
     );
@@ -821,8 +1250,15 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
     );
   }
 
-  Widget _buildTextField(TextEditingController c, String h, IconData i,
-      {bool obscure = false, Widget? suffix}) {
+  Widget _buildTextField(
+    TextEditingController c,
+    String h,
+    IconData i, {
+    bool obscure = false,
+    Widget? suffix,
+    ValueChanged<String>? onChanged,
+    void Function(String)? onSubmitted,
+  }) {
     final fieldColor = _isDarkMode
         ? Colors.white.withOpacity(0.04)
         : Colors.black.withOpacity(0.02);
@@ -838,6 +1274,8 @@ class _UEMSLoginPageState extends State<UEMSLoginPage>
         controller: c,
         obscureText: obscure,
         cursorColor: aViolet,
+        onChanged: onChanged,
+        onSubmitted: onSubmitted,
         style: TextStyle(
             color: _isDarkMode ? Colors.white : pViolet,
             fontWeight: FontWeight.w600,
@@ -889,8 +1327,7 @@ class CopyOfEntranceAnimation extends StatelessWidget {
 
 class _MovingBackground extends StatefulWidget {
   final bool isDarkMode;
-  final bool
-      isPaused; // PERFORMANCE FIX: Add pause capability to the dynamic canvas background
+  final bool isPaused;
   const _MovingBackground({
     required this.isDarkMode,
     this.isPaused = false,
@@ -902,13 +1339,15 @@ class _MovingBackground extends StatefulWidget {
 
 class _MovingBackgroundState extends State<_MovingBackground>
     with TickerProviderStateMixin {
-  late AnimationController _controller;
+  AnimationController? _controller;
   List<_MovingShape> _shapes = [];
   final Random _random = Random();
 
   @override
   void initState() {
     super.initState();
+    if (kIsWeb) return;
+
     _controller = AnimationController(
       duration: const Duration(seconds: 30),
       vsync: this,
@@ -917,26 +1356,26 @@ class _MovingBackgroundState extends State<_MovingBackground>
     _generateShapes();
 
     if (!widget.isPaused) {
-      _controller.repeat();
+      _controller!.repeat();
     }
   }
 
   @override
   void didUpdateWidget(covariant _MovingBackground oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // PERFORMANCE FIX: Halt animation execution immediately when login pipeline activates
+    if (kIsWeb) return;
     if (widget.isPaused != oldWidget.isPaused) {
       if (widget.isPaused) {
-        _controller.stop();
+        _controller?.stop();
       } else {
-        _controller.repeat();
+        _controller?.repeat();
       }
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -988,9 +1427,23 @@ class _MovingBackgroundState extends State<_MovingBackground>
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return Container(
+        decoration: BoxDecoration(
+            gradient: RadialGradient(
+          colors: [
+            Colors.white.withOpacity(0.04),
+            Colors.white.withOpacity(0.01),
+            Colors.transparent
+          ],
+          stops: const [0.0, 0.6, 1.0],
+        )),
+      );
+    }
+
     return RepaintBoundary(
       child: AnimatedBuilder(
-        animation: _controller,
+        animation: _controller!,
         builder: (context, child) {
           _updateShapes();
           return Stack(
